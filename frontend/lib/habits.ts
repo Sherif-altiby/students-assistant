@@ -1,13 +1,37 @@
 import { api } from "@/lib/api";
-import type { CreateHabitPayload, Habit, ListHabitsResponse, UpdateHabitPayload } from "@/types";
+import type {
+  CreateHabitPayload,
+  Habit,
+  HabitHistoryResponse,
+  ListHabitsResponse,
+  UpdateHabitPayload,
+} from "@/types";
 
-interface ItemResponse<T> { status: "success"; data: T }
+interface ItemResponse<T> {
+  status: "success";
+  data: T;
+}
 
-// NOTE: mirrors the /task contract exactly. Update paths here if the
-// backend's real /habit routes differ.
+export interface GetHabitHistoryParams {
+  page?: number;
+  limit?: number;
+}
+
 export async function listHabits(): Promise<Habit[]> {
   const res = await api.get<ListHabitsResponse>("/habit");
   return res.data.data.habits;
+}
+
+export async function getHabitHistory(
+  params: GetHabitHistoryParams = {},
+): Promise<HabitHistoryResponse["data"]> {
+  const res = await api.get<HabitHistoryResponse>("/habit/history", {
+    params: {
+      page: params.page ?? 1,
+      limit: params.limit ?? 6,
+    },
+  });
+  return res.data.data;
 }
 
 export async function createHabit(payload: CreateHabitPayload): Promise<Habit> {
@@ -15,11 +39,18 @@ export async function createHabit(payload: CreateHabitPayload): Promise<Habit> {
   return res.data.data;
 }
 
-export async function updateHabit(id: string, payload: UpdateHabitPayload): Promise<Habit> {
+export async function updateHabit(
+  id: string,
+  payload: UpdateHabitPayload,
+): Promise<Habit> {
   const res = await api.patch<ItemResponse<Habit>>(`/habit/${id}`, payload);
   return res.data.data;
 }
 
 export async function deleteHabit(id: string): Promise<void> {
   await api.delete(`/habit/${id}`);
+}
+
+export async function completeHabit(id: string): Promise<void> {
+  await api.post(`/habit/${id}/complete`);
 }

@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { MessageCircleQuestion } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Field";
+import { Button } from "@/components/ui/button";
 import { QuotaCard } from "@/components/QuotaCard";
 import {
   CONSULTATION_MONTHLY_LIMIT,
@@ -13,6 +12,7 @@ import {
   requestConsultation,
 } from "@/lib/support";
 import type { ConsultationSession } from "@/types";
+import { Input } from "@/components/ui/input";
 
 const STATUS_LABEL: Record<ConsultationSession["status"], string> = {
   PENDING: "قيد المراجعة",
@@ -57,8 +57,12 @@ export default function ConsultationsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display text-2xl font-extrabold text-ink">الاستشارات</h1>
-        <p className="mt-1 text-sm text-ink/60">يحق لك طلب حتى ٣ استشارات أكاديمية كل شهر</p>
+        <h1 className="font-display text-2xl font-extrabold text-ink">
+          الاستشارات
+        </h1>
+        <p className="mt-1 text-sm text-ink/60">
+          يحق لك طلب حتى ٣ استشارات أكاديمية كل شهر
+        </p>
       </div>
 
       <QuotaCard
@@ -71,21 +75,27 @@ export default function ConsultationsPage() {
       />
 
       <Card>
-        <form onSubmit={handleRequest} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+        <form
+          onSubmit={handleRequest}
+          className="flex flex-col gap-4 sm:flex-row sm:items-end"
+        >
           <div className="flex-1">
             <Input
-              label="موضوع الاستشارة"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="مثال: اختيار الشعبة الجامعية المناسبة"
               required
             />
           </div>
-          <Button type="submit" isLoading={isSubmitting} disabled={reachedLimit}>
+          <Button type="submit" disabled={reachedLimit}>
             {reachedLimit ? "تم استهلاك حصة هذا الشهر" : "طلب استشارة"}
           </Button>
         </form>
-        {error && <p className="mt-3 rounded-lg bg-rose-100 px-3 py-2 text-sm text-rose-600">{error}</p>}
+        {error && (
+          <p className="mt-3 rounded-lg bg-rose-100 px-3 py-2 text-sm text-rose-600">
+            {error}
+          </p>
+        )}
       </Card>
 
       <div className="flex flex-col gap-3">
@@ -93,13 +103,19 @@ export default function ConsultationsPage() {
         {isLoading ? (
           <Card className="h-14 animate-pulse" />
         ) : sessions.length === 0 ? (
-          <Card className="text-center text-sm text-ink/50">لا توجد استشارات سابقة</Card>
+          <Card className="text-center text-sm text-ink/50">
+            لا توجد استشارات سابقة
+          </Card>
         ) : (
           sessions.map((s) => (
             <Card key={s.id} className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-ink">{s.subject || "بدون عنوان"}</p>
-                <p className="mt-1 text-xs text-ink/50">{new Date(s.createdAt).toLocaleDateString("ar-EG")}</p>
+                <p className="text-sm font-medium text-ink">
+                  {s.subject || "بدون عنوان"}
+                </p>
+                <p className="mt-1 text-xs text-ink/50">
+                  {new Date(s.createdAt).toLocaleDateString("ar-EG")}
+                </p>
               </div>
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
                 {STATUS_LABEL[s.status]}

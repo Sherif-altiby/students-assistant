@@ -14,8 +14,22 @@ export const studyTableController = {
     });
   }),
 
-  getAll: asyncHandler(async (req, res) => {
-    const tables = await studyTableService.getMyTables(req.user!.id);
+  // study-table.controller.ts
+  getAll: asyncHandler(async (req: Request, res: Response) => {
+    // Get query parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+
+    // Validate pagination parameters
+    const validatedPage = Math.max(1, page);
+    const validatedLimit = Math.min(100, Math.max(1, limit)); // Max 100 items per page
+
+    const tables = await studyTableService.getMyTables(req.user!.id, {
+      page: validatedPage,
+      limit: validatedLimit,
+      search: search?.trim(),
+    });
 
     res.status(StatusCodes.OK).json({
       status: 'success',

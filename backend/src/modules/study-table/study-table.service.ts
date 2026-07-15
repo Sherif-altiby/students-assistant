@@ -5,6 +5,12 @@ import { studyTableRepository } from './study-table.repository';
 import { prisma } from '../../config/prisma';
 import { CreateStudyTableInput } from './study-table.schema';
 
+interface GetMyTablesOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
 export const studyTableService = {
   // Create table with days
   async create(userId: string, input: CreateStudyTableInput) {
@@ -66,8 +72,8 @@ export const studyTableService = {
   },
 
   // Get all tables (existing)
-  async getMyTables(userId: string) {
-    return studyTableRepository.findByUserId(userId);
+  async getMyTables(userId: string, options?: GetMyTablesOptions) {
+    return studyTableRepository.findByUserId(userId, options);
   },
 
   // Update table title

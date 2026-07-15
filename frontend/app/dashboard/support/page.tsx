@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { HeartHandshake } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { FieldShell } from "@/components/ui/Field";
+import { FieldShell } from "@/components/ui/input";
 import { QuotaCard } from "@/components/QuotaCard";
 import {
   SUPPORT_MONTHLY_LIMIT,

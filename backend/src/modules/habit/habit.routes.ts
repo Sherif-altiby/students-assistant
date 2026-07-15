@@ -11,7 +11,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', habitController.getMyHabits);
-router.get('/history', habitController.getHistory); // new
+router.get('/history', habitController.getHistory);  
 router.post('/', validate(createHabitSchema), habitController.create);
 router.patch('/:id', validate(updateHabitSchema), habitController.update);
 router.delete('/:id', validate(deleteHabitSchema), habitController.delete);

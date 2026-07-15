@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
 import { AuthShell } from "@/components/AuthShell";
-import { Input, Select } from "@/components/ui/Field";
+import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/Button";
 import { register } from "@/lib/auth";
 import { useAuthStore } from "@/store/useAuthStore";

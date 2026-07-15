@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { useAuthStore } from "@/store/useAuthStore";
+import { Header } from "@/components/header/Header";
 
 export default function DashboardLayout({
   children,
@@ -34,12 +35,11 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-paper">
-      <div className="fixed top-0 right-0 h-screen w-64">
-        <Sidebar />
-      </div>
-      <main className="flex-1 mr-64 h-screen overflow-y-auto px-6 py-8 sm:px-10">
-        {children}
+    <div className="flex h-screen bg-paper ">
+      <Sidebar />
+      <main className="flex-1 h-screen overflow-y-auto  ">
+        <Header />
+        <div className="px-4 py-4" >{children}</div>
       </main>
     </div>
   );

@@ -1,5 +1,11 @@
 import { prisma } from '../../config/prisma';
 
+interface FindByUserIdOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
 export const studyTableRepository = {
   create(data: {
     title: string;
@@ -43,17 +49,59 @@ export const studyTableRepository = {
     });
   },
 
-  findByUserId(userId: string) {
-    return prisma.studyTable.findMany({
-      where: {
-        userId,
-      },
+  // study-table.repository.ts
 
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-  },
+
+async findByUserId(
+  userId: string,
+  options?: FindByUserIdOptions
+) {
+  const { page = 1, limit = 10, search } = options || {};
+  const skip = (page - 1) * limit;
+
+  // Build where clause
+  const where: any = {
+    userId,
+  };
+
+  // Add search filter if provided
+  if (search && search.trim()) {
+    where.title = {
+      contains: search.trim(),
+      mode: 'insensitive', // Case-insensitive search
+    };
+  }
+
+  // Get total count for pagination
+  const totalItems = await prisma.studyTable.count({ where });
+
+  // Get paginated results
+  const tables = await prisma.studyTable.findMany({
+    where,
+    orderBy: {
+      createdAt: 'desc',
+    },
+    skip,
+    take: limit,
+  });
+
+  // Calculate pagination metadata
+  const totalPages = Math.ceil(totalItems / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
+  return {
+    data: tables,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems,
+      itemsPerPage: limit,
+      hasNextPage,
+      hasPrevPage,
+    },
+  };
+},
 
   createLessonCompletion(data: { lessonId: string; userId: string }) {
     return prisma.studyLessonCompletion.create({

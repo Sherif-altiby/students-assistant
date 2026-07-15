@@ -47,8 +47,25 @@ export const habitController = {
     res.status(StatusCodes.NO_CONTENT).send();
   }),
 
+  // habit.controller.ts
   getHistory: asyncHandler(async (req: Request, res: Response) => {
-    const data = await habitService.getHistoryData(req.user!.id);
+    // Get query parameters with defaults
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 30;
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+
+    // Validate pagination parameters
+    const validatedPage = Math.max(1, page);
+    const validatedLimit = Math.min(100, Math.max(1, limit)); // Max 100 items per page
+
+    const data = await habitService.getHistoryData(req.user!.id, {
+      page: validatedPage,
+      limit: validatedLimit,
+      startDate,
+      endDate,
+    });
+
     res.status(StatusCodes.OK).json({
       status: 'success',
       data,

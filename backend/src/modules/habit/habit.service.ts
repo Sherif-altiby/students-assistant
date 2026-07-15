@@ -46,11 +46,13 @@ export const habitService = {
       throw new ForbiddenError('You cannot complete this habit');
     }
 
+    // Use UTC date to avoid timezone issues
     const today = new Date();
+    const utcToday = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+    );
 
-    today.setHours(0, 0, 0, 0);
-
-    const completion = await habitRepository.findCompletion(habitId, today);
+    const completion = await habitRepository.findCompletion(habitId, utcToday);
 
     if (completion) {
       throw new ConflictError('Habit already completed today');
@@ -59,7 +61,7 @@ export const habitService = {
     return habitRepository.createCompletion({
       userId,
       habitId,
-      date: today,
+      date: utcToday,
     });
   },
 
@@ -95,7 +97,16 @@ export const habitService = {
     return habitRepository.getCompletionsHistory(userId);
   },
 
-  async getHistoryData(userId: string) {
-  return habitRepository.getHistoryData(userId);
-}
+  // habit.service.ts
+  async getHistoryData(
+    userId: string,
+    options?: {
+      page?: number;
+      limit?: number;
+      startDate?: string;
+      endDate?: string;
+    }
+  ) {
+    return habitRepository.getHistoryData(userId, options);
+  },
 };

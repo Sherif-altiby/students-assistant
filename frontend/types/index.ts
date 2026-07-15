@@ -81,11 +81,11 @@ export type HabitFrequency = "DAILY" | "WEEKLY";
 export interface Habit {
   id: string;
   title: string;
-  frequency: HabitFrequency;
-  streak?: number;
-  completedToday?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+}
+
+export interface HabitHistoryEntry {
+  date: string; // "YYYY-MM-DD"
+  completedHabitIds: string[];
 }
 
 export interface ListHabitsResponse {
@@ -93,23 +93,44 @@ export interface ListHabitsResponse {
   data: { habits: Habit[] };
 }
 
+export interface ListHabitsResponse {
+  status: "success";
+  data: {
+    habits: Habit[];
+  };
+}
+
 export interface CreateHabitPayload {
   title: string;
-  frequency: HabitFrequency;
 }
 
 export interface UpdateHabitPayload {
-  title?: string;
-  frequency?: HabitFrequency;
-  completedToday?: boolean;
+  title: string;
 }
 
-/**
- * NOTE: /support (الدعم النفسي) and /consultation (الاستشارات) endpoints
- * were not provided either. Modeled as simple booking records so the
- * monthly quota (1 support / month, 3 consultations / month) can be
- * enforced in the UI from the `createdAt` dates returned by the API.
- */
+export interface HabitPaginationMeta {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  dateRange: {
+    start: string;
+    end: string;
+  };
+}
+
+export interface HabitHistoryResponse {
+  status: "success";
+  data: {
+    habits: Habit[];
+    history: HabitHistoryEntry[];
+    pagination: HabitPaginationMeta;
+  };
+}
+
+ 
 export interface SupportSession {
   id: string;
   status: "PENDING" | "SCHEDULED" | "COMPLETED" | "CANCELLED";
