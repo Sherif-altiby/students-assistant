@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { CalendarDays, Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DaySubjectsEditorDialog } from "../DaySubjectsEditorDialog";
 import { StudyTableTypeBadge } from "../StudyTableTypeBadge";
@@ -20,7 +20,7 @@ interface StudyTableDetailPageProps {
 
 export default function StudyTableDetailPage() {
 
-  const params = useParams(); // ✅ Get params from hook
+  const params = useParams();  
   const id = params.id as string;
   const router = useRouter();
 
@@ -85,7 +85,6 @@ export default function StudyTableDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-7">
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-primary/70 to-primary/10" />
 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-4">

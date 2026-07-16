@@ -9,8 +9,8 @@ import {
   Check,
   CheckCircle2,
 } from "lucide-react";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { createTask, deleteTask, listTasks, updateTask } from "@/lib/tasks";
 import type { Task, TaskFrequency } from "@/types";
 import { cn } from "@/lib/utils";

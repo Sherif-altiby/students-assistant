@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { Habit } from "@/types";
 
@@ -39,7 +38,22 @@ export function HabitListItem({
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3">
+    <div className="group flex items-center gap-3.5 px-5 py-3.5 transition-colors hover:bg-muted/40">
+      <button
+        type="button"
+        onClick={() => onComplete(habit.id)}
+        disabled={isDone || isCompleting}
+        aria-pressed={isDone}
+        aria-label={isDone ? "منجزة اليوم" : "تحديد كمنجزة"}
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors disabled:cursor-default ${
+          isDone
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-border text-transparent hover:border-primary/50"
+        }`}
+      >
+        <Check className="h-4 w-4" strokeWidth={3} />
+      </button>
+
       <div className="min-w-0 flex-1">
         {isEditing ? (
           <Input
@@ -54,32 +68,36 @@ export function HabitListItem({
             className="h-8"
           />
         ) : (
-          <p className="truncate text-sm font-semibold text-foreground">{habit.title}</p>
+          <p
+            className={`truncate text-sm font-medium transition-colors ${
+              isDone ? "text-muted-foreground" : "text-foreground"
+            }`}
+          >
+            {habit.title}
+          </p>
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
-        <Button
-          size="sm"
-          variant={isDone ? "secondary" : "default"}
-          disabled={isDone || isCompleting}
-          onClick={() => onComplete(habit.id)}
-        >
-          {isDone ? "منجزة اليوم ✓" : "تحديد كمنجزة"}
-        </Button>
-        <Button size="icon" variant="ghost" onClick={startEdit} aria-label="تعديل العادة">
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={() => onDelete(habit.id)}
-          aria-label="حذف العادة"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
+      {!isEditing && (
+        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <button
+            type="button"
+            onClick={startEdit}
+            aria-label="تعديل العادة"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(habit.id)}
+            aria-label="حذف العادة"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

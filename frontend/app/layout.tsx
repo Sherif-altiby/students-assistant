@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { El_Messiri } from "next/font/google";
 import { Changa } from "next/font/google";
+import { Playpen_Sans } from "next/font/google";
 
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { QueryProvider } from "@/components/QueryClientProvider";
 import { ThemeInitializer } from "@/components/ThemeInitializer";
-import { Header } from "@/components/header/Header";
 
 const elMessiri = El_Messiri({
   subsets: ["arabic", "latin"],

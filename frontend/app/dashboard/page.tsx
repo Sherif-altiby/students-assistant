@@ -19,7 +19,7 @@ import {
   ListChecks,
   Repeat,
 } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/ui/card";
 import { QuotaCard } from "@/components/QuotaCard";
 import { useAuthStore } from "@/store/useAuthStore";
 import { listTasks } from "@/lib/tasks";

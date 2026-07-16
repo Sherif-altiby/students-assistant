@@ -2,8 +2,8 @@
 
 import { CalendarDays } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
- 
-import { Card } from "@/components/ui/Card";
+
+import { Card } from "@/components/ui/card";
 import {
   Pagination,
   PaginationContent,

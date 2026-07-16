@@ -75,6 +75,7 @@ function mapPrismaError(err: Prisma.PrismaClientKnownRequestError): {
     case 'P2003':
       return { statusCode: 400, message: 'Invalid reference to related record' };
     default:
+      console.error('Unhandled Prisma error', err);
       return { statusCode: 500, message: 'Database error' };
   }
 }

@@ -37,7 +37,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen bg-paper ">
       <Sidebar />
-      <main className="flex-1 h-screen overflow-y-auto  ">
+      <main className="flex-1 h-screen overflow-y-auto  custom-scrollbar">
         <Header />
         <div className="px-4 py-4" >{children}</div>
       </main>
