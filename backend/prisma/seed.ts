@@ -97,25 +97,7 @@ async function main() {
     },
   });
 
-  await prisma.completedTask.createMany({
-    data: [
-      {
-        userId: user.id,
-        taskId: gymTask.id,
-        date: today,
-      },
-      {
-        userId: user.id,
-        taskId: englishTask.id,
-        date: yesterday,
-      },
-      {
-        userId: user.id,
-        taskId: mathTask.id,
-        date: today,
-      },
-    ],
-  });
+   
 
   console.log('Seed completed successfully.');
 }

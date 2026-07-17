@@ -1,20 +1,32 @@
-import { Router } from 'express';
+// src/modules/task/task.routes.ts
 
+import { Router } from 'express';
+import { taskController } from './task.controller';
+import {
+  createTaskSchema,
+  updateTaskSchema,
+  deleteTaskSchema,
+  historyQuerySchema,
+} from './task.schema';
 import { authenticate } from '../../middlewares/authenticate';
 import { validate } from '../../middlewares/validate';
-
-import { taskController } from './task.controller';
-
-import { createTaskSchema, updateTaskSchema, deleteTaskSchema } from './task.schema';
 
 const router = Router();
 
 router.use(authenticate);
 
-router.get('/', taskController.getMyTasks);
+// Task CRUD operations
 router.post('/', validate(createTaskSchema), taskController.create);
-router.patch('/:id', validate(updateTaskSchema), taskController.update);
+router.get('/', taskController.getMyTasks);
+router.put('/:id', validate(updateTaskSchema), taskController.update);
 router.delete('/:id', validate(deleteTaskSchema), taskController.delete);
+
+// Task completion
 router.post('/:id/complete', taskController.complete);
+
+// Task history routes
+router.get('/history', validate(historyQuerySchema), taskController.getHistoryDays);
+router.get('/history/:date', taskController.getHistoryDay);
+router.get('/:id/history', taskController.getTaskHistory);
 
 export { router as taskRouter };

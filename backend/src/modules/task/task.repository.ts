@@ -1,7 +1,10 @@
+// src/modules/task/task.repository.ts
+
 import { prisma } from '../../config/prisma';
+import { TaskFrequency } from '@prisma/client';
 
 export const taskRepository = {
-  create(data: { title: string; frequency: 'TODAY' | 'EVERY_DAY'; userId: string }) {
+  create(data: { title: string; frequency: TaskFrequency; userId: string }) {
     return prisma.task.create({
       data,
     });
@@ -17,22 +20,18 @@ export const taskRepository = {
 
   findByUserId(userId: string) {
     const today = new Date();
-
     const startOfDay = new Date(today);
     startOfDay.setHours(0, 0, 0, 0);
-
     const endOfDay = new Date(today);
     endOfDay.setHours(23, 59, 59, 999);
 
     return prisma.task.findMany({
       where: {
         userId,
-
         OR: [
           {
             frequency: 'EVERY_DAY',
           },
-
           {
             frequency: 'TODAY',
             createdAt: {
@@ -42,7 +41,6 @@ export const taskRepository = {
           },
         ],
       },
-
       orderBy: {
         createdAt: 'desc',
       },
@@ -53,7 +51,7 @@ export const taskRepository = {
     id: string,
     data: {
       title?: string;
-      frequency?: 'TODAY' | 'EVERY_DAY';
+      frequency?: TaskFrequency;
     }
   ) {
     return prisma.task.update({
@@ -72,8 +70,9 @@ export const taskRepository = {
     });
   },
 
-  findCompletion(taskId: string, date: Date) {
-    return prisma.completedTask.findUnique({
+  // Task History methods
+  findHistoryByTaskAndDate(taskId: string, date: Date) {
+    return prisma.taskHistory.findUnique({
       where: {
         taskId_date: {
           taskId,
@@ -83,9 +82,150 @@ export const taskRepository = {
     });
   },
 
-  createCompletion(data: { userId: string; taskId: string; date: Date }) {
-    return prisma.completedTask.create({
-      data,
+  createHistory(data: {
+    userId: string;
+    taskId: string;
+    date: Date;
+    taskTitle: string;
+    taskFrequency: TaskFrequency;
+  }) {
+    return prisma.taskHistory.create({
+      data: {
+        ...data,
+        completedAt: new Date(),
+      },
+    });
+  },
+
+  getHistoryByDate(userId: string, date: Date) {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return prisma.taskHistory.findMany({
+      where: {
+        userId,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+      include: {
+        task: true,
+      },
+      orderBy: {
+        completedAt: 'asc',
+      },
+    });
+  },
+
+  getHistoryDays(userId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+
+    return prisma.taskHistory.groupBy({
+      by: ['date'],
+      where: {
+        userId,
+      },
+      _count: {
+        taskId: true,
+      },
+      _min: {
+        completedAt: true,
+      },
+      _max: {
+        completedAt: true,
+      },
+      orderBy: {
+        date: 'desc',
+      },
+      skip,
+      take: limit,
+    });
+  },
+
+  async getHistoryDaysCount(userId: string) {
+    const result = await prisma.taskHistory.groupBy({
+      by: ['date'],
+      where: {
+        userId,
+      },
+      _count: {
+        taskId: true,
+      },
+    });
+
+    return result.length;
+  },
+
+  getHistoryByDateRange(userId: string, startDate: Date, endDate: Date) {
+    return prisma.taskHistory.findMany({
+      where: {
+        userId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: {
+        task: true,
+      },
+      orderBy: {
+        date: 'desc',
+      },
+    });
+  },
+
+  deleteHistoryByTaskId(taskId: string) {
+    return prisma.taskHistory.deleteMany({
+      where: {
+        taskId,
+      },
+    });
+  },
+
+  getTaskHistory(taskId: string) {
+    return prisma.taskHistory.findMany({
+      where: {
+        taskId,
+      },
+      orderBy: {
+        date: 'desc',
+      },
+    });
+  },
+
+  getCompletedTasksByIds(taskIds: string[]) {
+    return prisma.task.findMany({
+      where: {
+        id: {
+          in: taskIds,
+        },
+      },
+    });
+  },
+
+  getHistoryDayWithTasks(userId: string, date: Date) {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return prisma.taskHistory.findMany({
+      where: {
+        userId,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+      include: {
+        task: true,
+      },
+      orderBy: {
+        completedAt: 'asc',
+      },
     });
   },
 };
