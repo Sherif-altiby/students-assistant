@@ -54,3 +54,29 @@ export async function deleteHabit(id: string): Promise<void> {
 export async function completeHabit(id: string): Promise<void> {
   await api.post(`/habit/${id}/complete`);
 }
+
+export type HabitProgressPeriod = "day" | "week" | "month";
+
+export interface HabitProgressPoint {
+  period: string;
+  completedCount: number;
+}
+
+export interface HabitProgressResponse {
+  period: HabitProgressPeriod;
+  data: HabitProgressPoint[];
+}
+
+interface HabitProgressApiResponse {
+  status: "success";
+  data: HabitProgressResponse;
+}
+
+export async function getHabitProgress(
+  period: HabitProgressPeriod = "day",
+): Promise<HabitProgressResponse> {
+  const res = await api.get<HabitProgressApiResponse>("/habit/progress", {
+    params: { period },
+  });
+  return res.data.data;
+}

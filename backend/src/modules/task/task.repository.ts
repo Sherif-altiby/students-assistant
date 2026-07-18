@@ -228,4 +228,26 @@ export const taskRepository = {
       },
     });
   },
+
+  findFirstTaskDate(userId: string) {
+    return prisma.task.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+      select: { createdAt: true },
+    });
+  },
+
+  getProgressHistory(userId: string, fromDate: Date) {
+    return prisma.taskHistory.findMany({
+      where: {
+        userId,
+        date: { gte: fromDate },
+      },
+      select: {
+        date: true,
+        taskFrequency: true,
+      },
+      orderBy: { date: 'asc' },
+    });
+  },
 };

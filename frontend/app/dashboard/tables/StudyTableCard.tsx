@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, Hash, Trash2, ArrowLeft } from "lucide-react";
+import { Calendar, Hash, Trash2, ChevronRight, BookOpen } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StudyTableTypeBadge } from "./StudyTableTypeBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Badge } from "@/components/ui/badge";
 
 import type { StudyTableSummary } from "@/types/study-table";
 import { formatShortDate } from "@/data/date";
+import { cn } from "@/lib/utils";
 
 interface StudyTableCardProps {
   table: StudyTableSummary;
@@ -17,71 +19,85 @@ interface StudyTableCardProps {
 }
 
 export function StudyTableCard({ table, onDelete }: StudyTableCardProps) {
+
   return (
     <Card
-      className=" group relative overflow-hidden border-border/60 bg-card p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg "
+      className={cn(
+        "group relative overflow-hidden border-border/40 bg-card transition-all duration-300 hover:shadow-lg",
+        "hover:border-primary/20 hover:-translate-y-1"
+      )}
     >
-      {/* Hover gradient */}
-       
-      <Link href={`/dashboard/tables/${table.id}`} className="flex flex-col gap-4" >
+      <Link href={`/dashboard/tables/${table.id}`} className="block p-5">
         {/* Header */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h3 className=" truncate text-base font-semibold text-foreground transition-colors group-hover:text-primary " >
-              {table.title}
-            </h3>
-
-            <p className="text-xs text-muted-foreground">
-              جدول مذاكرة
-            </p>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2.5 mb-1.5">
+              <div className="rounded-lg bg-primary/10 p-1.5">
+                <BookOpen className="h-4 w-4 text-primary" />
+              </div>
+              <h3 className="truncate text-base font-semibold text-foreground">
+                {table.title}
+              </h3>
+            </div>
+            
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{formatShortDate(table.startDate)}</span>
+              {table.endDate && (
+                <>
+                  <span>•</span>
+                  <span>{formatShortDate(table.endDate)}</span>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* <StudyTableTypeBadge type={table.type} /> */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <StudyTableTypeBadge type={table.type} />
+            
+            <ConfirmDialog
+              trigger={
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label="حذف الجدول"
+                  className="h-7 w-7 text-muted-foreground/30 transition-all hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              }
+              title="حذف الجدول؟"
+              description={`سيتم حذف "${table.title}" وكل بياناته نهائيًا.`}
+              confirmLabel="حذف"
+              onConfirm={() => onDelete(table.id)}
+            />
+          </div>
         </div>
 
-
-        {/* Date info */}
-        <div
-          className=" flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2 text-sm text-muted-foreground "
-        >
-          <div className="flex items-center gap-2">
-            {table.type === "DATE_RANGE" ? (
-              <Calendar className="h-4 w-4 text-primary" />
-            ) : (
-              <Hash className="h-4 w-4 text-primary" />
-            )}
-
-            <span>
-              {formatShortDate(table.startDate)}
-              {" — "}
-              {formatShortDate(table.endDate)}
-            </span>
+        {/* Progress Bar */}
+        {/* {progress > 0 && (
+          <div className="mb-3">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-muted-foreground">التقدم</span>
+              <span className="font-medium text-foreground">{progress}%</span>
+            </div>
+            <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
+        )} */}
 
-          <ArrowLeft
-            className=" h-4 w-4 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100 "
-          />
+        {/* Footer */}
+        <div className="flex items-center justify-end pt-2 border-t border-border/20">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground/60 group-hover:text-primary transition-colors">
+            <span>عرض الجدول</span>
+            <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+          </div>
         </div>
       </Link>
-
-
-      {/* Delete */}
-      <ConfirmDialog
-        trigger={
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="حذف الجدول"
-            className=" absolute left-3 top-3 h-8 w-8 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-10 max-md:opacity-100 "
-           >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        }
-        title="حذف الجدول؟"
-        description={`سيتم حذف "${table.title}" وكل بياناته نهائيًا. لا يمكن التراجع عن هذا الإجراء.`}
-        confirmLabel="حذف"
-        onConfirm={() => onDelete(table.id)}
-      />
     </Card>
   );
 }

@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
-import { z } from "zod";
 import { register } from "@/lib/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { RegisterPayload } from "@/types";

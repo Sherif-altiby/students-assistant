@@ -31,7 +31,10 @@ import {
   listConsultations,
   listSupportSessions,
 } from "@/lib/support";
-import type { Habit, Task } from "@/types";
+import type { Habit } from "@/types";
+import { Task } from "@/types/task";
+import TaskProgressChart from "@/components/dashboard/Taskprogresschart";
+import HabitProgressChart from "@/components/dashboard/Habitprogresschart";
 
 const PIE_COLORS = ["var(--chart-2)", "var(--muted)"];
 
@@ -81,7 +84,6 @@ export default function DashboardOverviewPage() {
 
   const habitChartData = habits.map((h) => ({
     name: h.title.length > 10 ? `${h.title.slice(0, 10)}…` : h.title,
-    streak: h.streak ?? 0,
   }));
 
   return (
@@ -114,7 +116,7 @@ export default function DashboardOverviewPage() {
         <SummaryStat
           icon={<Repeat className="h-4 w-4" />}
           label="أطول تتابع (Streak)"
-          value={habits.reduce((max, h) => Math.max(max, h.streak ?? 0), 0)}
+          value={habits.reduce((max, h) => Math.max(max, 0), 0)}
         />
       </div>
 
@@ -128,29 +130,7 @@ export default function DashboardOverviewPage() {
           ) : tasks.length === 0 ? (
             <EmptyChart message="لا توجد مهام بعد. أضف أول مهمة من صفحة المهام." />
           ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie
-                  data={taskPieData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={55}
-                  outerRadius={85}
-                  paddingAngle={3}
-                >
-                  {taskPieData.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "var(--card)", 
-                    borderColor: "var(--border)",
-                    borderRadius: "var(--radius)",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <TaskProgressChart />
           )}
         </Card>
 
@@ -163,27 +143,7 @@ export default function DashboardOverviewPage() {
           ) : habits.length === 0 ? (
             <EmptyChart message="لا توجد عادات بعد. أضف أول عادة من صفحة العادات." />
           ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={habitChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis 
-                  dataKey="name" 
-                  tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} 
-                />
-                <YAxis 
-                  tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} 
-                  allowDecimals={false} 
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "var(--card)", 
-                    borderColor: "var(--border)",
-                    borderRadius: "var(--radius)",
-                  }}
-                />
-                <Bar dataKey="streak" fill="var(--chart-3)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <HabitProgressChart />
           )}
         </Card>
       </div>
@@ -225,7 +185,9 @@ function SummaryStat({
         {icon}
       </div>
       <div>
-        <p className="font-display text-xl font-extrabold text-foreground">{value}</p>
+        <p className="font-display text-xl font-extrabold text-foreground">
+          {value}
+        </p>
         <p className="text-xs text-muted-foreground">{label}</p>
       </div>
     </Card>

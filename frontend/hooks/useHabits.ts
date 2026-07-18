@@ -7,13 +7,31 @@ import {
   createHabit,
   deleteHabit,
   getHabitHistory,
+  getHabitProgress,
   updateHabit,
 } from "@/lib/habits";
+import type { HabitProgressPeriod } from "@/lib/habits";
 
 const HISTORY_PAGE_SIZE = 6;
 
 function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+/** Chart data for the habit progress dashboard, filterable by day/week/month. */
+export function useHabitProgress(period: HabitProgressPeriod) {
+  const query = useQuery({
+    queryKey: ["habits", "progress", period],
+    queryFn: () => getHabitProgress(period),
+    placeholderData: keepPreviousData,
+  });
+
+  return {
+    points: query.data?.data ?? [],
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isError: query.isError,
+  };
 }
 
 export function useHabits() {

@@ -134,140 +134,170 @@ export const habitRepository = {
 
   // habit.repository.ts
 
-  // habit.repository.ts
-async getHistoryData(
-  userId: string,
-  options?: {
-    page?: number;
-    limit?: number;
-    startDate?: string;
-    endDate?: string;
-  }
-) {
-  const { page = 1, limit = 30, startDate, endDate } = options || {};
-  const skip = (page - 1) * limit;
-
-  // Get all habits for this user
-  const habits = await prisma.habit.findMany({
-    where: { userId },
-    select: { id: true, title: true, createdAt: true },
-    orderBy: { createdAt: 'asc' },
-  });
-
-  // Get the first habit creation date
-  const firstHabit = habits[0];
-  if (!firstHabit) {
-    // No habits found, return empty data
-    return {
-      habits: [],
-      history: [],
-      pagination: {
-        currentPage: page,
-        totalPages: 0,
-        totalItems: 0,
-        itemsPerPage: limit,
-        hasNextPage: false,
-        hasPrevPage: false,
-        dateRange: null,
-      },
-    };
-  }
-
-  // Build date filter
-  let dateFilter: any = {};
-  if (startDate) {
-    const start = new Date(startDate);
-    start.setUTCHours(0, 0, 0, 0);
-    dateFilter.gte = start;
-  }
-  if (endDate) {
-    const end = new Date(endDate);
-    end.setUTCHours(23, 59, 59, 999);
-    dateFilter.lte = end;
-  }
-
-  // Get total count for pagination
-  const totalCompletions = await prisma.completedHabit.count({
-    where: {
-      userId,
-      ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
-    },
-  });
-
-  // Get paginated completions
-  const completions = await prisma.completedHabit.findMany({
-    where: {
-      userId,
-      ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
-    },
-    select: {
-      habitId: true,
-      date: true,
-    },
-    orderBy: { date: 'desc' },
-    skip,
-    take: limit,
-  });
-
-  // Group completions by date using UTC
-  const completionMap = new Map<string, Set<string>>();
-  for (const comp of completions) {
-    const date = new Date(comp.date);
-    const dateKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
-
-    if (!completionMap.has(dateKey)) {
-      completionMap.set(dateKey, new Set());
+  async getHistoryData(
+    userId: string,
+    options?: {
+      page?: number;
+      limit?: number;
+      startDate?: string;
+      endDate?: string;
     }
-    completionMap.get(dateKey)!.add(comp.habitId);
-  }
+  ) {
+    const { page = 1, limit = 30, startDate, endDate } = options || {};
+    const skip = (page - 1) * limit;
 
-  // Get date range: from first habit creation to today
-  const firstHabitDate = new Date(firstHabit.createdAt);
-  firstHabitDate.setUTCHours(0, 0, 0, 0);
-
-  const today = new Date();
-  const todayUTC = new Date(
-    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
-  );
-
-  // Generate all dates from first habit to today
-  const allDates = [];
-  const currentDate = new Date(firstHabitDate);
-
-  while (currentDate <= todayUTC) {
-    const dateKey = `${currentDate.getUTCFullYear()}-${String(currentDate.getUTCMonth() + 1).padStart(2, '0')}-${String(currentDate.getUTCDate()).padStart(2, '0')}`;
-
-    allDates.push({
-      date: dateKey,
-      completedHabitIds: Array.from(completionMap.get(dateKey) || []),
+    // Get all habits for this user
+    const habits = await prisma.habit.findMany({
+      where: { userId },
+      select: { id: true, title: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
     });
 
-    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-  }
+    const firstHabit = habits[0];
+    if (!firstHabit) {
+      return {
+        habits: [],
+        history: [],
+        pagination: {
+          currentPage: page,
+          totalPages: 0,
+          totalItems: 0,
+          itemsPerPage: limit,
+          hasNextPage: false,
+          hasPrevPage: false,
+          dateRange: null,
+        },
+      };
+    }
 
-  // Sort by date descending (most recent first)
-  allDates.sort((a, b) => b.date.localeCompare(a.date));
+    // Build date filter
+    let dateFilter: any = {};
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setUTCHours(0, 0, 0, 0);
+      dateFilter.gte = start;
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setUTCHours(23, 59, 59, 999);
+      dateFilter.lte = end;
+    }
 
-  // Calculate pagination metadata
-  const totalPages = Math.ceil(totalCompletions / limit);
-  const hasNextPage = page < totalPages;
-  const hasPrevPage = page > 1;
-
-  return {
-    habits: habits.map((h) => ({ id: h.id, title: h.title })),
-    history: allDates,
-    pagination: {
-      currentPage: page,
-      totalPages,
-      totalItems: totalCompletions,
-      itemsPerPage: limit,
-      hasNextPage,
-      hasPrevPage,
-      dateRange: {
-        start: firstHabitDate.toISOString().split('T')[0],
-        end: todayUTC.toISOString().split('T')[0],
+    // Get all distinct dates with completion counts
+    const dateGroups = await prisma.completedHabit.groupBy({
+      by: ['date'],
+      where: {
+        userId,
+        ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
       },
-    },
-  };
-}
+      _count: {
+        habitId: true,
+      },
+      orderBy: {
+        date: 'desc',
+      },
+    });
+
+    // Get total number of distinct days
+    const totalDays = dateGroups.length;
+
+    // Apply pagination to dates
+    const paginatedDateGroups = dateGroups.slice(skip, skip + limit);
+
+    // Get completions for the paginated dates
+    const paginatedDates = paginatedDateGroups.map((group) => group.date);
+
+    let completions: any[] = [];
+    if (paginatedDates.length > 0) {
+      completions = await prisma.completedHabit.findMany({
+        where: {
+          userId,
+          date: {
+            in: paginatedDates,
+          },
+          ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+        },
+        select: {
+          habitId: true,
+          date: true,
+        },
+        orderBy: { date: 'desc' },
+      });
+    }
+
+    // Group completions by date
+    const completionMap = new Map<string, Set<string>>();
+    for (const comp of completions) {
+      const date = new Date(comp.date);
+      const dateKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+
+      if (!completionMap.has(dateKey)) {
+        completionMap.set(dateKey, new Set());
+      }
+      completionMap.get(dateKey)!.add(comp.habitId);
+    }
+
+    // Build history for paginated dates
+    const history = paginatedDateGroups.map((group) => {
+      const date = new Date(group.date);
+      const dateKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+
+      return {
+        date: dateKey,
+        completedHabitIds: Array.from(completionMap.get(dateKey) || []),
+        totalCompletions: group._count.habitId,
+      };
+    });
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalDays / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    // Get date range for the response
+    const firstHabitDate = new Date(firstHabit.createdAt);
+    firstHabitDate.setUTCHours(0, 0, 0, 0);
+
+    const today = new Date();
+    const todayUTC = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+    );
+
+    return {
+      habits: habits.map((h) => ({ id: h.id, title: h.title })),
+      history: history,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: totalDays,
+        itemsPerPage: limit,
+        hasNextPage,
+        hasPrevPage,
+        dateRange: {
+          start: firstHabitDate.toISOString().split('T')[0],
+          end: todayUTC.toISOString().split('T')[0],
+        },
+      },
+    };
+  },
+  
+  findFirstHabitDate(userId: string) {
+    return prisma.habit.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+      select: { createdAt: true },
+    });
+  },
+
+  getProgressCompletions(userId: string, fromDate: Date) {
+    return prisma.completedHabit.findMany({
+      where: {
+        userId,
+        date: { gte: fromDate },
+      },
+      select: {
+        date: true,
+      },
+    });
+  },
 };

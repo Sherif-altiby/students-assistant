@@ -75,7 +75,7 @@ export function CustomSelect({
         aria-invalid={!!hasError}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={onKeyDown}
-        className={`flex h-11 w-full items-center justify-between rounded-[var(--radius-md)] border bg-input/30 px-3.5 text-sm text-foreground outline-none transition-colors focus:ring-2 disabled:opacity-60 ${
+        className={`flex h-11 w-full items-center justify-between rounded-(--radius-md) border bg-input/30 px-3.5 text-sm text-foreground outline-none transition-colors focus:ring-2 disabled:opacity-60 ${
           hasError
             ? "border-destructive focus:ring-destructive/30"
             : "border-border focus:border-ring focus:ring-ring/30"
@@ -94,7 +94,7 @@ export function CustomSelect({
           <path
             d="M6 9l6 6 6-6"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeWidth="1.8" 
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -104,7 +104,7 @@ export function CustomSelect({
       {open && (
         <ul
           role="listbox"
-          className="absolute z-50 mt-1.5 max-h-56 w-full overflow-auto rounded-[var(--radius-md)] border border-border bg-popover p-1 shadow-lg"
+          className="absolute z-50 mt-1.5 max-h-56 w-full overflow-auto rounded-(--radius-md) border border-border bg-popover p-1 shadow-lg"
         >
           {options.map((opt, i) => (
             <li

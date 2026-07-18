@@ -8,6 +8,7 @@ import { getHabitHistoryColumns } from "./habit-history-columns";
 import { useHabits } from "@/hooks/useHabits";
 import { HabitList } from "./HabitList";
 import { CreateHabitForm } from "./CreateHabitForm";
+import { HabitHistory } from "./HabitHistory";
 
 export default function HabitsPage() {
   const {
@@ -54,14 +55,11 @@ export default function HabitsPage() {
       />
 
       {historyPagination && (
-        <DataTable
-          title="سجل الإنجاز"
-          data={history}
-          getRowId={(entry) => entry.date}
-          columns={getHabitHistoryColumns(habits)}
-          manualPagination
+        <HabitHistory
+          habits={habits}
+          history={history}
           page={historyPagination.currentPage}
-          pageCount={historyPagination.totalPages}
+          totalPages={historyPagination.totalPages}
           onPageChange={setHistoryPage}
           isFetching={isHistoryFetching}
         />

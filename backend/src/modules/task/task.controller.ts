@@ -47,7 +47,7 @@ export const taskController = {
 
   getHistoryDay: asyncHandler(async (req: Request, res: Response) => {
     const date = new Date(req.params.date as string);
-    
+
     if (isNaN(date.getTime())) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         status: 'error',
@@ -66,10 +66,7 @@ export const taskController = {
   }),
 
   getTaskHistory: asyncHandler(async (req: Request, res: Response) => {
-    const history = await taskService.getTaskHistory(
-      req.user!.id, 
-      req.params.id as string
-    );
+    const history = await taskService.getTaskHistory(req.user!.id, req.params.id as string);
 
     res.status(StatusCodes.OK).json({
       status: 'success',
@@ -78,11 +75,7 @@ export const taskController = {
   }),
 
   update: asyncHandler(async (req: Request, res: Response) => {
-    const task = await taskService.update(
-      req.user!.id, 
-      req.params.id as string, 
-      req.body
-    );
+    const task = await taskService.update(req.user!.id, req.params.id as string, req.body);
 
     res.status(StatusCodes.OK).json({
       status: 'success',
@@ -94,5 +87,16 @@ export const taskController = {
     await taskService.delete(req.user!.id, req.params.id as string);
 
     res.status(StatusCodes.NO_CONTENT).send();
+  }),
+
+  getProgress: asyncHandler(async (req: Request, res: Response) => {
+    const period = (req.query.period as 'day' | 'week' | 'month') || 'day';
+
+    const progress = await taskService.getProgress(req.user!.id, period);
+
+    res.status(StatusCodes.OK).json({
+      status: 'success',
+      data: progress,
+    });
   }),
 };

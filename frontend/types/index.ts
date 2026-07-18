@@ -48,34 +48,6 @@ export interface RegisterPayload {
   country: string;
 }
 
-export type TaskFrequency = "TODAY" | "EVERY_DAY";
-
-export interface Task {
-  id: string;
-  title: string;
-  frequency: TaskFrequency;
-  completed?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface CreateTaskPayload {
-  title: string;
-  frequency: TaskFrequency;
-}
-
-export interface UpdateTaskPayload {
-  title?: string;
-  frequency?: TaskFrequency;
-  completed?: boolean;
-}
-
-/**
- * NOTE: the /habit endpoints were not provided by the backend spec.
- * They are implemented here mirroring the /task contract
- * (POST /habit, PATCH /habit/:id, GET /habit, DELETE /habit/:id).
- * Adjust lib/habits.ts if the real contract differs.
- */
 export type HabitFrequency = "DAILY" | "WEEKLY";
 
 export interface Habit {
@@ -130,7 +102,6 @@ export interface HabitHistoryResponse {
   };
 }
 
- 
 export interface SupportSession {
   id: string;
   status: "PENDING" | "SCHEDULED" | "COMPLETED" | "CANCELLED";

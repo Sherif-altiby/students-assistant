@@ -26,5 +26,14 @@ export const deleteHabitSchema = z.object({
   }),
 });
 
+
+export const habitProgressQuerySchema = z.object({
+  query: z.object({
+    period: z.enum(['day', 'week', 'month']).optional().default('day'),
+  }),
+});
+
 // New: no input needed
 export const getHistorySchema = z.object({});
+export type HabitProgressQuery = z.infer<typeof habitProgressQuerySchema>['query'];
+

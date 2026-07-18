@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, X, BookOpen, Layers, ListChecks } from "lucide-react";
+import { 
+  Loader2, 
+  X, 
+  BookOpen, 
+  Layers, 
+  ListChecks,
+  Check,
+  ChevronRight,
+  Calendar,
+  ClipboardList
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,16 +22,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-
 import { cn } from "@/lib/utils";
 import type {
   StudyTableDayDetailed,
@@ -85,11 +88,13 @@ export function DaySubjectsEditorDialog({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [subjectIndex, setSubjectIndex] = useState<string>("");
   const [chapterIndex, setChapterIndex] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"select" | "summary">("select");
 
   useEffect(() => {
     setSelected(buildInitialSelection(day));
     setSubjectIndex("");
     setChapterIndex("");
+    setActiveTab("select");
   }, [day]);
 
   const si = subjectIndex === "" ? null : Number(subjectIndex);
@@ -97,6 +102,24 @@ export function DaySubjectsEditorDialog({
 
   const chapters = si !== null ? STATIC_SUBJECTS[si].chapters : [];
   const lessons = si !== null && ci !== null ? chapters[ci].lessons : [];
+
+  const subjectOptions = useMemo(
+    () =>
+      STATIC_SUBJECTS.map((subject, index) => ({
+        value: String(index),
+        label: subject.title,
+      })),
+    [],
+  );
+
+  const chapterOptions = useMemo(
+    () =>
+      chapters.map((chapter, index) => ({
+        value: String(index),
+        label: chapter.title,
+      })),
+    [chapters],
+  );
 
   const summaryItems = useMemo(() => {
     return Array.from(selected).map((key) => {
@@ -161,189 +184,305 @@ export function DaySubjectsEditorDialog({
     onSave(currentDay.id, payload, hasExisting);
   }
 
+  // Helper to get subject name by index
+  const getSubjectName = (index: number | null) => {
+    if (index === null) return "";
+    return STATIC_SUBJECTS[index]?.title || "";
+  };
+
   return (
     <Dialog open={!!day} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-        {/* Header with consistent padding */}
-        <DialogHeader className="px-6 pt-6 pb-2">
-          <DialogTitle className="text-xl font-bold">
-            {formatDayHeading(currentDay.date)}
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            اختر الدروس التي تريد دراستها في هذا اليوم
-          </p>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh]  flex flex-col py-5 rounded-2xl">
+        {/* Enhanced Header with gradient background */}
+        <div className="from-primary/5 via-primary/10 to-transparent px-6 py-5 border-b">
+          <DialogHeader className="p-0">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  {formatDayHeading(currentDay.date)}
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  اختر الدروس التي تريد دراستها في هذا اليوم
+                  {hasExisting && (
+                    <Badge variant="secondary" className="text-xs">
+                      تعديل
+                    </Badge>
+                  )}
+                </p>
+              </div>
+              <Badge 
+                variant="outline" 
+                className="text-xs font-medium bg-primary/5 border-primary/20 px-3 py-1"
+              >
+                {selected.size} درس محدد
+              </Badge>
+            </div>
+          </DialogHeader>
+        </div>
 
-        <Separator />
+        {/* Tabs */}
+        <div className="flex border-b px-6 pt-2">
+          <button
+            onClick={() => setActiveTab("select")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all relative",
+              activeTab === "select"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <BookOpen className="h-4 w-4" />
+            اختيار الدروس
+          </button>
+          <button
+            onClick={() => setActiveTab("summary")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all relative",
+              activeTab === "summary"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <ListChecks className="h-4 w-4" />
+            الدروس المختارة
+            {selected.size > 0 && (
+              <Badge className="ml-1 text-xs bg-primary text-primary-foreground">
+                {selected.size}
+              </Badge>
+            )}
+          </button>
+        </div>
 
         {/* Main content with scroll */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-          {/* Selection section */}
-          <div className="space-y-4">
-            {/* Subject selection */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <BookOpen className="h-4 w-4 text-primary" />
-                المادة
-              </label>
-              <Select
-                value={subjectIndex}
-                onValueChange={(value) => {
-                  setSubjectIndex(value ?? "");
-                  setChapterIndex("");
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="اختر المادة" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATIC_SUBJECTS.map((subject, index) => (
-                    <SelectItem key={subject.title} value={String(index)}>
-                      {subject.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Chapter selection - only when subject is selected */}
-            {si !== null && (
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Layers className="h-4 w-4 text-primary" />
-                  الفصل
-                </label>
-                <Select
-                  value={chapterIndex}
-                  onValueChange={(value) => setChapterIndex(value ?? "")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="اختر الفصل" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {chapters.map((chapter, index) => (
-                      <SelectItem key={chapter.title} value={String(index)}>
-                        {chapter.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Lessons - only when chapter is selected */}
-            {si !== null && ci !== null && (
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <ListChecks className="h-4 w-4 text-primary" />
-                  الدروس
-                </label>
-                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-                  {lessons.map((lesson, li) => (
-                    <label
-                      key={lesson.title}
-                      className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
-                    >
-                      <Checkbox
-                        checked={selected.has(lessonKey(si, ci, li))}
-                        onCheckedChange={() => toggleLesson(si, ci, li)}
-                        className="mt-0.5"
-                      />
-                      <span className="text-sm">{lesson.title}</span>
-                    </label>
-                  ))}
-                  {lessons.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-2">
-                      لا توجد دروس في هذا الفصل
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Selected lessons summary */}
-          {summaryItems.length > 0 && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-foreground">
-                    الدروس المختارة
+        <div className="flex-1  px-6 py-4">
+          {activeTab === "select" ? (
+            <div className="space-y-6">
+              {/* Selection section with improved styling */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Subject selection */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    المادة
                   </label>
-                  <Badge variant="outline" className="text-xs">
-                    {summaryItems.length} درس
-                  </Badge>
+                  <CustomSelect
+                    value={subjectIndex}
+                    onChange={(value) => {
+                      setSubjectIndex(value);
+                      setChapterIndex("");
+                    }}
+                    options={subjectOptions}
+                    placeholder="اختر المادة"
+                  />
                 </div>
-                <ScrollArea className="max-h-48">
-                  <div className="flex flex-wrap gap-2 pr-1 pb-1">
+
+                {/* Chapter selection */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Layers className="h-4 w-4 text-primary" />
+                    الفصل
+                  </label>
+                  <CustomSelect
+                    value={chapterIndex}
+                    onChange={(value) => setChapterIndex(value)}
+                    options={chapterOptions}
+                    placeholder={si !== null ? "اختر الفصل" : "اختر المادة أولاً"}
+                    disabled={si === null}
+                  />
+                </div>
+              </div>
+
+              {/* Lessons - enhanced display */}
+              {si !== null && ci !== null && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <ListChecks className="h-4 w-4 text-primary" />
+                      الدروس
+                      <span className="text-xs text-muted-foreground">
+                        ({lessons.length} درس)
+                      </span>
+                    </label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => {
+                        const allKeys = lessons.map((_, li) => lessonKey(si, ci, li));
+                        const allSelected = allKeys.every(key => selected.has(key));
+                        setSelected(prev => {
+                          const next = new Set(prev);
+                          if (allSelected) {
+                            allKeys.forEach(key => next.delete(key));
+                          } else {
+                            allKeys.forEach(key => next.add(key));
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      {lessons.every((_, li) => selected.has(lessonKey(si, ci, li)))
+                        ? "إلغاء الكل"
+                        : "تحديد الكل"}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 rounded-xl border border-border bg-card p-4">
+                    {lessons.map((lesson, li) => {
+                      const key = lessonKey(si, ci, li);
+                      const isSelected = selected.has(key);
+                      return (
+                        <label
+                          key={lesson.title}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer group",
+                            isSelected
+                              ? "bg-primary/10 border border-primary/30 hover:bg-primary/15"
+                              : "bg-muted/20 border border-transparent hover:bg-muted/30"
+                          )}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleLesson(si, ci, li)}
+                            className="mt-0.5 data-[state=checked]:bg-primary"
+                          />
+                          <span className={cn(
+                            "text-sm flex-1",
+                            isSelected ? "font-medium text-foreground" : "text-muted-foreground"
+                          )}>
+                            {lesson.title}
+                          </span>
+                          {isSelected && (
+                            <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                          )}
+                        </label>
+                      );
+                    })}
+                    {lessons.length === 0 && (
+                      <div className="col-span-full text-center py-6">
+                        <p className="text-sm text-muted-foreground">
+                          لا توجد دروس في هذا الفصل
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state - enhanced */}
+              {si === null && (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="rounded-full bg-muted/30 p-4 mb-4">
+                    <BookOpen className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    اختر مادة من القائمة أعلاه
+                  </p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    ستظهر الدروس المتاحة بعد اختيار المادة والفصل
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            // Summary Tab
+            <div className="space-y-4">
+              {summaryItems.length > 0 ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">الدروس المختارة</h4>
+                    <Badge variant="outline" className="text-xs">
+                      {summaryItems.length} درس
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
                     {summaryItems.map((item) => (
-                      <Badge
+                      <div
                         key={item.key}
-                        variant="secondary"
-                        className="flex items-center gap-1.5 py-1.5 px-3 text-xs max-w-full"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border hover:bg-muted/30 transition-colors group"
                       >
-                        <span className="truncate">
-                          <span className="font-medium">{item.subject}</span>
-                          <span className="text-muted-foreground mx-1">›</span>
-                          <span>{item.chapter}</span>
-                          <span className="text-muted-foreground mx-1">:</span>
-                          <span>{item.lesson}</span>
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="font-medium text-foreground">
+                              {item.subject}
+                            </span>
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            <span className="text-muted-foreground">
+                              {item.chapter}
+                            </span>
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            <span className="text-foreground">
+                              {item.lesson}
+                            </span>
+                          </div>
+                        </div>
                         <button
                           type="button"
                           onClick={() => removeSelection(item.key)}
                           aria-label="إزالة"
-                          className={cn(
-                            "rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive flex-shrink-0",
-                          )}
+                          className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive flex-shrink-0 opacity-0 group-hover:opacity-100"
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-3.5 w-3.5" />
                         </button>
-                      </Badge>
+                      </div>
                     ))}
                   </div>
-                </ScrollArea>
-              </div>
-            </>
-          )}
-
-          {/* Empty state */}
-          {summaryItems.length === 0 && si === null && (
-            <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">
-                اختر المادة والفصل ثم الدروس من الأعلى
-              </p>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="rounded-full bg-muted/30 p-4 mb-4">
+                    <ListChecks className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    لا توجد دروس مختارة
+                  </p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    انتقل إلى تبويب "اختيار الدروس" لإضافة دروس
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         <Separator />
 
-        {/* Footer with consistent padding */}
-        <DialogFooter className="px-6 py-4 flex items-center justify-between sm:justify-between">
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {selected.size} درس محدد
-            </span>
+        {/* Enhanced Footer */}
+        <DialogFooter className="px-6 py-4 flex items-center justify-between sm:justify-between bg-muted/5">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-xs font-bold text-primary">
+                  {selected.size}
+                </span>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                درس {selected.size === 1 ? "محدد" : "محددة"}
+              </span>
+            </div>
             {hasExisting && (
-              <Badge variant="outline" className="text-xs">
+              <Badge 
+                variant="outline" 
+                className="text-xs border-amber-200 bg-amber-50 text-amber-700"
+              >
                 تعديل
               </Badge>
             )}
           </div>
           <div className="flex gap-2">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={onClose}
               disabled={isSaving}
+              className="hover:bg-muted"
             >
               إلغاء
             </Button>
             <Button
               onClick={handleSave}
               disabled={isSaving || selected.size === 0}
-              className="min-w-[100px]"
+              className="min-w-[120px] bg-primary hover:bg-primary/90"
             >
               {isSaving ? (
                 <>
@@ -351,7 +490,10 @@ export function DaySubjectsEditorDialog({
                   جاري الحفظ...
                 </>
               ) : (
-                "حفظ"
+                <>
+                  <Check className="h-4 w-4 ml-2" />
+                  حفظ التغييرات
+                </>
               )}
             </Button>
           </div>

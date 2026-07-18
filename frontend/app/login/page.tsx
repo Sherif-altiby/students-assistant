@@ -8,6 +8,7 @@ import { z } from "zod";
 import { login } from "@/lib/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 import { loginSchema } from "@/validations/auth";
+import { Input } from "@/components/ui/input";
 
 
 
@@ -89,7 +90,7 @@ export default function LoginPage() {
               <label htmlFor="email" className="text-sm font-medium text-foreground">
                 البريد الإلكتروني
               </label>
-              <input
+              <Input
                 id="email"
                 type="email"
                 value={email}
@@ -99,7 +100,7 @@ export default function LoginPage() {
                 }}
                 placeholder="name@example.com"
                 aria-invalid={!!fieldErrors.email}
-                className={`h-11 w-full rounded-[var(--radius-md)] border bg-input/30 px-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:ring-2 ${
+                className={`h-11 w-full rounded-(--radius-md) border bg-input/30 px-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:ring-2 ${
                   fieldErrors.email
                     ? "border-destructive focus:ring-destructive/30"
                     : "border-border focus:border-ring focus:ring-ring/30"
@@ -123,7 +124,7 @@ export default function LoginPage() {
                 </Link>
               </div>
               <div className="relative">
-                <input
+                <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}

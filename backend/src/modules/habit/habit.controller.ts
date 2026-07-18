@@ -71,4 +71,15 @@ export const habitController = {
       data,
     });
   }),
+
+  getProgress: asyncHandler(async (req: Request, res: Response) => {
+    const period = (req.query.period as 'day' | 'week' | 'month') || 'day';
+
+    const progress = await habitService.getProgress(req.user!.id, period);
+
+    res.status(StatusCodes.OK).json({
+      status: 'success',
+      data: progress,
+    });
+  }),
 };

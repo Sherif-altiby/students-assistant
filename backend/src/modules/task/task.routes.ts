@@ -7,6 +7,7 @@ import {
   updateTaskSchema,
   deleteTaskSchema,
   historyQuerySchema,
+  progressQuerySchema,
 } from './task.schema';
 import { authenticate } from '../../middlewares/authenticate';
 import { validate } from '../../middlewares/validate';
@@ -28,5 +29,8 @@ router.post('/:id/complete', taskController.complete);
 router.get('/history', validate(historyQuerySchema), taskController.getHistoryDays);
 router.get('/history/:date', taskController.getHistoryDay);
 router.get('/:id/history', taskController.getTaskHistory);
+
+router.get('/progress', validate(progressQuerySchema), taskController.getProgress);
+
 
 export { router as taskRouter };

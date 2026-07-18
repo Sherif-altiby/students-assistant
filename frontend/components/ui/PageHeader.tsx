@@ -18,7 +18,7 @@ export function PageHeader({ title, description, action, className }: PageHeader
     >
       {/* النصوص والوصف */}
       <div className="space-y-1.5 text-right flex-1 min-w-0">
-        <h1 className="text-2xl font-black tracking-tight text-neutral-950 sm:text-3xl transition-all duration-200">
+        <h1 className="text-2xl font-black tracking-tight text-primary sm:text-3xl transition-all duration-200">
           {title}
         </h1>
         {description && (
