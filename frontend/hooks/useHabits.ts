@@ -8,6 +8,7 @@ import {
   deleteHabit,
   getHabitHistory,
   getHabitProgress,
+  getHabitStats,
   updateHabit,
 } from "@/lib/habits";
 import type { HabitProgressPeriod } from "@/lib/habits";
@@ -59,14 +60,23 @@ export function useHabits() {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["habit-history"] });
 
+  const invalidateStats = () =>
+    queryClient.invalidateQueries({ queryKey: ["habits", "stats"] });
+
   const createMutation = useMutation({
     mutationFn: createHabit,
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      invalidateStats();
+    },
   });
 
   const completeMutation = useMutation({
     mutationFn: completeHabit,
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      invalidateStats();
+    },
   });
 
   const updateMutation = useMutation({
@@ -77,7 +87,10 @@ export function useHabits() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteHabit,
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      invalidateStats();
+    },
   });
 
   const error =
@@ -114,5 +127,20 @@ export function useHabits() {
     historyPage,
     setHistoryPage,
     isHistoryFetching: historyQuery.isFetching,
+  };
+}
+
+export function useHabitStats() {
+  const query = useQuery({
+    queryKey: ["habits", "stats"],
+    queryFn: getHabitStats,
+    staleTime: 30_000,
+  });
+
+  return {
+    stats: query.data ?? null,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isError: query.isError,
   };
 }

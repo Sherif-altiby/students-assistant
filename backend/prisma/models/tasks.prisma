@@ -1,0 +1,37 @@
+model Task {
+    id        String        @id @default(uuid())
+    title     String
+    frequency TaskFrequency @default(TODAY)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    histories TaskHistory[]
+
+    @@index([userId])
+    @@map("tasks")
+}
+
+model TaskHistory {
+    id     String @id @default(cuid())
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    taskId String
+    task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+    date        DateTime @db.Date
+    completedAt DateTime @default(now())
+
+    taskTitle     String
+    taskFrequency TaskFrequency
+
+    @@unique([taskId, date])
+    @@index([userId])
+    @@index([taskId])
+    @@index([date])
+    @@map("task_histories")
+}

@@ -60,11 +60,7 @@ export async function getTaskHistory(params: {
   return res.data.data;
 }
 
-/**
- * The endpoint 404s (or returns nothing meaningful) for a day with no
- * completions yet — that's a normal "no history" case, not a real error,
- * so it resolves to `null` instead of throwing.
- */
+ 
 export async function getTaskHistoryByDate(dateKey: string): Promise<TaskHistoryDay | null> {
   try {
     const res = await api.get<HistoryDayResponse>(`/task/history/${dateKey}`);
@@ -95,15 +91,15 @@ export type TaskProgressPeriod = "day" | "week" | "month";
 
 export interface TaskProgressPoint {
   period: string;
-  everyDayCompleted: number;
-  todayCompleted: number;
+  completed: number;
+  total: number;
+  completionRate: number;
 }
 
 export interface TaskProgressResponse {
   period: TaskProgressPeriod;
   data: TaskProgressPoint[];
 }
-
 interface ProgressApiResponse {
   status: "success";
   data: TaskProgressResponse;
@@ -113,5 +109,25 @@ export async function getTaskProgress(
   period: TaskProgressPeriod = "day",
 ): Promise<TaskProgressResponse> {
   const res = await api.get<ProgressApiResponse>("/task/progress", { params: { period } });
+  return res.data.data;
+}
+
+// ---- Stats ----
+
+export interface TaskStats {
+  total: number;
+  completed: number;
+  notCompleted: number;
+  completionRate: number;
+  longestStreak: number;
+}
+
+interface StatsApiResponse {
+  status: "success";
+  data: TaskStats;
+}
+
+export async function getTaskStats(): Promise<TaskStats> {
+  const res = await api.get<StatsApiResponse>("/task/stats");
   return res.data.data;
 }

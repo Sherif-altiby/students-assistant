@@ -1,0 +1,33 @@
+// prisma/models/study-lesson.prisma
+model StudyLesson {
+  id String @id @default(uuid())
+
+  title String
+
+  chapterId String       @map("chapter_id")
+  chapter   StudyChapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  completions StudyLessonCompletion[]
+
+  createdAt DateTime @default(now())
+
+  @@index([chapterId])
+  @@map("study_lessons")
+}
+
+model StudyLessonCompletion {
+  id String @id @default(uuid())
+
+  completedAt DateTime @default(now())
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lessonId String      @map("lesson_id")
+  lesson   StudyLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@map("study_lesson_completions")
+}

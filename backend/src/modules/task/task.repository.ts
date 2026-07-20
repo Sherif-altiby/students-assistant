@@ -207,15 +207,21 @@ export const taskRepository = {
   },
 
   getHistoryDayWithTasks(userId: string, date: Date) {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Create date objects in local timezone
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+
+    // Start of day in local timezone
+    const startOfDay = new Date(year, month, day, 0, 0, 0, 0);
+
+    // End of day in local timezone
+    const endOfDay = new Date(year, month, day, 23, 59, 59, 999);
 
     return prisma.taskHistory.findMany({
       where: {
         userId,
-        date: {
+        completedAt: {
           gte: startOfDay,
           lte: endOfDay,
         },
@@ -247,6 +253,15 @@ export const taskRepository = {
         date: true,
         taskFrequency: true,
       },
+      orderBy: { date: 'asc' },
+    });
+  },
+
+  getDistinctHistoryDates(userId: string) {
+    return prisma.taskHistory.findMany({
+      where: { userId },
+      select: { date: true },
+      distinct: ['date'],
       orderBy: { date: 'asc' },
     });
   },

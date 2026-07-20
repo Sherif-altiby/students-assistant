@@ -23,6 +23,35 @@ const formatDateTime = (date: Date): string => {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
+// Given a sorted (ascending), deduplicated list of completion dates, find the
+// longest run of consecutive calendar days.
+const calculateLongestStreak = (dates: Date[]): number => {
+  if (dates.length === 0) return 0;
+
+  let longest = 1;
+  let current = 1;
+
+  for (let i = 1; i < dates.length; i++) {
+    const prev = dates[i - 1] as Date;
+    const curr = dates[i] as Date;
+
+    const diffInDays = Math.round((curr.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000));
+
+    if (diffInDays === 1) {
+      current += 1;
+    } else if (diffInDays > 1) {
+      current = 1;
+    }
+    // diffInDays === 0 shouldn't happen since dates are distinct
+
+    if (current > longest) {
+      longest = current;
+    }
+  }
+
+  return longest;
+};
+
 // Helper to get today's date in UTC
 const getTodayUTC = (): Date => {
   const now = new Date();
@@ -32,10 +61,12 @@ const getTodayUTC = (): Date => {
 
 type ProgressPeriod = 'day' | 'week' | 'month';
 
+// In your types file
 interface ProgressPoint {
   period: string;
-  everyDayCompleted: number;
-  todayCompleted: number;
+  completed: number;
+  total?: number;
+  completionRate?: number;
 }
 
 const getPeriodKey = (date: Date, period: ProgressPeriod): string => {
@@ -260,33 +291,88 @@ export const taskService = {
 
     const history = await taskRepository.getProgressHistory(userId, startDate);
 
-    const buckets = new Map<string, { everyDayCompleted: number; todayCompleted: number }>();
+    // Get all tasks to know what should have been completed
+    const allTasks = await taskRepository.findByUserId(userId);
+    const taskFrequencyMap = new Map<string, string>();
+    allTasks.forEach((task) => {
+      taskFrequencyMap.set(task.id, task.frequency);
+    });
+
+    const buckets = new Map<string, { completed: number; total: number; completionRate: number }>();
 
     for (const key of buildEmptyBuckets(startDate, endDate, period)) {
-      buckets.set(key, { everyDayCompleted: 0, todayCompleted: 0 });
+      // Calculate how many tasks should be completed on this date
+      const tasksForDate = allTasks.filter((task) => {
+        if (task.frequency === 'TODAY') {
+          // TODAY tasks should only be completed on the day they were created
+          const taskDate = new Date(task.createdAt);
+          const keyDate = new Date(key);
+          return (
+            taskDate.getFullYear() === keyDate.getFullYear() &&
+            taskDate.getMonth() === keyDate.getMonth() &&
+            taskDate.getDate() === keyDate.getDate()
+          );
+        } else if (task.frequency === 'EVERY_DAY') {
+          // EVERY_DAY tasks should be completed every day
+          return true;
+        }
+        return false;
+      });
+
+      buckets.set(key, {
+        completed: 0,
+        total: tasksForDate.length,
+        completionRate: 0,
+      });
     }
 
+    // Count completed tasks
     for (const entry of history) {
       const key = getPeriodKey(entry.date, period);
-      const bucket = buckets.get(key) ?? { everyDayCompleted: 0, todayCompleted: 0 };
-
-      if (entry.taskFrequency === 'EVERY_DAY') {
-        bucket.everyDayCompleted += 1;
-      } else {
-        bucket.todayCompleted += 1;
+      const bucket = buckets.get(key);
+      if (bucket) {
+        bucket.completed += 1;
+        // Recalculate completion rate
+        bucket.completionRate =
+          bucket.total > 0 ? Math.round((bucket.completed / bucket.total) * 100) : 0;
+        buckets.set(key, bucket);
       }
-
-      buckets.set(key, bucket);
     }
 
     const data: ProgressPoint[] = Array.from(buckets.entries())
       .sort(([a], [b]) => (a < b ? -1 : 1))
       .map(([periodKey, counts]) => ({
         period: periodKey,
-        everyDayCompleted: counts.everyDayCompleted,
-        todayCompleted: counts.todayCompleted,
+        completed: counts.completed,
+        total: counts.total,
+        completionRate: counts.completionRate,
       }));
 
     return { period, data };
+  },
+
+  async getStats(userId: string) {
+    // "Your tasks today": every EVERY_DAY task plus any TODAY task created today
+    const activeTasks = await taskRepository.findByUserId(userId);
+    const total = activeTasks.length;
+
+    const today = getTodayUTC();
+    const todaysHistory = await taskRepository.getHistoryByDate(userId, today);
+    const completedTaskIds = new Set(todaysHistory.map((h) => h.taskId));
+
+    const completed = activeTasks.filter((t) => completedTaskIds.has(t.id)).length;
+    const notCompleted = total - completed;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    const historyDates = await taskRepository.getDistinctHistoryDates(userId);
+    const longestStreak = calculateLongestStreak(historyDates.map((h) => h.date));
+
+    return {
+      total,
+      completed,
+      notCompleted,
+      completionRate,
+      longestStreak,
+    };
   },
 };

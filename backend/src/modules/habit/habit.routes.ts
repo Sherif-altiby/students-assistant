@@ -17,7 +17,7 @@ router.patch('/:id', validate(updateHabitSchema), habitController.update);
 router.delete('/:id', validate(deleteHabitSchema), habitController.delete);
 router.post('/:id/complete', habitController.complete);
 router.get('/progress', validate(habitProgressQuerySchema), habitController.getProgress);
-
+router.get('/stats', habitController.getStats);
 
 export { router as habitRouter };
 

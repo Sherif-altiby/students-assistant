@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MessageCircleQuestion } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { QuotaCard } from "@/components/QuotaCard";
 import {

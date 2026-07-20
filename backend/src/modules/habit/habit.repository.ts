@@ -170,16 +170,18 @@ export const habitRepository = {
       };
     }
 
-    // Build date filter
+    // Build date filter with proper timezone handling
     let dateFilter: any = {};
     if (startDate) {
       const start = new Date(startDate);
-      start.setUTCHours(0, 0, 0, 0);
+      // Set to start of day in local timezone
+      start.setHours(0, 0, 0, 0);
       dateFilter.gte = start;
     }
     if (endDate) {
       const end = new Date(endDate);
-      end.setUTCHours(23, 59, 59, 999);
+      // Set to end of day in local timezone
+      end.setHours(23, 59, 59, 999);
       dateFilter.lte = end;
     }
 
@@ -220,17 +222,22 @@ export const habitRepository = {
         select: {
           habitId: true,
           date: true,
+          completedAt: true, // Include the original timestamp
         },
         orderBy: { date: 'desc' },
       });
     }
 
-    // Group completions by date
+    // Group completions by date (using the date field directly)
     const completionMap = new Map<string, Set<string>>();
-    for (const comp of completions) {
-      const date = new Date(comp.date);
-      const dateKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+    const dateKeys = new Set<string>();
 
+    for (const comp of completions) {
+      // Use the date field as is (it should be stored as a date without time)
+      const dateObj = new Date(comp.date);
+      const dateKey = `${dateObj.getUTCFullYear()}-${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dateObj.getUTCDate()).padStart(2, '0')}`;
+
+      dateKeys.add(dateKey);
       if (!completionMap.has(dateKey)) {
         completionMap.set(dateKey, new Set());
       }
@@ -256,12 +263,10 @@ export const habitRepository = {
 
     // Get date range for the response
     const firstHabitDate = new Date(firstHabit.createdAt);
-    firstHabitDate.setUTCHours(0, 0, 0, 0);
+    firstHabitDate.setHours(0, 0, 0, 0);
 
     const today = new Date();
-    const todayUTC = new Date(
-      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
-    );
+    const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
     return {
       habits: habits.map((h) => ({ id: h.id, title: h.title })),
@@ -275,12 +280,12 @@ export const habitRepository = {
         hasPrevPage,
         dateRange: {
           start: firstHabitDate.toISOString().split('T')[0],
-          end: todayUTC.toISOString().split('T')[0],
+          end: todayLocal.toISOString().split('T')[0],
         },
       },
     };
   },
-  
+
   findFirstHabitDate(userId: string) {
     return prisma.habit.findFirst({
       where: { userId },
@@ -298,6 +303,15 @@ export const habitRepository = {
       select: {
         date: true,
       },
+    });
+  },
+
+  getDistinctCompletionDates(userId: string) {
+    return prisma.completedHabit.findMany({
+      where: { userId },
+      select: { date: true },
+      distinct: ['date'],
+      orderBy: { date: 'asc' },
     });
   },
 };

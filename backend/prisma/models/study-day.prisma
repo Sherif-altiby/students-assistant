@@ -1,0 +1,17 @@
+// prisma/models/study-day.prisma
+model StudyDay {
+  id String @id @default(uuid())
+
+  date DateTime @db.Date
+
+  studyTableId String     @map("study_table_id")
+  studyTable   StudyTable @relation(fields: [studyTableId], references: [id], onDelete: Cascade)
+
+  subjects StudySubject[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([studyTableId, date])
+  @@index([studyTableId])
+  @@map("study_days")
+}

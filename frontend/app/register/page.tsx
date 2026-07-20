@@ -11,9 +11,23 @@ import { registerSchema } from "@/validations/auth";
 import { ARAB_COUNTRIES } from "@/data/auth";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 
-
-
 type RegisterFormErrors = Partial<Record<keyof RegisterPayload, string>>;
+
+// Track options depend on the selected level.
+const TRACK_OPTIONS_BY_LEVEL: Record<
+  RegisterPayload["level"],
+  { value: RegisterPayload["track"]; label: string }[]
+> = {
+  AZHARI_SECONDARY: [
+    { value: "LITERATURE", label: "أدبي" },
+    { value: "SCIENCE", label: "علمي" },
+  ],
+  GENERAL_SECONDARY: [
+    { value: "SCIENCE_MATH", label: "علمي رياضة" },
+    { value: "SCIENCE_SCIENCE", label: "علمي علوم" },
+    { value: "LITERATURE", label: "أدبي" },
+  ],
+};
 
 const initialForm: RegisterPayload = {
   name: "",
@@ -22,7 +36,7 @@ const initialForm: RegisterPayload = {
   phone: "",
   gender: "MALE",
   level: "AZHARI_SECONDARY",
-  track: "SCIENCE",
+  track: TRACK_OPTIONS_BY_LEVEL.AZHARI_SECONDARY[0].value,
   parentPhone: "",
   country: "egypt",
 };
@@ -42,12 +56,29 @@ export default function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const trackOptions = TRACK_OPTIONS_BY_LEVEL[form.level];
+
   function update<K extends keyof RegisterPayload>(key: K, value: RegisterPayload[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+
+      // When the level changes, the previous track may no longer be valid
+      // for the new level — fall back to that level's first option.
+      if (key === "level") {
+        const validTracks = TRACK_OPTIONS_BY_LEVEL[value as RegisterPayload["level"]];
+        if (!validTracks.some((t) => t.value === prev.track)) {
+          next.track = validTracks[0].value;
+        }
+      }
+
+      return next;
+    });
+
     setFieldErrors((prev) => {
       if (!prev[key]) return prev;
       const next = { ...prev };
       delete next[key];
+      if (key === "level") delete next.track;
       return next;
     });
   }
@@ -252,11 +283,7 @@ export default function RegisterPage() {
                   value={form.track}
                   onChange={(v) => update("track", v as RegisterPayload["track"])}
                   hasError={!!fieldErrors.track}
-                  options={[
-                    { value: "SCIENCE", label: "علمي" },
-                    { value: "LITERATURE", label: "أدبي" },
-                    { value: "MATH", label: "رياضة" },
-                  ]}
+                  options={trackOptions}
                 />
                 {fieldErrors.track && (
                   <p className="text-xs text-destructive">{fieldErrors.track}</p>

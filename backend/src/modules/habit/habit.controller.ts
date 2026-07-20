@@ -82,4 +82,13 @@ export const habitController = {
       data: progress,
     });
   }),
+
+  getStats: asyncHandler(async (req: Request, res: Response) => {
+    const stats = await habitService.getStats(req.user!.id);
+
+    res.status(StatusCodes.OK).json({
+      status: 'success',
+      data: stats,
+    });
+  }),
 };

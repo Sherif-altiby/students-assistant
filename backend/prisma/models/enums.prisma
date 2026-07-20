@@ -1,0 +1,26 @@
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum EducationLevel {
+  GENERAL_SECONDARY // ثانوية عامة
+  AZHARI_SECONDARY  // ثانوية أزهرية
+}
+
+enum Track {
+  SCIENCE_MATH     // علمي رياضة (عامة فقط)
+  SCIENCE_SCIENCE  // علمي علوم (عامة فقط)
+  SCIENCE          // علمي (أزهرية فقط)
+  LITERARY         // أدبي (عامة وأزهرية)
+}
+
+enum StudyTableType {
+  DATE_RANGE
+  NUMBER_OF_DAYS
+}
+
+enum TaskFrequency {
+  TODAY
+  EVERY_DAY
+}

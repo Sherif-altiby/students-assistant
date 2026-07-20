@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   completeTask,
   createTask,
@@ -11,6 +16,7 @@ import {
   listTasks,
   updateTask,
   listTaskHistory,
+  getTaskStats,
 } from "@/lib/tasks";
 import type { CreateTaskPayload, Task, UpdateTaskPayload } from "@/types/task";
 import type { TaskProgressPeriod } from "@/lib/tasks";
@@ -83,7 +89,11 @@ export function useTasks() {
     [tasksQuery.data, completedTodayIds],
   );
 
-  const invalidateTasks = () => queryClient.invalidateQueries({ queryKey: TASKS_KEY });
+  const invalidateTasks = () =>
+    queryClient.invalidateQueries({ queryKey: TASKS_KEY });
+  const invalidateStats = () =>
+    queryClient.invalidateQueries({ queryKey: ["tasks", "stats"] });
+
   const invalidateTodayHistory = () =>
     queryClient.invalidateQueries({ queryKey: ["tasks", "history", "day"] });
 
@@ -103,13 +113,19 @@ export function useTasks() {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: TASKS_KEY });
       const previous = queryClient.getQueryData<Task[]>(TASKS_KEY);
-      queryClient.setQueryData<Task[]>(TASKS_KEY, (old) => old?.filter((t) => t.id !== id));
+      queryClient.setQueryData<Task[]>(TASKS_KEY, (old) =>
+        old?.filter((t) => t.id !== id),
+      );
       return { previous };
     },
     onError: (_err, _id, context) => {
-      if (context?.previous) queryClient.setQueryData(TASKS_KEY, context.previous);
+      if (context?.previous)
+        queryClient.setQueryData(TASKS_KEY, context.previous);
     },
-    onSettled: invalidateTasks,
+    onSettled: () => {
+      invalidateTasks();
+      invalidateStats();
+    },
   });
 
   const completeMutation = useMutation({
@@ -117,6 +133,7 @@ export function useTasks() {
     onSuccess: () => {
       invalidateTasks();
       invalidateTodayHistory();
+      invalidateStats();
     },
   });
 
@@ -142,12 +159,33 @@ export function useTasks() {
 
     updateFrequency: (id: string, frequency: UpdateTaskPayload["frequency"]) =>
       updateMutation.mutate({ id, payload: { frequency } }),
-    updatingTaskId: updateMutation.isPending ? updateMutation.variables?.id ?? null : null,
+    updatingTaskId: updateMutation.isPending
+      ? (updateMutation.variables?.id ?? null)
+      : null,
 
     deleteTask: deleteMutation.mutate,
-    deletingTaskId: deleteMutation.isPending ? deleteMutation.variables ?? null : null,
+    deletingTaskId: deleteMutation.isPending
+      ? (deleteMutation.variables ?? null)
+      : null,
 
     completeTask: completeMutation.mutate,
-    completingTaskId: completeMutation.isPending ? completeMutation.variables ?? null : null,
+    completingTaskId: completeMutation.isPending
+      ? (completeMutation.variables ?? null)
+      : null,
+  };
+}
+
+export function useTaskStats() {
+  const query = useQuery({
+    queryKey: ["tasks", "stats"],
+    queryFn: getTaskStats,
+    staleTime: 30_000,
+  });
+
+  return {
+    stats: query.data ?? null,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isError: query.isError,
   };
 }

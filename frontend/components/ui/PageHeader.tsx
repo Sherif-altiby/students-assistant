@@ -12,7 +12,7 @@ export function PageHeader({ title, description, action, className }: PageHeader
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 border-b border-neutral-100 pb-6 sm:flex-row-reverse sm:items-center sm:justify-between",
+        "flex flex-col gap-4  border-neutral-100 pb-6 sm:flex-row-reverse sm:items-center sm:justify-between",
         className
       )}
     >

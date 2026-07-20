@@ -9,6 +9,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup, // Add this import
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -34,7 +35,7 @@ export function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-full p-1 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50">
+      <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-md p-1 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50">
         <Avatar className="h-8 w-8">
           <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
             {initial}
@@ -44,15 +45,21 @@ export function UserMenu() {
           <p className="max-w-[10rem] truncate text-sm font-semibold leading-tight text-foreground">
             {user.name}
           </p>
-          <p className="max-w-[10rem] truncate text-xs text-muted-foreground">{user.email}</p>
+          <p className="max-w-[10rem] truncate text-xs text-muted-foreground">
+            {user.email}
+          </p>
         </div>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="font-normal">
-          <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
-          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-        </DropdownMenuLabel>
+        <DropdownMenuGroup> {/* Wrap label in group */}
+          <DropdownMenuLabel className="font-normal">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {user.name}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
           <User className="h-4 w-4" />

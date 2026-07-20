@@ -80,3 +80,23 @@ export async function getHabitProgress(
   });
   return res.data.data;
 }
+
+
+export interface HabitStats {
+  habits: { id: string; title: string }[];
+  total: number;
+  completed: number;
+  notCompleted: number;
+  completionRate: number;
+  longestStreak: number;
+}
+
+interface HabitStatsApiResponse {
+  status: "success";
+  data: HabitStats;
+}
+
+export async function getHabitStats(): Promise<HabitStats> {
+  const res = await api.get<HabitStatsApiResponse>("/habit/stats");
+  return res.data.data;
+}

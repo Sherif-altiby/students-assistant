@@ -1,0 +1,32 @@
+// prisma/models/study-subject.prisma
+model StudySubject {
+  id String @id @default(uuid())
+
+  title String
+
+  dayId String   @map("day_id")
+  day   StudyDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  chapters StudyChapter[]
+
+  createdAt DateTime @default(now())
+
+  @@index([dayId])
+  @@map("study_subjects")
+}
+
+model StudyChapter {
+  id String @id @default(uuid())
+
+  title String
+
+  subjectId String       @map("subject_id")
+  subject   StudySubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  lessons StudyLesson[]
+
+  createdAt DateTime @default(now())
+
+  @@index([subjectId])
+  @@map("study_chapters")
+}

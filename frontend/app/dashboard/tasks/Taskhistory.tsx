@@ -110,16 +110,16 @@ export function TaskHistory() {
                   </div>
                 </AccordionTrigger>
 
-                <AccordionContent className="pb-0">
+                <AccordionContent dir="rtl" className="pb-0">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/20 hover:bg-muted/20">
                         <TableHead className="text-right text-xs font-medium">
                           العنوان
                         </TableHead>
-                        <TableHead className="text-right text-xs font-medium">
+                        {/* <TableHead className="text-right text-xs font-medium">
                           التكرار
-                        </TableHead>
+                        </TableHead> */}
                         <TableHead className="text-right text-xs font-medium">
                           وقت الإنجاز
                         </TableHead>
@@ -131,11 +131,7 @@ export function TaskHistory() {
                           <TableCell className="py-3 text-sm font-medium text-foreground">
                             {task.completedTitle}
                           </TableCell>
-                          <TableCell className="py-3 text-sm text-muted-foreground">
-                            <Badge variant="outline" className="text-xs">
-                              {FREQUENCY_LABEL[task.completedFrequency]}
-                            </Badge>
-                          </TableCell>
+                          
                           <TableCell className="py-3 text-sm text-muted-foreground">
                             {formatTime(task.completedAt)}
                           </TableCell>

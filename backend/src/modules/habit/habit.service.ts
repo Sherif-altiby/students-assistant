@@ -59,6 +59,34 @@ const buildEmptyBuckets = (startDate: Date, endDate: Date, period: ProgressPerio
   return keys;
 };
 
+// Given a sorted (ascending), deduplicated list of completion dates, find the
+// longest run of consecutive calendar days.
+const calculateLongestStreak = (dates: Date[]): number => {
+  if (dates.length === 0) return 0;
+
+  let longest = 1;
+  let current = 1;
+
+  for (let i = 1; i < dates.length; i++) {
+    const prev = dates[i - 1] as Date;
+    const curr = dates[i] as Date;
+
+    const diffInDays = Math.round((curr.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000));
+
+    if (diffInDays === 1) {
+      current += 1;
+    } else if (diffInDays > 1) {
+      current = 1;
+    }
+
+    if (current > longest) {
+      longest = current;
+    }
+  }
+
+  return longest;
+};
+
 export const habitService = {
   async create(userId: string, input: CreateHabitInput) {
     return habitRepository.create({
@@ -192,5 +220,30 @@ export const habitService = {
       .map(([periodKey, completedCount]) => ({ period: periodKey, completedCount }));
 
     return { period, data };
+  },
+
+  async getStats(userId: string) {
+    const habits = await habitRepository.findByUserId(userId);
+    const total = habits.length;
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const todaysCompletions = await habitRepository.getCompletionsForDate(userId, today);
+    const completed = todaysCompletions.length;
+    const notCompleted = total - completed;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    const completionDates = await habitRepository.getDistinctCompletionDates(userId);
+    const longestStreak = calculateLongestStreak(completionDates.map((c) => c.date));
+
+    return {
+      habits: habits.map((h) => ({ id: h.id, title: h.title })),
+      total,
+      completed,
+      notCompleted,
+      completionRate,
+      longestStreak,
+    };
   },
 };

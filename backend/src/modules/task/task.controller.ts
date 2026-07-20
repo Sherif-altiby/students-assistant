@@ -99,4 +99,13 @@ export const taskController = {
       data: progress,
     });
   }),
+
+  getStats: asyncHandler(async (req: Request, res: Response) => {
+    const stats = await taskService.getStats(req.user!.id);
+
+    res.status(StatusCodes.OK).json({
+      status: 'success',
+      data: stats,
+    });
+  }),
 };

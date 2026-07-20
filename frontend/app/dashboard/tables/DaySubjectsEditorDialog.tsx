@@ -30,8 +30,9 @@ import type {
   StudyTableDayDetailed,
   UpdateDaySubjectsPayload,
 } from "@/types/study-table";
-import { STATIC_SUBJECTS } from "@/data/subjects-data";
-import { formatDayHeading } from "@/data/date";
+import { STATIC_SUBJECTS, Track } from "@/data/subjects-data";
+ import { formatDayHeading } from "@/data/date";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface DaySubjectsEditorDialogProps {
   day: StudyTableDayDetailed | null;
@@ -54,20 +55,23 @@ function parseLessonKey(key: string) {
   return { si, ci, li };
 }
 
-function buildInitialSelection(day: StudyTableDayDetailed | null): Set<string> {
+function buildInitialSelection(
+  day: StudyTableDayDetailed | null,
+  filteredSubjects: typeof STATIC_SUBJECTS
+): Set<string> {
   const selected = new Set<string>();
   if (!day) return selected;
 
   day.subjects.forEach((subject) => {
-    const si = STATIC_SUBJECTS.findIndex((s) => s.title === subject.title);
+    const si = filteredSubjects.findIndex((s) => s.title === subject.title);
     if (si === -1) return;
     subject.chapters.forEach((chapter) => {
-      const ci = STATIC_SUBJECTS[si].chapters.findIndex(
+      const ci = filteredSubjects[si].chapters.findIndex(
         (c) => c.title === chapter.title,
       );
       if (ci === -1) return;
       chapter.lessons.forEach((lesson) => {
-        const li = STATIC_SUBJECTS[si].chapters[ci].lessons.findIndex(
+        const li = filteredSubjects[si].chapters[ci].lessons.findIndex(
           (l) => l.title === lesson.title,
         );
         if (li === -1) return;
@@ -85,31 +89,42 @@ export function DaySubjectsEditorDialog({
   onSave,
   isSaving,
 }: DaySubjectsEditorDialogProps) {
+  const user = useAuthStore((s) => s.user);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [subjectIndex, setSubjectIndex] = useState<string>("");
   const [chapterIndex, setChapterIndex] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"select" | "summary">("select");
 
+  // Filter subjects based on user's track
+  const filteredSubjects = useMemo(() => {
+    if (!user?.track) return STATIC_SUBJECTS;
+    
+    return STATIC_SUBJECTS.filter((subject) =>
+      subject.tracks.includes(user.track as Track)
+    );
+  }, [user?.track]);
+
+  // Reset selections when day changes or filtered subjects change
   useEffect(() => {
-    setSelected(buildInitialSelection(day));
+    setSelected(buildInitialSelection(day, filteredSubjects));
     setSubjectIndex("");
     setChapterIndex("");
     setActiveTab("select");
-  }, [day]);
+  }, [day, filteredSubjects]);
 
   const si = subjectIndex === "" ? null : Number(subjectIndex);
   const ci = chapterIndex === "" ? null : Number(chapterIndex);
 
-  const chapters = si !== null ? STATIC_SUBJECTS[si].chapters : [];
-  const lessons = si !== null && ci !== null ? chapters[ci].lessons : [];
+  const chapters = si !== null ? filteredSubjects[si]?.chapters ?? [] : [];
+  const lessons = si !== null && ci !== null ? chapters[ci]?.lessons ?? [] : [];
 
   const subjectOptions = useMemo(
     () =>
-      STATIC_SUBJECTS.map((subject, index) => ({
+      filteredSubjects.map((subject, index) => ({
         value: String(index),
         label: subject.title,
       })),
-    [],
+    [filteredSubjects],
   );
 
   const chapterOptions = useMemo(
@@ -124,22 +139,46 @@ export function DaySubjectsEditorDialog({
   const summaryItems = useMemo(() => {
     return Array.from(selected).map((key) => {
       const { si, ci, li } = parseLessonKey(key);
-      const subject = STATIC_SUBJECTS[si];
+      const subject = filteredSubjects[si];
+      if (!subject) return null;
       const chapter = subject.chapters[ci];
+      if (!chapter) return null;
       const lesson = chapter.lessons[li];
+      if (!lesson) return null;
       return {
         key,
         subject: subject.title,
         chapter: chapter.title,
         lesson: lesson.title,
       };
-    });
-  }, [selected]);
+    }).filter((item): item is NonNullable<typeof item> => item !== null);
+  }, [selected, filteredSubjects]);
 
   if (!day) return null;
 
   const currentDay = day;
   const hasExisting = currentDay.subjects.length > 0;
+
+  // Show fallback if no subjects available for this track
+  if (filteredSubjects.length === 0) {
+    return (
+      <Dialog open={!!day} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>لا توجد مواد متاحة</DialogTitle>
+          </DialogHeader>
+          <div className="py-8 text-center">
+            <p className="text-muted-foreground">
+              لا توجد مواد متاحة لمسارك الدراسي الحالي
+            </p>
+            <Button onClick={onClose} className="mt-4">
+              إغلاق
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   function toggleLesson(lessonSi: number, lessonCi: number, lessonLi: number) {
     const key = lessonKey(lessonSi, lessonCi, lessonLi);
@@ -161,11 +200,11 @@ export function DaySubjectsEditorDialog({
   function handleSave() {
     const payload: UpdateDaySubjectsPayload = { subjects: [] };
 
-    STATIC_SUBJECTS.forEach((subject, subjIdx) => {
+    filteredSubjects.forEach((subject, subjIdx) => {
       const chaptersToSend = subject.chapters
         .map((chapter, chapIdx) => {
           const lessonsToSend = chapter.lessons.filter((_, lessonIdx) =>
-            selected.has(lessonKey(subjIdx, chapIdx, lessonIdx)),
+            selected.has(lessonKey(subjIdx, chapIdx, lessonIdx))
           );
           return lessonsToSend.length > 0
             ? { title: chapter.title, lessons: lessonsToSend }
@@ -187,12 +226,12 @@ export function DaySubjectsEditorDialog({
   // Helper to get subject name by index
   const getSubjectName = (index: number | null) => {
     if (index === null) return "";
-    return STATIC_SUBJECTS[index]?.title || "";
+    return filteredSubjects[index]?.title || "";
   };
 
   return (
     <Dialog open={!!day} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh]  flex flex-col py-5 rounded-2xl">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col py-5 rounded-2xl">
         {/* Enhanced Header with gradient background */}
         <div className="from-primary/5 via-primary/10 to-transparent px-6 py-5 border-b">
           <DialogHeader className="p-0">
@@ -256,7 +295,7 @@ export function DaySubjectsEditorDialog({
         </div>
 
         {/* Main content with scroll */}
-        <div className="flex-1  px-6 py-4">
+        <div className="flex-1 px-6 py-4">
           {activeTab === "select" ? (
             <div className="space-y-6">
               {/* Selection section with improved styling */}

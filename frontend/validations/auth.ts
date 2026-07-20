@@ -27,7 +27,7 @@ export const registerSchema = z.object({
   level: z.enum(["AZHARI_SECONDARY", "GENERAL_SECONDARY"], {
     message: "اختر المرحلة الدراسية",
   }),
-  track: z.enum(["SCIENCE", "LITERATURE", "MATH"], { message: "اختر الشعبة" }),
+  track: z.enum(["SCIENCE", "LITERATURE", "SCIENCE_SCIENCE", "SCIENCE_MATH"], { message: "اختر الشعبة" }),
   country: z.string().min(1, "الدولة مطلوبة"),
 });
 

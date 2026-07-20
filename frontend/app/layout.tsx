@@ -6,13 +6,12 @@ import { Playpen_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { QueryProvider } from "@/components/QueryClientProvider";
-import { ThemeInitializer } from "@/components/ThemeInitializer";
 
 const elMessiri = El_Messiri({
   subsets: ["arabic", "latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-el-messiri",
-});
+}); 
 
 const changa = Changa({
   subsets: ["arabic"],
@@ -32,14 +31,11 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={changa.className}> 
       <body>
-        <ThemeInitializer>
           <QueryProvider>
             <AuthProvider>
-              
                {children}
             </AuthProvider>
           </QueryProvider>
-        </ThemeInitializer>
       </body>
     </html>
   );

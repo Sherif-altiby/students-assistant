@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { useHabitProgress } from "@/hooks/useHabits";
 import type { HabitProgressPeriod } from "@/lib/habits";
-import { Calendar, TrendingUp, Award, Loader2 } from "lucide-react";
+import { Calendar, TrendingUp, Award, Loader2, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -45,14 +45,102 @@ function formatPeriodLabel(
   });
 }
 
-// Calculate gradient color based on value
+// Map a value's share of the max onto the theme's chart palette (no gradients).
 const getBarColor = (value: number, max: number) => {
   const ratio = max > 0 ? value / max : 0;
-  if (ratio >= 0.8) return "#34d399"; // emerald
-  if (ratio >= 0.5) return "#60a5fa"; // blue
-  if (ratio >= 0.3) return "#a78bfa"; // purple
-  return "#f472b6"; // pink
+  if (ratio >= 0.8) return "var(--chart-2)";
+  if (ratio >= 0.5) return "var(--chart-1)";
+  if (ratio >= 0.3) return "var(--chart-4)";
+  return "var(--chart-5)";
 };
+
+// A short, human read on how a day/week/month stacks up against the best one.
+const getPerformanceLabel = (ratio: number) => {
+  if (ratio >= 0.99) return "أفضل أداء 🏆";
+  if (ratio >= 0.8) return "أداء ممتاز";
+  if (ratio >= 0.5) return "أداء جيد";
+  if (ratio >= 0.3) return "أداء متوسط";
+  return "أداء ضعيف";
+};
+
+// Custom tooltip: shows the count, its share of the best period, and a
+// color dot matching the bar so the tooltip reads consistently with the chart.
+const CustomTooltip = ({ active, payload, label, maxValue }: any) => {
+  if (!active || !payload || !payload.length) return null;
+
+  const row = payload[0]?.payload;
+  if (!row) return null;
+
+  const { completedCount } = row;
+  const ratio = maxValue > 0 ? completedCount / maxValue : 0;
+  const color = getBarColor(completedCount, maxValue || 1);
+
+  return (
+    <div className="min-w-[180px] rounded-xl border border-border bg-popover p-4 shadow-lg">
+      <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-popover-foreground">
+        <span
+          className="inline-block h-2.5 w-2.5 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+        {label}
+      </p>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-4 text-xs">
+          <span className="text-muted-foreground">عادات منجزة</span>
+          <span className="font-bold text-popover-foreground">
+            {completedCount}
+          </span>
+        </div>
+
+        {/* Mini progress bar relative to the best period */}
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{
+              width: `${Math.round(ratio * 100)}%`,
+              backgroundColor: color,
+            }}
+          />
+        </div>
+
+        <div className="mt-1.5 flex items-center justify-between gap-4 border-t border-border pt-1.5 text-xs">
+          <span className="text-muted-foreground">مقارنة بأفضل يوم</span>
+          <span className="font-medium text-popover-foreground">
+            {Math.round(ratio * 100)}%
+          </span>
+        </div>
+
+        <p className="pt-0.5 text-xs font-medium" style={{ color }}>
+          {getPerformanceLabel(ratio)}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// Thin, rounded, theme-aware scrollbar for the horizontally scrollable chart
+const ScrollbarStyles = () => (
+  <style>{`
+    .habit-progress-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .habit-progress-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+    .habit-progress-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .habit-progress-scroll::-webkit-scrollbar-thumb {
+      background-color: var(--border);
+      border-radius: 9999px;
+    }
+    .habit-progress-scroll::-webkit-scrollbar-thumb:hover {
+      background-color: var(--muted-foreground);
+    }
+  `}</style>
+);
 
 export default function HabitProgressChart() {
   const [filter, setFilter] = useState<HabitProgressPeriod>("day");
@@ -63,8 +151,10 @@ export default function HabitProgressChart() {
       points.map((point) => ({
         ...point,
         label: formatPeriodLabel(point.period, filter),
-        // Add additional data for better visualization
-        percentage: points.length > 0 ? (point.completedCount / Math.max(...points.map(p => p.completedCount))) * 100 : 0,
+        percentage:
+          points.length > 0
+            ? (point.completedCount / Math.max(...points.map((p) => p.completedCount))) * 100
+            : 0,
       })),
     [points, filter],
   );
@@ -75,51 +165,37 @@ export default function HabitProgressChart() {
   );
 
   const maxValue = useMemo(
-    () => Math.max(...chartData.map(p => p.completedCount), 0),
+    () => Math.max(...chartData.map((p) => p.completedCount), 0),
     [chartData],
   );
 
   const averageCompletion = useMemo(
-    () => chartData.length > 0 ? Math.round(totalCompleted / chartData.length) : 0,
+    () => (chartData.length > 0 ? Math.round(totalCompleted / chartData.length) : 0),
     [chartData, totalCompleted],
   );
 
   const bestDay = useMemo(
-    () => chartData.length > 0 ? Math.max(...chartData.map(p => p.completedCount)) : 0,
+    () => (chartData.length > 0 ? Math.max(...chartData.map((p) => p.completedCount)) : 0),
     [chartData],
   );
 
   return (
-    <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 shadow-xl">
-      {/* Decorative gradient blur */}
-      <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-purple-500/10 blur-3xl" />
-      <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
-
-      <div className="relative z-10">
+    <Card className="border border-border bg-card p-6 shadow-sm">
+      <ScrollbarStyles />
+      <div>
         {/* Header */}
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-xl font-bold tracking-tight text-card-foreground">
               تقدم العادات
             </h2>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-emerald-400">
-                🎯 {totalCompleted} عادة منجزة
-              </span>
-              <span className="text-slate-400">
-                📊 متوسط {averageCompletion} / يوم
-              </span>
-              <span className="text-purple-400">
-                ⭐ أفضل يوم {bestDay}
-              </span>
-            </div>
           </div>
 
           {/* Filter Buttons */}
           <div
             role="group"
             aria-label="فلترة التقدم"
-            className="inline-flex rounded-lg border border-slate-700/50 bg-slate-800/50 p-1 backdrop-blur-sm"
+            className="inline-flex rounded-lg border border-border bg-muted p-1"
           >
             {FILTERS.map(({ value, label, icon }) => {
               const active = value === filter;
@@ -130,11 +206,11 @@ export default function HabitProgressChart() {
                   onClick={() => setFilter(value)}
                   aria-pressed={active}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200",
-                    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400",
+                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-200",
+                    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                     active
-                      ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25"
-                      : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
                   {icon}
@@ -147,8 +223,8 @@ export default function HabitProgressChart() {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="flex h-72 flex-col items-center justify-center gap-3 text-sm text-slate-400">
-            <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+          <div className="flex h-72 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p>جارٍ تحميل تقدمك…</p>
           </div>
         )}
@@ -156,25 +232,23 @@ export default function HabitProgressChart() {
         {/* Error State */}
         {isError && (
           <div className="flex h-72 flex-col items-center justify-center gap-2 text-sm">
-            <div className="rounded-full bg-red-500/10 p-3">
-              <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
+            <div className="rounded-full bg-destructive/10 p-3">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
             </div>
-            <p className="text-red-400">تعذر تحميل تقدمك</p>
-            <p className="text-xs text-slate-500">يرجى المحاولة مرة أخرى</p>
+            <p className="text-destructive">تعذر تحميل تقدمك</p>
+            <p className="text-xs text-muted-foreground">يرجى المحاولة مرة أخرى</p>
           </div>
         )}
 
         {/* Empty State */}
         {!isLoading && !isError && chartData.length === 0 && (
           <div className="flex h-72 flex-col items-center justify-center gap-3 text-center">
-            <div className="rounded-full bg-slate-800/50 p-4">
-              <Calendar className="h-8 w-8 text-slate-400" />
+            <div className="rounded-full bg-muted p-4">
+              <Calendar className="h-8 w-8 text-muted-foreground" />
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-slate-300">لا توجد عادات منجزة بعد</p>
-              <p className="text-sm text-slate-500">
+              <p className="font-medium text-card-foreground">لا توجد عادات منجزة بعد</p>
+              <p className="text-sm text-muted-foreground">
                 أنجز عادة وستظهر هنا 📝
               </p>
             </div>
@@ -185,102 +259,71 @@ export default function HabitProgressChart() {
         {!isLoading && !isError && chartData.length > 0 && (
           <div
             className={cn(
-              "h-72 transition-all duration-300",
+              "relative h-72 transition-opacity duration-300",
               isFetching ? "opacity-60" : "opacity-100"
             )}
           >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 8, right: 8, left: -8, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.8}/>
-                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="4 4"
-                  stroke="#1e293b"
-                  vertical={false}
-                  opacity={0.5}
-                />
-                <XAxis
-                  dataKey="label"
-                  stroke="#64748b"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  dy={8}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  stroke="#64748b"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  dx={-4}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "rgba(15, 23, 42, 0.95)",
-                    border: "1px solid #1e293b",
-                    borderRadius: 12,
-                    fontSize: 13,
-                    padding: "12px 16px",
-                    backdropFilter: "blur(8px)",
-                  }}
-                  labelStyle={{ 
-                    color: "#e2e8f0", 
-                    fontWeight: 600,
-                    marginBottom: 4,
-                  }}
-                  cursor={{ 
-                    fill: "rgba(148, 163, 184, 0.06)",
-                    radius: 4,
-                  }}
-                  formatter={(value: number) => [
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block h-2 w-2 rounded-full bg-purple-400" />
-                      {value} عادة
-                    </span>,
-                    "منجز"
-                  ]}
-                />
-                <Bar
-                  dataKey="completedCount"
-                  radius={[6, 6, 0, 0]}
-                  animationDuration={800}
-                  animationEasing="ease-in-out"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={getBarColor(entry.completedCount, maxValue || 1)}
-                      className="transition-all hover:opacity-80"
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+            {/* Edge fades hinting there's more to scroll */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-card to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-card to-transparent" />
 
-        {/* Stats Footer */}
-        {!isLoading && !isError && chartData.length > 0 && (
-          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-700/50 pt-4">
-            <div className="text-center">
-              <p className="text-xs text-slate-400">إجمالي</p>
-              <p className="text-sm font-bold text-white">{totalCompleted}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-slate-400">المتوسط</p>
-              <p className="text-sm font-bold text-emerald-400">{averageCompletion}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-slate-400">الأفضل</p>
-              <p className="text-sm font-bold text-purple-400">{bestDay}</p>
+            <div className="habit-progress-scroll h-full overflow-x-auto overflow-y-hidden pb-2">
+              <div
+                className="h-full"
+                style={{
+                  minWidth: "100%",
+                  width: Math.max(chartData.length * 64, 100),
+                }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 8, right: 8, left: -8, bottom: 0 }}
+                    barSize={36}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="4 4"
+                      stroke="var(--border)"
+                      vertical={false}
+                      opacity={0.6}
+                    />
+                    <XAxis
+                      dataKey="label"
+                      stroke="var(--muted-foreground)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      dy={8}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      stroke="var(--muted-foreground)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      dx={-4}
+                    />
+                    <Tooltip
+                      content={<CustomTooltip maxValue={maxValue} />}
+                      cursor={{ fill: "var(--muted)", radius: 4 }}
+                    />
+                    <Bar
+                      dataKey="completedCount"
+                      radius={[6, 6, 0, 0]}
+                      animationDuration={800}
+                      animationEasing="ease-in-out"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={getBarColor(entry.completedCount, maxValue || 1)}
+                          className="transition-opacity hover:opacity-80"
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         )}

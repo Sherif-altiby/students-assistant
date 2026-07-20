@@ -2,18 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
   HeartHandshake,
   MessageCircleQuestion,
   ListChecks,
@@ -35,8 +23,14 @@ import type { Habit } from "@/types";
 import { Task } from "@/types/task";
 import TaskProgressChart from "@/components/dashboard/Taskprogresschart";
 import HabitProgressChart from "@/components/dashboard/Habitprogresschart";
-
-const PIE_COLORS = ["var(--chart-2)", "var(--muted)"];
+import { useTaskStats } from "@/hooks/Usetasks";
+import {
+  ChartSkeleton,
+  EmptyChart,
+  FeaturedStats,
+  SummaryStat,
+} from "@/components/dashboard/home/home-page-components";
+import { useHabitStats } from "@/hooks/useHabits";
 
 export default function DashboardOverviewPage() {
   const user = useAuthStore((s) => s.user);
@@ -46,6 +40,9 @@ export default function DashboardOverviewPage() {
   const [supportUsed, setSupportUsed] = useState(0);
   const [consultationsUsed, setConsultationsUsed] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const { stats: habitStats, isLoading: isHabitStatsLoading } = useHabitStats();
+
+  const { stats, isLoading: isStatsLoading } = useTaskStats();
 
   useEffect(() => {
     let cancelled = false;
@@ -89,42 +86,43 @@ export default function DashboardOverviewPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="font-display text-2xl font-extrabold text-foreground">
-          أهلًا، {user?.name?.split(" ")[0] ?? "بطل"} 👋
+        <div className="mb-2 flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {new Date().toLocaleDateString("ar-EG", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </span>
+        </div>
+
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+          أهلًا، {user?.name?.split(" ")[0] ?? "بطل"}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          هذه نظرة سريعة على مذاكرتك وعاداتك هذا الأسبوع
+
+        <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
+          ملخص أدائك في المذاكرة والعادات
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryStat
-          icon={<ListChecks className="h-4 w-4" />}
-          label="إجمالي المهام"
-          value={tasks.length}
-        />
-        <SummaryStat
-          icon={<ListChecks className="h-4 w-4" />}
-          label="مهام منجزة"
-          value={completedTasks}
-        />
-        <SummaryStat
-          icon={<Repeat className="h-4 w-4" />}
-          label="عادات نشطة"
-          value={habits.length}
-        />
-        <SummaryStat
-          icon={<Repeat className="h-4 w-4" />}
-          label="أطول تتابع (Streak)"
-          value={habits.reduce((max, h) => Math.max(max, 0), 0)}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <FeaturedStats
+          total={stats?.total ?? 0}
+          longestStreak={stats?.longestStreak ?? 0}
+          isLoading={isStatsLoading}
+          title="المهام"
+          />
+        <FeaturedStats
+          total={habitStats?.total ?? 0}
+          longestStreak={habitStats?.longestStreak ?? 0}
+          isLoading={isHabitStatsLoading}
+          title="العادات"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <h2 className="mb-4 font-display text-base font-bold text-foreground">
-            حالة المهام
-          </h2>
+        <>
           {isLoading ? (
             <ChartSkeleton />
           ) : tasks.length === 0 ? (
@@ -132,12 +130,9 @@ export default function DashboardOverviewPage() {
           ) : (
             <TaskProgressChart />
           )}
-        </Card>
+        </>
 
-        <Card>
-          <h2 className="mb-4 font-display text-base font-bold text-foreground">
-            تتابع العادات
-          </h2>
+        <>
           {isLoading ? (
             <ChartSkeleton />
           ) : habits.length === 0 ? (
@@ -145,7 +140,7 @@ export default function DashboardOverviewPage() {
           ) : (
             <HabitProgressChart />
           )}
-        </Card>
+        </>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -166,42 +161,6 @@ export default function DashboardOverviewPage() {
           icon={<MessageCircleQuestion className="h-4 w-4" />}
         />
       </div>
-    </div>
-  );
-}
-
-function SummaryStat({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-}) {
-  return (
-    <Card className="flex items-center gap-3">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-foreground">
-        {icon}
-      </div>
-      <div>
-        <p className="font-display text-xl font-extrabold text-foreground">
-          {value}
-        </p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
-    </Card>
-  );
-}
-
-function ChartSkeleton() {
-  return <div className="h-[240px] animate-pulse rounded-xl bg-muted" />;
-}
-
-function EmptyChart({ message }: { message: string }) {
-  return (
-    <div className="flex h-[240px] items-center justify-center rounded-xl border border-dashed border-border text-center text-sm text-muted-foreground">
-      {message}
     </div>
   );
 }

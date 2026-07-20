@@ -1,8 +1,7 @@
 "use client";
 
 import { CalendarDays } from "lucide-react";
-import PageHeader from "@/components/PageHeader";
-
+ 
 import { Card } from "@/components/ui/card";
 import {
   Pagination,
@@ -16,6 +15,7 @@ import { useStudyTables } from "@/hooks/useStudyTables";
 import { cn } from "@/lib/utils";
 import { CreateStudyTableDialog } from "./CreateStudyTableDialog";
 import { StudyTableCard } from "./StudyTableCard";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function StudyTablesPage() {
   const { tables, pagination, isLoading, page, setPage, createTable, isCreating, deleteTable } =
@@ -27,7 +27,6 @@ export default function StudyTablesPage() {
         <PageHeader
           title="جداول المذاكرة"
           description="نظّم وقتك وتابع تقدمك في كل درس"
-          icon={<CalendarDays className="h-7 w-7 text-primary" />}
         />
         <CreateStudyTableDialog onCreate={createTable} isCreating={isCreating} />
       </div>

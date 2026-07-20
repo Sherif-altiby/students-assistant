@@ -31,6 +31,6 @@ router.get('/history/:date', taskController.getHistoryDay);
 router.get('/:id/history', taskController.getTaskHistory);
 
 router.get('/progress', validate(progressQuerySchema), taskController.getProgress);
-
+router.get('/stats', taskController.getStats);
 
 export { router as taskRouter };

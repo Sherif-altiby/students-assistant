@@ -23,8 +23,8 @@ const NAV_ITEMS = [
   { href: "/dashboard/tasks", label: "المهام", icon: ListChecks },
   { href: "/dashboard/habits", label: "العادات", icon: Repeat },
   { href: "/dashboard/tables", label: "الجداول", icon: Table },
-  { href: "/dashboard/support", label: "الدعم النفسي", icon: HeartHandshake },
-  { href: "/dashboard/consultations", label: "الاستشارات", icon: MessageCircleQuestion,},
+  // { href: "/dashboard/support", label: "الدعم النفسي", icon: HeartHandshake },
+  // { href: "/dashboard/consultations", label: "الاستشارات", icon: MessageCircleQuestion,},
 ];
 
 export function Sidebar() {
@@ -128,45 +128,7 @@ export function Sidebar() {
             </Link>
           );
         })}
-      </nav>
-
-      {/* Footer */}
-      <div
-        className={cn(
-          "mt-6 border-t border-border pt-4",
-          collapsed && "flex flex-col items-center",
-        )}
-      >
-        {user && !collapsed && (
-          <div className="mb-3 px-1">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {user.name}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {user.email}
-            </p>
-          </div>
-        )}
-        {user && collapsed && (
-          <div
-            title={`${user.name} — ${user.email}`}
-            className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
-          >
-            {user.name?.charAt(0)}
-          </div>
-        )}
-        <button
-          onClick={handleLogout}
-          title={collapsed ? "تسجيل الخروج" : undefined}
-          className={cn(
-            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10",
-            collapsed && "justify-center px-0",
-          )}
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && "تسجيل الخروج"}
-        </button>
-      </div>
+      </nav>    
     </aside>
   );
 }
