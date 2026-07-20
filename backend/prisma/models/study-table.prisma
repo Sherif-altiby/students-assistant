@@ -1,0 +1,21 @@
+model StudyTable {
+  id String @id @default(uuid())
+
+  title String
+
+  type StudyTableType
+
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  days StudyDay[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("study_tables")
+}

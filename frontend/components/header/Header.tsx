@@ -9,7 +9,7 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [];
 
 export function Header() {
   return (
-    <header className="  top-0 z-20 flex items-center justify-between border-b border-border bg-card/80 px-6 py-3 backdrop-blur-sm sm:px-10">
+    <header className=" sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card/80 px-6 py-3 backdrop-blur-sm sm:px-10">
       <div />
 
       <div className="flex items-center gap-1">
