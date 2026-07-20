@@ -21,8 +21,8 @@ export const pdfService = {
           margin: 50,
           bufferPages: true,
           info: {
-            Title: `Study Table: ${studyTable.title}`,
-            Author: 'Study Planner App',
+            Title: `جدول المذاكرة: ${studyTable.title}`,
+            Author: 'تطبيق تنظيم المذاكرة',
           },
         });
 
@@ -40,11 +40,10 @@ export const pdfService = {
          * Helpers
          ******************************/
 
-        const safeText = (value: unknown) =>
-          value ? String(value) : 'Untitled';
+        const safeText = (value: unknown) => (value ? String(value) : 'بدون عنوان');
 
         const formatDate = (date: string | Date) =>
-          new Date(date).toLocaleDateString('en-US', {
+          new Date(date).toLocaleDateString('ar-EG', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -52,9 +51,7 @@ export const pdfService = {
           });
 
         const addHeader = () => {
-          doc
-            .rect(0, 0, doc.page.width, 140)
-            .fill(COLORS.primary);
+          doc.rect(0, 0, doc.page.width, 140).fill(COLORS.primary);
 
           doc
             .fillColor('white')
@@ -69,11 +66,11 @@ export const pdfService = {
             .font('Helvetica')
             .fontSize(12)
             .text(
-              `${safeText(studyTable.type)} • ${new Date(
+              `نوع الجدول: ${safeText(studyTable.type)} • من ${new Date(
                 studyTable.startDate
-              ).toLocaleDateString()} → ${new Date(
-                studyTable.endDate
-              ).toLocaleDateString()}`,
+              ).toLocaleDateString('ar-EG')} إلى ${new Date(studyTable.endDate).toLocaleDateString(
+                'ar-EG'
+              )}`,
               {
                 width: doc.page.width - 100,
                 align: 'center',
@@ -109,19 +106,19 @@ export const pdfService = {
 
           const stats = [
             {
-              title: 'Subjects',
+              title: 'المواد',
               value: totalSubjects,
             },
             {
-              title: 'Chapters',
+              title: 'الفصول',
               value: totalChapters,
             },
             {
-              title: 'Lessons',
+              title: 'الدروس',
               value: totalLessons,
             },
             {
-              title: 'Completed',
+              title: 'المنجزة',
               value: completedLessons,
             },
           ];
@@ -134,9 +131,7 @@ export const pdfService = {
           stats.forEach((stat, index) => {
             const x = startX + index * (cardWidth + gap);
 
-            doc
-              .roundedRect(x, y, cardWidth, 75, 10)
-              .fillAndStroke(COLORS.light, COLORS.border);
+            doc.roundedRect(x, y, cardWidth, 75, 10).fillAndStroke(COLORS.light, COLORS.border);
 
             doc
               .fillColor(COLORS.primary)
@@ -169,19 +164,15 @@ export const pdfService = {
 
           const top = doc.y;
 
-          doc
-            .roundedRect(50, top, 495, cardHeight, 12)
-            .fillAndStroke(COLORS.light, COLORS.border);
+          doc.roundedRect(50, top, 495, cardHeight, 12).fillAndStroke(COLORS.light, COLORS.border);
 
-          doc
-            .roundedRect(50, top, 8, cardHeight, 4)
-            .fill(COLORS.primary);
+          doc.roundedRect(50, top, 8, cardHeight, 4).fill(COLORS.primary);
 
           doc
             .fillColor(COLORS.dark)
             .font('Helvetica-Bold')
             .fontSize(16)
-            .text(`Day ${index + 1}`, 75, top + 18);
+            .text(`اليوم ${index + 1}`, 75, top + 18);
 
           doc
             .fillColor(COLORS.secondary)
@@ -195,11 +186,9 @@ export const pdfService = {
         const addLesson = (lesson: any, index: number) => {
           const completed = lesson.completions?.length > 0;
 
-          const status = completed ? 'Completed' : 'Pending';
+          const status = completed ? 'مكتمل' : 'قيد الإنجاز';
 
-          const badgeColor = completed
-            ? COLORS.success
-            : COLORS.warning;
+          const badgeColor = completed ? COLORS.success : COLORS.warning;
 
           const y = doc.y;
 
@@ -211,18 +200,11 @@ export const pdfService = {
             .fillColor(COLORS.dark)
             .font('Helvetica')
             .fontSize(11)
-            .text(
-              `${index + 1}. ${safeText(lesson.title)}`,
-              100,
-              y,
-              {
-                width: 300,
-              }
-            );
+            .text(`${index + 1}. ${safeText(lesson.title)}`, 100, y, {
+              width: 300,
+            });
 
-          doc
-            .roundedRect(430, y - 2, 90, 18, 8)
-            .fill(badgeColor);
+          doc.roundedRect(430, y - 2, 90, 18, 8).fill(badgeColor);
 
           doc
             .fillColor('white')
@@ -252,7 +234,7 @@ export const pdfService = {
               .font('Helvetica')
               .fontSize(11)
               .fillColor(COLORS.secondary)
-              .text('No subjects scheduled for this day.', 75)
+              .text('لا توجد مواد مجدولة لهذا اليوم.', 75)
               .moveDown(2);
 
             return;
@@ -263,10 +245,7 @@ export const pdfService = {
               .fillColor(COLORS.primary)
               .font('Helvetica-Bold')
               .fontSize(14)
-              .text(
-                `${subjectIndex + 1}. ${safeText(subject.title)}`,
-                75
-              )
+              .text(`${subjectIndex + 1}. ${safeText(subject.title)}`, 75)
               .moveDown(0.4);
 
             if (!subject.chapters?.length) {
@@ -274,46 +253,37 @@ export const pdfService = {
                 .font('Helvetica')
                 .fontSize(11)
                 .fillColor(COLORS.secondary)
-                .text('No chapters', 90)
+                .text('لا توجد فصول', 90)
                 .moveDown();
 
               return;
             }
 
-            subject.chapters.forEach(
-              (chapter: any, chapterIndex: number) => {
+            subject.chapters.forEach((chapter: any, chapterIndex: number) => {
+              doc
+                .fillColor(COLORS.secondary)
+                .font('Helvetica-Bold')
+                .fontSize(12)
+                .text(`${String.fromCharCode(97 + chapterIndex)}. ${safeText(chapter.title)}`, 90)
+                .moveDown(0.3);
+
+              if (!chapter.lessons?.length) {
                 doc
-                  .fillColor(COLORS.secondary)
-                  .font('Helvetica-Bold')
-                  .fontSize(12)
-                  .text(
-                    `${String.fromCharCode(
-                      97 + chapterIndex
-                    )}. ${safeText(chapter.title)}`,
-                    90
-                  )
-                  .moveDown(0.3);
+                  .font('Helvetica')
+                  .fontSize(10)
+                  .fillColor('#94a3b8')
+                  .text('لا توجد فصول', 90)
+                  .moveDown();
 
-                if (!chapter.lessons?.length) {
-                  doc
-                    .font('Helvetica')
-                    .fontSize(10)
-                    .fillColor('#94a3b8')
-                    .text('No lessons', 105)
-                    .moveDown();
-
-                  return;
-                }
-
-                chapter.lessons.forEach(
-                  (lesson: any, lessonIndex: number) => {
-                    addLesson(lesson, lessonIndex);
-                  }
-                );
-
-                doc.moveDown(0.8);
+                return;
               }
-            );
+
+              chapter.lessons.forEach((lesson: any, lessonIndex: number) => {
+                addLesson(lesson, lessonIndex);
+              });
+
+              doc.moveDown(0.8);
+            });
 
             doc
               .strokeColor(COLORS.border)
@@ -346,21 +316,11 @@ export const pdfService = {
             .fillColor(COLORS.secondary)
             .font('Helvetica')
             .fontSize(9)
-            .text(
-              `Generated on ${new Date().toLocaleString()}`,
-              50,
-              doc.page.height - 45
-            );
+            .text(`تم إنشاء الملف بتاريخ ${new Date().toLocaleString('ar-EG')}`, 50, doc.page.height - 45);
 
-          doc
-            .text(
-              `Page ${i + 1} of ${pages.count}`,
-              0,
-              doc.page.height - 45,
-              {
-                align: 'right',
-              }
-            );
+          doc.text(`الصفحة ${i + 1} من ${pages.count}`, 0, doc.page.height - 45, {
+            align: 'right',
+          });
         }
 
         doc.end();
