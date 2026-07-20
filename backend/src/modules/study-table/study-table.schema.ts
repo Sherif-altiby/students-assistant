@@ -156,6 +156,12 @@ export const updateDayContentSchema = z.object({
   }),
 });
 
+export const generatePDFSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('Invalid study table ID format'),
+  }),
+});
+
 export type CreateStudyTableInput = z.infer<typeof createStudyTableSchema>['body'];
 
 export type CompleteLessonInput = z.infer<typeof completeLessonSchema>['params'];

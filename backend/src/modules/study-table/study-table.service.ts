@@ -4,6 +4,8 @@ import { addDays, eachDayOfInterval, startOfDay } from 'date-fns';
 import { studyTableRepository } from './study-table.repository';
 import { prisma } from '../../config/prisma';
 import { CreateStudyTableInput } from './study-table.schema';
+import { pdfService } from './pdf.service';
+import { NotFoundError, UnauthorizedError } from '../../utils/AppError';
 
 interface GetMyTablesOptions {
   page?: number;
@@ -137,5 +139,13 @@ export const studyTableService = {
     if (!table) throw new Error('Table not found');
     if (table.userId !== userId) throw new Error('Unauthorized');
     return studyTableRepository.delete(tableId);
+  },
+
+  async generatePDF(userId: string, tableId: string): Promise<Buffer> {
+    const table = await studyTableRepository.findById(tableId);
+    if (!table) throw new NotFoundError('Table not found');
+    if (table.userId !== userId) throw new UnauthorizedError('You are not authorized to perform these action');
+    
+    return pdfService.generateStudyTablePDF(table);
   },
 };

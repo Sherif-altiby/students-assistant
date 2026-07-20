@@ -65,4 +65,9 @@ router.post('/days/:dayId/subjects', validate(addDayContentSchema), studyTableCo
 //    Deletes all existing subjects for the day and recreates them with the new data.
 router.put('/days/:dayId/subjects', validate(updateDayContentSchema), studyTableController.replaceDayContent);
 
+// 9. Generate PDF for a study table
+//    URL param: id (UUID)
+//    Returns a PDF file download
+router.get('/:id/pdf', validate(getStudyTableSchema), studyTableController.generatePDF);
+
 export { router as studyTableRouter };

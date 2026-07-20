@@ -90,4 +90,15 @@ export const studyTableController = {
       data: updatedDay,
     });
   }),
+
+  generatePDF: asyncHandler(async (req: Request, res: Response) => {
+    const pdfBuffer = await studyTableService.generatePDF(req.user!.id, req.params.id as string);
+
+    // Set response headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=study-table-${req.params.id}.pdf`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    res.status(StatusCodes.OK).send(pdfBuffer);
+  }),
 };
