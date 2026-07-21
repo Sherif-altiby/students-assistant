@@ -13,6 +13,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Table,
+  MessageCircleCode,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/tasks", label: "المهام", icon: ListChecks },
   { href: "/dashboard/habits", label: "العادات", icon: Repeat },
   { href: "/dashboard/tables", label: "الجداول", icon: Table },
+  { href: "/dashboard/chat", label: "الدردشات", icon: MessageCircleCode },
   // { href: "/dashboard/support", label: "الدعم النفسي", icon: HeartHandshake },
   // { href: "/dashboard/consultations", label: "الاستشارات", icon: MessageCircleQuestion,},
 ];

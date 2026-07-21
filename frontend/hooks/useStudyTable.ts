@@ -1,9 +1,12 @@
+// hooks/useStudyTable.ts
+
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   completeLesson,
   createDaySubjects,
+  downloadStudyTablePdf,
   getStudyTable,
   updateDaySubjects,
   updateStudyTable,
@@ -47,6 +50,10 @@ export function useStudyTable(tableId: string) {
     onSuccess: invalidate,
   });
 
+  const downloadPdfMutation = useMutation({
+    mutationFn: () => downloadStudyTablePdf(tableId),
+  });
+
   return {
     table: query.data,
     isLoading: query.isLoading,
@@ -67,5 +74,8 @@ export function useStudyTable(tableId: string) {
     },
     isSavingDaySubjects:
       createDaySubjectsMutation.isPending || updateDaySubjectsMutation.isPending,
+
+    downloadPdf: downloadPdfMutation.mutateAsync,
+    isDownloadingPdf: downloadPdfMutation.isPending,
   };
 }

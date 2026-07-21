@@ -1,3 +1,5 @@
+// hooks/useStudyTables.ts
+
 "use client";
 
 import { useState } from "react";

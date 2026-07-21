@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { CalendarDays, Loader2, Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, Loader2, Pencil, Trash2, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { useStudyTable } from "@/hooks/useStudyTable";
 import { useStudyTables } from "@/hooks/useStudyTables";
 import type { StudyTableDayDetailed } from "@/types/study-table";
 import { DayCell } from "../DayCell";
+import { toast } from "sonner"; // or your preferred toast library
 
 interface StudyTableDetailPageProps {
   params: Promise<{ id: string }>;
@@ -33,6 +34,8 @@ export default function StudyTableDetailPage() {
     isCompletingLesson,
     saveDaySubjects,
     isSavingDaySubjects,
+    downloadPdf,
+    isDownloadingPdf,
   } = useStudyTable(id);
 
   const { deleteTable } = useStudyTables();
@@ -59,6 +62,27 @@ export default function StudyTableDetailPage() {
   function handleDelete() {
     deleteTable(id);
     router.push("/dashboard/tables");
+  }
+
+  async function handleDownloadPdf() {
+    try {
+      const blob = await downloadPdf();
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${table?.title || 'study-table'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('تم تحميل الفديو بنجاح');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error('حدث خطأ أثناء تحميل الفديو');
+    }
   }
 
   if (isLoading) {
@@ -132,21 +156,36 @@ export default function StudyTableDetailPage() {
             </div>
           </div>
 
-          <ConfirmDialog
-            trigger={
-              <Button
-                variant="outline"
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-                حذف الجدول
-              </Button>
-            }
-            title="حذف الجدول؟"
-            description={`سيتم حذف "${table.title}" وكل بياناته نهائيًا. لا يمكن التراجع عن هذا الإجراء.`}
-            confirmLabel="حذف"
-            onConfirm={handleDelete}
-          />
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleDownloadPdf}
+              disabled={isDownloadingPdf}
+              className="gap-2"
+            >
+              {isDownloadingPdf ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Video className="h-4 w-4" />
+              )}
+              {isDownloadingPdf ? 'جاري التحميل...' : 'تحميل الجدول'}
+            </Button>
+
+            <ConfirmDialog
+              trigger={
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  حذف الجدول
+                </Button>
+              }
+              title="حذف الجدول؟"
+              description={`سيتم حذف "${table.title}" وكل بياناته نهائيًا. لا يمكن التراجع عن هذا الإجراء.`}
+              confirmLabel="حذف"
+              onConfirm={handleDelete}
+            />
+          </div>
         </div>
       </div>
 

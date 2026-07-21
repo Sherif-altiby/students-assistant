@@ -1,3 +1,5 @@
+// lib/study-table.ts
+
 import { api } from "@/lib/api";
 import type {
   CreateStudyTablePayload,
@@ -85,4 +87,12 @@ export async function updateDaySubjects(
     payload,
   );
   return res.data.data;
+}
+
+/** Download study table as PDF */
+export async function downloadStudyTablePdf(id: string): Promise<Blob> {
+  const response = await api.get(`/study-table/${id}/pdf`, {
+    responseType: 'blob',
+  });
+  return response.data;
 }
