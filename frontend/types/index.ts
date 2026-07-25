@@ -8,6 +8,7 @@ export interface User {
   email: string;
   phone: string;
   gender: Gender;
+  role: "USER" | "ADMIN" | "DOCTOR";
   level: Level;
   track: Track;
   parentPhone: string;

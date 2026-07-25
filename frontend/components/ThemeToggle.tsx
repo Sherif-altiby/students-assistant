@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
   const theme = useThemeStore((s) => s.theme);
+  const resolved = useThemeStore((s) => s.resolved);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const isDark = theme === "dark";
 
@@ -14,10 +15,11 @@ export function ThemeToggle() {
       size="icon"
       variant="ghost"
       onClick={toggleTheme}
+      disabled={!resolved}
       aria-label={isDark ? "التبديل للوضع الفاتح" : "التبديل للوضع الداكن"}
       className="h-9 w-9 rounded-full text-muted-foreground hover:bg-accent hover:text-accent-foreground"
     >
-      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {resolved ? isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" /> : <span className="h-4 w-4" />}
     </Button>
   );
 }

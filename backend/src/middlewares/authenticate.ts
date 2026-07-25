@@ -34,6 +34,7 @@ export const authenticate = (
   req.user = {
     id: payload.sub,
     email: payload.email,
+    role: payload.role,  
   };
 
   next();

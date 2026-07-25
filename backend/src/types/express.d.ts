@@ -1,13 +1,16 @@
-/**
- * Augments Express's Request type so `req.user` is known wherever the
- * `authenticate` middleware runs, without resorting to `any` casts in
- * every controller that needs it.
- */
-declare namespace Express {
-  export interface Request {
-    user?: {
-      id: string;
-      email: string;
-    };
+// Merge this into your existing express type augmentation file if you
+// already have one (don't create two conflicting declarations).
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: string; // 'USER' | 'ADMIN' | 'DOCTOR'
+      };
+    }
   }
 }
+
+export {};

@@ -1,15 +1,34 @@
 // prisma/models/user.prisma
+
+
+
+// Lifecycle for accounts created by an admin (invite -> accept -> active)
+enum UserStatus {
+  PENDING // created by admin, invite email sent, password not set yet
+  ACTIVE // normal signup, or invite accepted
+}
+
 model User {
-  id          String         @id @default(uuid())
-  name        String
-  email       String         @unique
-  phone       String         @unique @default("0000000000")
-  password    String
-  gender      Gender
-  level       EducationLevel
-  track       Track
-  parentPhone String         @unique @map("parent_phone")
-  country     String
+  id       String     @id @default(uuid())
+  name     String
+  email    String     @unique
+  phone    String?    @unique
+  password String? // nullable: doctors have no password until they accept the invite
+  role     Role       @default(USER)
+  status   UserStatus @default(ACTIVE)
+
+  // --- Student-only fields ---
+  // Required for role = USER at the application layer (see user.schema.ts),
+  // but must be optional here because ADMIN/DOCTOR rows won't have them.
+  gender      Gender?
+  level       EducationLevel?
+  track       Track?
+  parentPhone String?         @unique @map("parent_phone")
+  country     String?
+
+  // --- Invitation flow (role = DOCTOR) ---
+  invitationToken          String?   @unique @map("invitation_token")
+  invitationTokenExpiresAt DateTime? @map("invitation_token_expires_at")
 
   habits Habit[]
   tasks  Task[]
@@ -23,6 +42,11 @@ model User {
 
   messages  Message[]
   reactions Reaction[]
+
+  doctorAvailabilityRules DoctorAvailabilityRule[] @relation("DoctorAvailabilityRules")
+  doctorSlots             AvailabilitySlot[]       @relation("DoctorSlots")
+  bookings                SessionBooking[]         @relation("UserBookings")
+  ratingsGiven            SessionRating[]          @relation("UserRatings")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

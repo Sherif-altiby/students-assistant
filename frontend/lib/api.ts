@@ -1,3 +1,4 @@
+// lib/api.ts
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { RefreshResponse } from "@/types";

@@ -10,7 +10,7 @@ export default function ChatPage() {
   const chat = useChat();
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
+    <div className="flex h-[calc(100vh-100px)] overflow-hidden flex-col bg-background">
       {/* <ChatHeader isConnected={chat.isConnected} /> */}
 
       <MessageList

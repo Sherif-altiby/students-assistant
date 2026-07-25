@@ -13,14 +13,14 @@ export interface AuthTokenPayload extends JwtPayload {
  * as a refresh token (long-lived, only sent to /auth/refresh).
  */
 export const jwtService = {
-  signAccessToken(payload: { id: string; email: string }): string {
-    return jwt.sign({ sub: payload.id, email: payload.email }, env.jwt.accessSecret, {
+  signAccessToken(payload: { id: string; email: string, role: string }): string {
+    return jwt.sign({ sub: payload.id, email: payload.email, role: payload.role }, env.jwt.accessSecret, {
       expiresIn: env.jwt.accessExpiresIn as SignOptions['expiresIn'],
     });
   },
 
-  signRefreshToken(payload: { id: string; email: string }): string {
-    return jwt.sign({ sub: payload.id, email: payload.email }, env.jwt.refreshSecret, {
+  signRefreshToken(payload: { id: string; email: string, role: string }): string {
+    return jwt.sign({ sub: payload.id, email: payload.email, role: payload.role }, env.jwt.refreshSecret, {
       expiresIn: env.jwt.refreshExpiresIn as SignOptions['expiresIn'],
     });
   },

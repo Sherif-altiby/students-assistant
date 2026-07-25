@@ -15,12 +15,12 @@ interface AuthResult {
 }
 
 /** Strip the password hash before a user object ever leaves this layer. */
-const toSafeUser = <T extends { password: string }>(user: T): Omit<T, 'password'> => {
+const toSafeUser = <T extends { password: string | null }>(user: T): Omit<T, 'password'> => {
   const { password: _password, ...safeUser } = user;
   return safeUser;
 };
 
-const issueTokens = (user: { id: string; email: string }) => ({
+const issueTokens = (user: { id: string; email: string , role: string}) => ({
   accessToken: jwtService.signAccessToken(user),
   refreshToken: jwtService.signRefreshToken(user),
 });
@@ -55,6 +55,16 @@ export const authService = {
     // which one it was, or an attacker can enumerate valid emails.
     if (!user) {
       throw new UnauthorizedError('Invalid email or password');
+    }
+
+    // A user with no password yet is a doctor who hasn't accepted their
+    // invitation. This is a distinct, expected state — tell them what to
+    // do instead of leaking that into a generic "invalid credentials" or
+    // letting bcrypt.compare blow up on a null hash.
+    if (!user.password) {
+      throw new UnauthorizedError(
+        'This account has not been activated yet. Please check your email for the invitation link.'
+      );
     }
 
     const passwordMatches = await bcrypt.compare(input.password, user.password);

@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Header } from "@/components/header/Header";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function DashboardLayout({
   children,
@@ -39,7 +40,9 @@ export default function DashboardLayout({
       <Sidebar />
       <main className="flex-1 h-screen overflow-y-auto  custom-scrollbar">
         <Header />
-        <div className="px-4 py-4" >{children}</div>
+        <div className="px-4 py-4">
+          <RoleGuard allowedRoles={["USER"]}>{children}</RoleGuard>
+        </div>
       </main>
     </div>
   );

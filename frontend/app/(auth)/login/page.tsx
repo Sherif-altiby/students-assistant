@@ -10,7 +10,11 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { loginSchema } from "@/validations/auth";
 import { Input } from "@/components/ui/input";
 
-
+const roleRoutes = {
+  USER: "/dashboard",
+  ADMIN: "/admin",
+  DOCTOR: "/doctor",
+};
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 type LoginFormErrors = Partial<Record<keyof LoginFormValues, string>>;
@@ -54,11 +58,12 @@ export default function LoginPage() {
     try {
       const { user, accessToken } = await login(result.data);
       setSession(user, accessToken);
-      router.push("/dashboard");
+      const redirectPath = roleRoutes[user.role as keyof typeof roleRoutes] || "/dashboard";
+      router.push(redirectPath);
     } catch (err) {
       const message =
         err instanceof AxiosError
-          ? err.response?.data?.message ?? "بيانات الدخول غير صحيحة"
+          ? (err.response?.data?.message ?? "بيانات الدخول غير صحيحة")
           : "حدث خطأ غير متوقع، حاول مرة أخرى";
       setFormError(message);
     } finally {
@@ -72,22 +77,31 @@ export default function LoginPage() {
         <div className="w-full max-w-lg rounded-lg border border-border p-4">
           {/* logo */}
           <div className="mb-8 flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-serif text-lg font-semibold">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground   text-lg font-semibold">
               م
             </div>
-            <span className="text-lg font-semibold text-foreground">مُذاكرة</span>
+            <span className="text-lg font-semibold text-foreground">
+              مُذاكرة
+            </span>
           </div>
 
-          <h2 className="font-serif text-2xl font-medium text-foreground text-center">
+          <h2 className=" text-2xl font-medium text-foreground text-center">
             سجّل الدخول لمتابعة تقدمك
           </h2>
           <p className="mt-2 text-sm text-muted-foreground text-center border-b pb-3">
             سعداء بعودتك. أدخل بياناتك للمتابعة من حيث توقفت.
           </p>
 
-          <form onSubmit={handleSubmit} noValidate className="mt-8 flex flex-col gap-5">
+          <form
+            onSubmit={handleSubmit}
+            noValidate
+            className="mt-8 flex flex-col gap-5"
+          >
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-sm font-medium text-foreground">
+              <label
+                htmlFor="email"
+                className="text-sm font-medium text-foreground"
+              >
                 البريد الإلكتروني
               </label>
               <Input
@@ -113,7 +127,10 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-sm font-medium text-foreground">
+                <label
+                  htmlFor="password"
+                  className="text-sm font-medium text-foreground"
+                >
                   كلمة المرور
                 </label>
                 <Link
@@ -144,22 +161,43 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute left-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                  aria-label={
+                    showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"
+                  }
                 >
                   {showPassword ? (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.5 5.3A10.7 10.7 0 0112 5c5.5 0 9.3 4 10.5 7-.4 1-1 2-1.8 2.9M6.6 6.6C4.5 8 3 10 2 12c1.2 3 5 7 10 7 1.4 0 2.7-.3 3.9-.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path
+                        d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.5 5.3A10.7 10.7 0 0112 5c5.5 0 9.3 4 10.5 7-.4 1-1 2-1.8 2.9M6.6 6.6C4.5 8 3 10 2 12c1.2 3 5 7 10 7 1.4 0 2.7-.3 3.9-.8"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   ) : (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M2 12c1.2-3.5 5-7 10-7s8.8 3.5 10 7c-1.2 3.5-5 7-10 7s-8.8-3.5-10-7z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6"/>
+                      <path
+                        d="M2 12c1.2-3.5 5-7 10-7s8.8 3.5 10 7c-1.2 3.5-5 7-10 7s-8.8-3.5-10-7z"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinejoin="round"
+                      />
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="3"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                      />
                     </svg>
                   )}
                 </button>
               </div>
               {fieldErrors.password && (
-                <p className="text-xs text-destructive">{fieldErrors.password}</p>
+                <p className="text-xs text-destructive">
+                  {fieldErrors.password}
+                </p>
               )}
             </div>
 
@@ -175,9 +213,25 @@ export default function LoginPage() {
               className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-primary text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               {isLoading && (
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity="0.25" />
-                  <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    opacity="0.25"
+                  />
+                  <path
+                    d="M21 12a9 9 0 00-9-9"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
                 </svg>
               )}
               دخول
@@ -186,7 +240,10 @@ export default function LoginPage() {
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
             ليس لديك حساب؟{" "}
-            <Link href="/register" className="font-medium text-primary hover:underline">
+            <Link
+              href="/register"
+              className="font-medium text-primary hover:underline"
+            >
               إنشاء حساب جديد
             </Link>
           </p>

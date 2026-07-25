@@ -19,9 +19,9 @@ const setRefreshCookie = (res: Response, token: string): void => {
   res.cookie(REFRESH_COOKIE_NAME, token, {
     httpOnly: true,
     secure: env.isProduction,
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge: env.cookies.refreshMaxAgeMs,
-    path: '/api/v1/auth', // only sent back to auth endpoints, not the whole app
+    path: '/',  
   });
 };
 

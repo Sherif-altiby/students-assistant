@@ -4,7 +4,7 @@ type Theme = "light" | "dark";
 
 interface ThemeState {
   theme: Theme;
-  resolved: boolean; // true once we've read localStorage/system preference
+  resolved: boolean;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   initTheme: () => void;
@@ -17,11 +17,13 @@ function applyThemeClass(theme: Theme) {
 }
 
 function getStoredTheme(): Theme | null {
+  if (typeof window === "undefined") return null;
   const stored = localStorage.getItem(STORAGE_KEY);
   return stored === "light" || stored === "dark" ? stored : null;
 }
 
 function getSystemTheme(): Theme {
+  if (typeof window === "undefined") return "light";
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
@@ -30,7 +32,9 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   resolved: false,
 
   setTheme: (theme) => {
-    localStorage.setItem(STORAGE_KEY, theme);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, theme);
+    }
     applyThemeClass(theme);
     set({ theme });
   },

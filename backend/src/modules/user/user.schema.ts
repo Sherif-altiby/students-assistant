@@ -15,6 +15,8 @@ const withLevelTrackRule = <T extends { level: string; track: string }>(schema: 
     path: ['track'],
   });
 
+const phoneRegex = /^\+?[0-9]{8,15}$/;
+
 const baseUserFields = {
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
@@ -25,14 +27,15 @@ const baseUserFields = {
   parentPhone: z
     .string()
     .min(8, 'Invalid parent phone number')
-    .regex(/^\+?[0-9]{8,15}$/, 'Invalid parent phone number'),
+    .regex(phoneRegex, 'Invalid parent phone number'),
   phone: z
     .string()
     .min(8, 'Invalid phone number')
-    .regex(/^\+?[0-9]{8,15}$/, 'Invalid phone number'),
+    .regex(phoneRegex, 'Invalid phone number'),
   country: z.string().min(2, 'Country is required'),
 };
 
+// --- Student self-signup (unchanged) ---
 export const createUserSchema = z.object({
   body: withLevelTrackRule(z.object(baseUserFields)),
   query: z.object({}).optional(),
@@ -48,7 +51,7 @@ const updateBodySchema = z
     track: trackEnum.optional(),
     parentPhone: z
       .string()
-      .regex(/^\+?[0-9]{8,15}$/, 'Invalid parent phone number')
+      .regex(phoneRegex, 'Invalid parent phone number')
       .optional(),
     country: z.string().min(2).optional(),
   })
@@ -81,5 +84,31 @@ export const getUserSchema = z.object({
   }),
 });
 
+// --- Admin invites a doctor ---
+export const inviteDoctorSchema = z.object({
+  body: z.object({
+    name: z.string().min(2, 'Name must be at least 2 characters'),
+    email: z.string().email('Invalid email address'),
+    phone: z
+      .string()
+      .min(8, 'Invalid phone number')
+      .regex(phoneRegex, 'Invalid phone number'),
+  }),
+  query: z.object({}).optional(),
+  params: z.object({}).optional(),
+});
+
+// --- Doctor accepts the invite and sets their password ---
+export const acceptInvitationSchema = z.object({
+  body: z.object({
+    token: z.string().min(10, 'Invalid or missing invitation token'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+  }),
+  query: z.object({}).optional(),
+  params: z.object({}).optional(),
+});
+
 export type CreateUserInput = z.infer<typeof createUserSchema>['body'];
 export type UpdateUserInput = z.infer<typeof updateUserSchema>['body'];
+export type InviteDoctorInput = z.infer<typeof inviteDoctorSchema>['body'];
+export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>['body'];

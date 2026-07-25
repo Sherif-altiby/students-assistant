@@ -1,0 +1,127 @@
+// prisma/models/availability.prisma
+
+enum RecurrenceType {
+  DAILY
+  WEEKLY
+  CUSTOM // one-off specific date
+}
+
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum SlotStatus {
+  OPEN       // available, no booking yet
+  BOOKED     // a booking is pending or accepted on it
+  CANCELLED  // doctor cancelled the slot
+  COMPLETED  // session happened
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+// What the doctor configures: "every day 10pm-11pm", "every Friday 4-5pm",
+// or a one-off "Jan 12 2026, 10-11am". This is the *template*; actual
+// bookable AvailabilitySlot rows are generated from it.
+model DoctorAvailabilityRule {
+  id        String         @id @default(uuid())
+  doctorId  String         @map("doctor_id")
+  doctor    User           @relation("DoctorAvailabilityRules", fields: [doctorId], references: [id], onDelete: Cascade)
+
+  type      RecurrenceType
+  dayOfWeek DayOfWeek?     @map("day_of_week") // required when type = WEEKLY
+  customDate DateTime?     @map("custom_date")  // required when type = CUSTOM (date only, time ignored)
+
+  startTime String         @map("start_time") // "22:00" (HH:mm, 24h, doctor's local time)
+  endTime   String         @map("end_time")   // "23:00"
+
+  isActive  Boolean        @default(true) @map("is_active")
+
+  slots     AvailabilitySlot[]
+
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  @@map("doctor_availability_rules")
+}
+
+// A concrete, bookable date+time instance. Generated from a rule (or created
+// directly for a pure one-off). This is what users actually see and apply to.
+model AvailabilitySlot {
+  id        String       @id @default(uuid())
+  doctorId  String       @map("doctor_id")
+  doctor    User         @relation("DoctorSlots", fields: [doctorId], references: [id], onDelete: Cascade)
+
+  ruleId    String?      @map("rule_id")
+  rule      DoctorAvailabilityRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  startTime DateTime     @map("start_time") // full timestamp
+  endTime   DateTime     @map("end_time")
+
+  status    SlotStatus   @default(OPEN)
+  meetingLink String?    @map("meeting_link") // Google Meet / Zoom URL
+
+  booking   SessionBooking?
+
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@unique([doctorId, startTime])
+  @@index([doctorId, status, startTime])
+  @@map("availability_slots")
+}
+
+// A user's application to a slot. 1:1 with the slot (a slot can only ever
+// have one active booking — enforced by the unique slotId + service logic).
+model SessionBooking {
+  id          String        @id @default(uuid())
+
+  slotId      String        @unique @map("slot_id")
+  slot        AvailabilitySlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  userId      String        @map("user_id")
+  user        User          @relation("UserBookings", fields: [userId], references: [id], onDelete: Cascade)
+
+  status      BookingStatus @default(PENDING)
+  note        String?       // optional message from the user when applying
+
+  requestedAt DateTime      @default(now()) @map("requested_at")
+  respondedAt DateTime?     @map("responded_at") // when doctor accepted/rejected
+  cancelledAt DateTime?     @map("cancelled_at")
+
+  rating      SessionRating?
+
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@map("session_bookings")
+}
+
+model SessionRating {
+  id        String   @id @default(uuid())
+
+  bookingId String   @unique @map("booking_id")
+  booking   SessionBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  userId    String   @map("user_id")
+  user      User     @relation("UserRatings", fields: [userId], references: [id], onDelete: Cascade)
+
+  score     Int      // 1-5, validated at the application layer
+  comment   String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("session_ratings")
+}

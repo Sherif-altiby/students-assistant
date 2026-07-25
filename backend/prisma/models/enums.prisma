@@ -3,16 +3,22 @@ enum Gender {
   FEMALE
 }
 
+enum Role {
+  USER
+  ADMIN
+  DOCTOR
+}
+
 enum EducationLevel {
   GENERAL_SECONDARY // ثانوية عامة
-  AZHARI_SECONDARY  // ثانوية أزهرية
+  AZHARI_SECONDARY // ثانوية أزهرية
 }
 
 enum Track {
-  SCIENCE_MATH     // علمي رياضة (عامة فقط)
-  SCIENCE_SCIENCE  // علمي علوم (عامة فقط)
-  SCIENCE          // علمي (أزهرية فقط)
-  LITERARY         // أدبي (عامة وأزهرية)
+  SCIENCE_MATH // علمي رياضة (عامة فقط)
+  SCIENCE_SCIENCE // علمي علوم (عامة فقط)
+  SCIENCE // علمي (أزهرية فقط)
+  LITERARY // أدبي (عامة وأزهرية)
 }
 
 enum StudyTableType {

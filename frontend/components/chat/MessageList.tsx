@@ -57,7 +57,7 @@ export function MessageList({
 
   if (messages.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center ">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-2xl">
           👋
         </div>
@@ -74,7 +74,7 @@ export function MessageList({
   }
 
   return (
-    <div className="relative flex-1 overflow-hidden">
+    <div className="relative flex-1 overflow-hidden pb-3">
       <div
         ref={containerRef}
         // className="custom-scrollbar h-full overflow-y-auto px-4 py-3"
