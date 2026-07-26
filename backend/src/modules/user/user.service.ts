@@ -21,7 +21,7 @@ interface ListUsersParams {
   page: number;
   limit: number;
   search?: string;
-  role?: Role
+  role?: Role;
 }
 
 /** Strip sensitive fields before a user object ever leaves this layer. */
@@ -82,6 +82,27 @@ export const userService = {
     const [users, total] = await Promise.all([
       userRepository.findMany({ skip, take: params.limit, ...filters }),
       userRepository.count(filters),
+    ]);
+
+    return {
+      users: users.map(toSafeUser),
+      total,
+      page: params.page,
+      limit: params.limit,
+    };
+  },
+
+  async listDoctors(params: { page: number; limit: number; search?: string }): Promise<{
+    users: SafeUser[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const skip = (params.page - 1) * params.limit;
+
+    const [users, total] = await Promise.all([
+      userRepository.findDoctors({ skip, take: params.limit, search: params.search }),
+      userRepository.countDoctors({ search: params.search }),
     ]);
 
     return {

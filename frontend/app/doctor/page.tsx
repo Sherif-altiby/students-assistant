@@ -24,12 +24,7 @@ import {
 } from "@/components/ui/card";
 import { RatingsMarquee } from "@/components/doctor/RatingMarquee";
  
-/**
- * ---- Mock data ----
- * Design-only pass — replace with real data from:
- *  - GET /support/doctors/me/bookings           (stats + upcoming sessions)
- *  - GET /support/doctors/me/ratings (if added) (ratings carousel)
- */
+
 const stats = [
   {
     label: "الجلسات المكتملة",

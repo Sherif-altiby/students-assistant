@@ -43,19 +43,50 @@ export const userRepository = {
     return prisma.user.findUnique({ where: { invitationToken: token } });
   },
 
-   findMany(params: FindManyParams): Promise<User[]> {
+  findMany(params: FindManyParams): Promise<User[]> {
     return prisma.user.findMany({
       where: buildWhere(params),
       skip: params.skip,
       take: params.take,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
   },
 
-  count(params: Pick<FindManyParams, "search" | "role"> = {}): Promise<number> {
-    return prisma.user.count({ where: buildWhere(params) });
+  // Add these to your userRepository.ts
+  findDoctors(params: { skip: number; take: number; search?: string }): Promise<User[]> {
+    return prisma.user.findMany({
+      where: {
+        role: 'DOCTOR',
+        ...(params.search && {
+          OR: [
+            { name: { contains: params.search, mode: 'insensitive' } },
+            { email: { contains: params.search, mode: 'insensitive' } },
+          ],
+        }),
+      },
+      skip: params.skip,
+      take: params.take,
+      orderBy: { createdAt: 'desc' },
+    });
   },
 
+  countDoctors(params: { search?: string }): Promise<number> {
+    return prisma.user.count({
+      where: {
+        role: 'DOCTOR',
+        ...(params.search && {
+          OR: [
+            { name: { contains: params.search, mode: 'insensitive' } },
+            { email: { contains: params.search, mode: 'insensitive' } },
+          ],
+        }),
+      },
+    });
+  },
+
+  count(params: Pick<FindManyParams, 'search' | 'role'> = {}): Promise<number> {
+    return prisma.user.count({ where: buildWhere(params) });
+  },
 
   update(id: string, data: Prisma.UserUpdateInput): Promise<User> {
     return prisma.user.update({ where: { id }, data });

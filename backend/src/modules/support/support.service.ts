@@ -141,7 +141,7 @@ export const supportService = {
   },
 
   // --- Bookings ---
-  async applyToSlot(userId: string, slotId: string, note?: string) {
+  async applyToSlot(userId: string, slotId: string) {
     return supportRepository.runTransaction(async (tx) => {
       const slot = await tx.availabilitySlot.findUnique({ where: { id: slotId } });
       if (!slot) throw new NotFoundError("Slot not found");
@@ -150,7 +150,7 @@ export const supportService = {
       }
 
       const booking = await tx.sessionBooking.create({
-        data: { slotId, userId, note, status: "PENDING" },
+        data: { slotId, userId, status: "PENDING" },
       });
       await tx.availabilitySlot.update({ where: { id: slotId }, data: { status: "BOOKED" } });
 

@@ -14,6 +14,7 @@ router.post('/accept-invitation', validate(acceptInvitationSchema), userControll
 
 // --- Protected ---
 router.get('/', authenticate, authorize('ADMIN'), userController.list);
+router.get('/doctors', authenticate, authorize('USER'), userController.listDoctors);
 // router.get('/:id', authenticate, validate(getUserSchema), userController.getById);
 // router.patch('/:id', authenticate, validate(updateUserSchema), userController.update);
 // router.delete('/:id', authenticate, validate(getUserSchema), userController.remove);

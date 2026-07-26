@@ -48,6 +48,7 @@ export const supportController = {
     const slots = await supportService.listOpenSlots(doctorId);
     res.status(StatusCodes.OK).json({ status: 'success', data: slots });
   }),
+  
 
   setMeetingLink: asyncHandler(async (req: Request, res: Response) => {
     const { slotId } = slotIdParamSchema.parse(req.params);
@@ -65,8 +66,8 @@ export const supportController = {
   // --- Bookings ---
   apply: asyncHandler(async (req: Request, res: Response) => {
     const { slotId } = slotIdParamSchema.parse(req.params);
-    const { note } = applyToSlotSchema.parse(req.body);
-    const booking = await supportService.applyToSlot(req.user!.id, slotId, note);
+     
+    const booking = await supportService.applyToSlot(req.user!.id, slotId);
     res.status(StatusCodes.CREATED).json({ status: 'success', data: booking });
   }),
 
