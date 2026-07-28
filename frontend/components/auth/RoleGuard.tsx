@@ -1,4 +1,4 @@
-// components/auth/RoleGuard.tsx
+// RoleGuard.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,45 +13,38 @@ interface RoleGuardProps {
   redirectTo?: string;
 }
 
-export function RoleGuard({ 
-  children, 
-  allowedRoles = ["USER", "ADMIN", "DOCTOR"], 
-  redirectTo = "/login" 
+export function RoleGuard({
+  children,
+  allowedRoles = ["USER", "ADMIN", "DOCTOR"],
+  redirectTo = "/login",
 }: RoleGuardProps) {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, } = useAuthStore();
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    // If still loading, wait
+    // Wait until the store has finished hydrating/loading before deciding anything
 
-    // If no user, redirect to login
     if (!user) {
-      router.push(redirectTo);
+      router.replace(redirectTo);
       return;
     }
 
-    // Check if user's role is allowed
     const userRole = user.role as UserRole;
     if (allowedRoles.includes(userRole)) {
       setIsAuthorized(true);
     } else {
-      // Redirect to user's appropriate dashboard
-      const roleRoutes = {
+      const roleRoutes: Record<UserRole, string> = {
         USER: "/dashboard",
         ADMIN: "/admin",
         DOCTOR: "/doctor",
       };
-      router.push(roleRoutes[userRole] || "/dashboard");
+      router.replace(roleRoutes[userRole] || "/dashboard");
     }
   }, [user, router, allowedRoles, redirectTo]);
 
- 
 
-  // If not authorized, don't render children
-  if (!isAuthorized) {
-    return null;
-  }
+  if (!isAuthorized) return null;
 
   return <>{children}</>;
 }

@@ -22,21 +22,23 @@ export function NotificationsButton({ notifications = [] }: NotificationsButtonP
 
   return (
     <Popover>
-      <PopoverTrigger>
-        <Button
-          size="icon"
-          variant="ghost"
-          aria-label="الإشعارات"
-          className="relative h-9 w-9 rounded-full text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-        >
-          <Bell className="h-4 w-4" />
-          {unreadCount > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-semibold text-destructive-foreground">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
+      <PopoverTrigger
+        render={
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="الإشعارات"
+            className="relative h-9 w-9 rounded-full text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-semibold text-destructive-foreground">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </Button>
+        }
+      />
 
       <PopoverContent align="end" className="w-80 p-0">
         <div className="border-b border-border px-4 py-3">

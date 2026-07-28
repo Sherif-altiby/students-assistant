@@ -1,69 +1,44 @@
 import { api } from "@/lib/api";
+import type {
+  ItemResponse,
+  ListResponse,
+  CreateAvailabilityRulePayload,
+  UpdateAvailabilityRulePayload,
+  AvailabilityRule,
+  Slot,
+  Booking,
+  BookingWithSlot,
+  BookingWithSlotAndUser,
+  ListDoctorsParams,
+  ListDoctorsResult,
+  ListDoctorsApiResponse,
+  DoctorStats,
+  UpcomingSession,
+} from "@/types/support";
 
-interface ItemResponse<T> {
-  status: "success";
-  data: T;
-}
-
-interface ListResponse<T> {
-  status: "success";
-  data: T[];
-}
+export type {
+  AvailabilityRuleType,
+  DayOfWeek,
+  CreateAvailabilityRulePayload,
+  UpdateAvailabilityRulePayload,
+  AvailabilityRule,
+  SlotStatus,
+  Slot,
+  BookingStatus,
+  Booking,
+  BookingUser,
+  BookingWithSlot,
+  BookingWithSlotAndUser,
+  DoctorSummary,
+  ListDoctorsParams,
+  ListDoctorsResult,
+  DoctorStats,
+  UpcomingSession,
+} from "@/types/support";
 
 /* ------------------------------------------------------------------ */
 /* Availability rules                                                  */
 /* ------------------------------------------------------------------ */
-
-export type AvailabilityRuleType = "DAILY" | "WEEKLY" | "CUSTOM";
-
-export type DayOfWeek =
-  | "SUNDAY"
-  | "MONDAY"
-  | "TUESDAY"
-  | "WEDNESDAY"
-  | "THURSDAY"
-  | "FRIDAY"
-  | "SATURDAY";
-
-interface DailyRulePayload {
-  type: "DAILY";
-  startTime: string; // "HH:mm"
-  endTime: string; // "HH:mm"
-}
-
-interface WeeklyRulePayload {
-  type: "WEEKLY";
-  dayOfWeek: DayOfWeek;
-  startTime: string;
-  endTime: string;
-}
-
-interface CustomRulePayload {
-  type: "CUSTOM";
-  customDate: string; // "YYYY-MM-DD"
-  startTime: string;
-  endTime: string;
-}
-
-export type CreateAvailabilityRulePayload =
-  | DailyRulePayload
-  | WeeklyRulePayload
-  | CustomRulePayload;
-
-export type UpdateAvailabilityRulePayload = CreateAvailabilityRulePayload;
-
-export interface AvailabilityRule {
-  id: string;
-  doctorId: string;
-  type: AvailabilityRuleType;
-  dayOfWeek: DayOfWeek | null;
-  customDate: string | null;
-  startTime: string;
-  endTime: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export async function listAvailabilityRules(): Promise<AvailabilityRule[]> {
   const res = await api.get<ListResponse<AvailabilityRule>>(
@@ -101,20 +76,6 @@ export async function deleteAvailabilityRule(id: string): Promise<void> {
 /* Slots                                                                */
 /* ------------------------------------------------------------------ */
 
-export type SlotStatus = "OPEN" | "BOOKED" | "COMPLETED" | "CANCELLED";
-
-export interface Slot {
-  id: string;
-  doctorId: string;
-  ruleId: string | null;
-  startTime: string;
-  endTime: string;
-  status: SlotStatus;
-  meetingLink: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
 /** Fetches all available slots for a doctor (endpoint is POST, no body needed). */
 export async function getDoctorSlots(doctorId: string): Promise<Slot[]> {
   const res = await api.get<ListResponse<Slot>>(
@@ -144,50 +105,6 @@ export async function completeSlot(slotId: string): Promise<Slot> {
 /* ------------------------------------------------------------------ */
 /* Bookings                                                             */
 /* ------------------------------------------------------------------ */
-
-export type BookingStatus =
-  | "PENDING"
-  | "ACCEPTED"
-  | "REJECTED"
-  | "CANCELLED"
-  | "COMPLETED";
-
-export interface Booking {
-  id: string;
-  slotId: string;
-  userId: string;
-  status: BookingStatus;
-  note: string | null;
-  requestedAt: string;
-  respondedAt: string | null;
-  cancelledAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface BookingUser {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  status: string;
-  gender: string;
-  level: string;
-  track: string;
-  parentPhone: string;
-  country: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface BookingWithSlot extends Booking {
-  slot: Slot;
-}
-
-export interface BookingWithSlotAndUser extends BookingWithSlot {
-  user: BookingUser;
-}
 
 export async function bookSlot(slotId: string): Promise<Booking> {
   const res = await api.post<ItemResponse<Booking>>(
@@ -243,44 +160,6 @@ export async function rateBooking(
 /* Doctors directory                                                    */
 /* ------------------------------------------------------------------ */
 
-export interface DoctorSummary {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  status: string;
-  gender: string | null;
-  level: string | null;
-  track: string | null;
-  parentPhone: string | null;
-  country: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ListDoctorsParams {
-  page?: number;
-  limit?: number;
-}
-
-export interface ListDoctorsResult {
-  doctors: DoctorSummary[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-interface ListDoctorsApiResponse {
-  status: "success";
-  data: {
-    users: DoctorSummary[];
-    total: number;
-    page: number;
-    limit: number;
-  };
-}
-
 export async function listDoctors(
   params: ListDoctorsParams = {},
 ): Promise<ListDoctorsResult> {
@@ -292,4 +171,24 @@ export async function listDoctors(
   });
   const { users, total, page, limit } = res.data.data;
   return { doctors: users, total, page, limit };
+}
+
+/* ------------------------------------------------------------------ */
+/* Doctor stats                                                         */
+/* ------------------------------------------------------------------ */
+
+export async function getDoctorStats(): Promise<DoctorStats> {
+  const res = await api.get<ItemResponse<DoctorStats>>("/support/doctor/stats");
+  return res.data.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Upcoming sessions                                                    */
+/* ------------------------------------------------------------------ */
+
+export async function getUpcomingSessions(): Promise<UpcomingSession[]> {
+  const res = await api.get<ListResponse<UpcomingSession>>(
+    "/support/doctor/upcoming",
+  );
+  return res.data.data;
 }

@@ -7,11 +7,9 @@ export default function DoctorLayout({
   children: React.ReactNode;
 }) {
   return (
-    <RoleGuard allowedRoles={["DOCTOR"]}>
       <div>
         <Header />
         {children}
       </div>
-    </RoleGuard>
   );
 }

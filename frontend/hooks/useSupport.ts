@@ -14,6 +14,8 @@ import {
   deleteAvailabilityRule,
   getDoctorBookings,
   getDoctorSlots,
+  getDoctorStats,
+  getUpcomingSessions,
   getUserBookings,
   listAvailabilityRules,
   listDoctors,
@@ -224,6 +226,46 @@ export function useDoctorBookings() {
 
     completeSlot: completeMutation.mutate,
     isCompletingSlot: completeMutation.isPending,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Doctor: profile stats (completed sessions, beneficiaries, rating)   */
+/* ------------------------------------------------------------------ */
+
+export function useDoctorStats() {
+  const query = useQuery({
+    queryKey: ["support", "doctor-stats"],
+    queryFn: getDoctorStats,
+  });
+
+  const error = query.isError ? "تعذر تحميل إحصائيات الطبيب" : null;
+
+  return {
+    stats: query.data,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    error,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Doctor: nearest upcoming sessions (max 3)                            */
+/* ------------------------------------------------------------------ */
+
+export function useUpcomingSessions() {
+  const query = useQuery({
+    queryKey: ["support", "upcoming-sessions"],
+    queryFn: getUpcomingSessions,
+  });
+
+  const error = query.isError ? "تعذر تحميل الجلسات القادمة" : null;
+
+  return {
+    sessions: query.data ?? [],
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    error,
   };
 }
 
