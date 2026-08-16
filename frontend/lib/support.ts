@@ -15,6 +15,10 @@ import type {
   DoctorStats,
   UpcomingSession,
 } from "@/types/support";
+import type {
+  SupportSession,
+  ConsultationSession,
+} from "@/types";
 
 export type {
   AvailabilityRuleType,
@@ -190,5 +194,58 @@ export async function getUpcomingSessions(): Promise<UpcomingSession[]> {
   const res = await api.get<ListResponse<UpcomingSession>>(
     "/support/doctor/upcoming",
   );
+  return res.data.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Support and consultation sessions                                    */
+/* ------------------------------------------------------------------ */
+
+export const SUPPORT_MONTHLY_LIMIT = 1;
+export const CONSULTATION_MONTHLY_LIMIT = 3;
+
+type SupportApiListResponse<T> = { status: "success"; data: T[] };
+type SupportApiItemResponse<T> = { status: "success"; data: T };
+
+export function countThisMonth<T extends { createdAt: string }>(items: T[]) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  return items.filter((item) => {
+    const createdAt = new Date(item.createdAt);
+    return (
+      !Number.isNaN(createdAt.getTime()) &&
+      createdAt.getFullYear() === currentYear &&
+      createdAt.getMonth() === currentMonth
+    );
+  }).length;
+}
+
+export async function listSupportSessions(): Promise<SupportSession[]> {
+  const res = await api.get<SupportApiListResponse<SupportSession>>("/support");
+  return res.data.data;
+}
+
+export async function requestSupportSession(
+  note?: string,
+): Promise<SupportSession> {
+  const res = await api.post<SupportApiItemResponse<SupportSession>>("/support", {
+    note,
+  });
+  return res.data.data;
+}
+
+export async function listConsultations(): Promise<ConsultationSession[]> {
+  const res = await api.get<SupportApiListResponse<ConsultationSession>>("/consultation");
+  return res.data.data;
+}
+
+export async function requestConsultation(
+  subject: string,
+): Promise<ConsultationSession> {
+  const res = await api.post<SupportApiItemResponse<ConsultationSession>>("/consultation", {
+    subject,
+  });
   return res.data.data;
 }

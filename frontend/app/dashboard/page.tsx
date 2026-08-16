@@ -4,10 +4,7 @@ import { useEffect, useState } from "react";
 import {
   HeartHandshake,
   MessageCircleQuestion,
-  ListChecks,
-  Repeat,
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { QuotaCard } from "@/components/QuotaCard";
 import { useAuthStore } from "@/store/useAuthStore";
 import { listTasks } from "@/lib/tasks";
@@ -74,10 +71,7 @@ export default function DashboardOverviewPage() {
 
   const completedTasks = tasks.filter((t) => t.completed).length;
   const pendingTasks = tasks.length - completedTasks;
-  const taskPieData = [
-    { name: "منجزة", value: completedTasks },
-    { name: "متبقية", value: pendingTasks || 1 },
-  ];
+ 
 
   const habitChartData = habits.map((h) => ({
     name: h.title.length > 10 ? `${h.title.slice(0, 10)}…` : h.title,

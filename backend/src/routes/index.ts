@@ -7,7 +7,7 @@ import { studyTableRouter } from '../modules/study-table/study-table.routes';
 import { chatRouter } from '../modules/chat/chat.routes';
 import { supportRouter } from '../modules/support/support.routes';
 
-const router = Router();
+const router = Router(); 
 
 
 router.use('/auth', authRouter);

@@ -30,4 +30,7 @@ router.post("/slots/:slotId/complete" , authorize("DOCTOR"), supportController.c
 // --- User: rate completed session ---
 router.post("/bookings/:bookingId/rating" , authorize("USER"), supportController.rate);
 
+router.get('/doctor/stats', authorize('DOCTOR'), supportController.getStats);
+router.get('/doctor/upcoming', authorize('DOCTOR'), supportController.getUpcomingSessions);
+
 export { router as supportRouter };

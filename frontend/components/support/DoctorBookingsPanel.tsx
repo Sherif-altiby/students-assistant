@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useDoctorBookings } from "@/hooks/useSupport";
 import {
   Card,
@@ -16,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -100,6 +102,79 @@ function BookingRowActions({
   return null;
 }
 
+function BookingsTable({
+  bookings,
+  showActions,
+  isResponding,
+  isSettingMeetingLink,
+  isCompletingSlot,
+  onRespond,
+  onSetMeetingLink,
+  onComplete,
+  emptyMessage,
+}: {
+  bookings: BookingWithSlotAndUser[];
+  showActions: boolean;
+  isResponding: boolean;
+  isSettingMeetingLink: boolean;
+  isCompletingSlot: boolean;
+  onRespond: (bookingId: string, accept: boolean) => void;
+  onSetMeetingLink: (slotId: string, meetingLink: string) => void;
+  onComplete: (slotId: string) => void;
+  emptyMessage: string;
+}) {
+  if (bookings.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-center text-muted-foreground">
+        <Users className="h-8 w-8" />
+        <p className="text-sm">{emptyMessage}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto text-right">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-right">الطالب</TableHead>
+            <TableHead className="text-right">الموعد</TableHead>
+            <TableHead className="text-right">الحالة</TableHead>
+            {showActions && <TableHead className="text-center">إجراءات</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {bookings.map((booking) => (
+            <TableRow key={booking.id}>
+              <TableCell>
+                <div className="font-medium">{booking.user.name}</div>
+                <div className="text-xs text-muted-foreground">{booking.user.phone}</div>
+              </TableCell>
+              <TableCell className="text-sm">{formatSlotTime(booking.slot)}</TableCell>
+              <TableCell>
+                <BookingStatusBadge status={booking.status} />
+              </TableCell>
+              {showActions && (
+                <TableCell>
+                  <BookingRowActions
+                    booking={booking}
+                    isResponding={isResponding}
+                    isSettingMeetingLink={isSettingMeetingLink}
+                    isCompletingSlot={isCompletingSlot}
+                    onRespond={(accept) => onRespond(booking.id, accept)}
+                    onSetMeetingLink={(meetingLink) => onSetMeetingLink(booking.slotId, meetingLink)}
+                    onComplete={() => onComplete(booking.slotId)}
+                  />
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 export function DoctorBookingsPanel() {
   const {
     bookings,
@@ -112,6 +187,18 @@ export function DoctorBookingsPanel() {
     completeSlot,
     isCompletingSlot,
   } = useDoctorBookings();
+
+  const [activeTab, setActiveTab] = useState("pending");
+
+  const pendingBookings = useMemo(
+    () => bookings.filter((b) => b.status === "PENDING" || b.status === "ACCEPTED"),
+    [bookings],
+  );
+
+  const completedBookings = useMemo(
+    () => bookings.filter((b) => b.status === "COMPLETED"),
+    [bookings],
+  );
 
   return (
     <Card>
@@ -131,55 +218,48 @@ export function DoctorBookingsPanel() {
           </div>
         )}
 
-        {!isLoading && bookings.length === 0 && (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-center text-muted-foreground">
-            <Users className="h-8 w-8" />
-            <p className="text-sm">لا توجد حجوزات حتى الآن</p>
-          </div>
-        )}
+        {!isLoading && (
+          <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
+            <TabsList>
+              <TabsTrigger value="pending">
+                بانتظار الرد
+                {pendingBookings.length > 0 && (
+                  <span className="ms-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
+                    {pendingBookings.length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="completed">مكتمل</TabsTrigger>
+            </TabsList>
 
-        {!isLoading && bookings.length > 0 && (
-          <div className="overflow-x-auto text-right">
-            <Table>
-              <TableHeader  >
-                <TableRow >
-                  <TableHead className="text-right" > الطالب  </TableHead>
-                  <TableHead className="text-right">الموعد</TableHead>
-                  <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-center">إجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell>
-                      <div className="font-medium">{booking.user.name}</div>
-                      <div className="text-xs text-muted-foreground">{booking.user.phone}</div>
-                    </TableCell>
-                    <TableCell className="text-sm">{formatSlotTime(booking.slot)}</TableCell>
-                    <TableCell>
-                      <BookingStatusBadge status={booking.status} />
-                    </TableCell>
-                    <TableCell>
-                      <BookingRowActions
-                        booking={booking}
-                        isResponding={isResponding}
-                        isSettingMeetingLink={isSettingMeetingLink}
-                        isCompletingSlot={isCompletingSlot}
-                        onRespond={(accept) =>
-                          respondToBooking({ bookingId: booking.id, accept })
-                        }
-                        onSetMeetingLink={(meetingLink) =>
-                          setMeetingLink({ slotId: booking.slotId, meetingLink })
-                        }
-                        onComplete={() => completeSlot(booking.slotId)}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+            <TabsContent value="pending" className="mt-4">
+              <BookingsTable
+                bookings={pendingBookings}
+                showActions
+                isResponding={isResponding}
+                isSettingMeetingLink={isSettingMeetingLink}
+                isCompletingSlot={isCompletingSlot}
+                onRespond={(bookingId, accept) => respondToBooking({ bookingId, accept })}
+                onSetMeetingLink={(slotId, meetingLink) => setMeetingLink({ slotId, meetingLink })}
+                onComplete={(slotId) => completeSlot(slotId)}
+                emptyMessage="لا توجد حجوزات بانتظار الرد"
+              />
+            </TabsContent>
+
+            <TabsContent value="completed" className="mt-4">
+              <BookingsTable
+                bookings={completedBookings}
+                showActions={false}
+                isResponding={isResponding}
+                isSettingMeetingLink={isSettingMeetingLink}
+                isCompletingSlot={isCompletingSlot}
+                onRespond={() => {}}
+                onSetMeetingLink={() => {}}
+                onComplete={() => {}}
+                emptyMessage="لا توجد جلسات مكتملة بعد"
+              />
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
     </Card>

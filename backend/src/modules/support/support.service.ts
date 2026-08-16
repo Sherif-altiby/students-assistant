@@ -1,23 +1,28 @@
-import { addDays, isBefore, setHours, setMinutes } from "date-fns";
-import type { DayOfWeek } from "@prisma/client";
-import { supportRepository } from "./support.repository";
-import type { CreateRuleInput, UpdateRuleInput } from "./support.schema";
+import { addDays, isBefore, setHours, setMinutes } from 'date-fns';
+import type { DayOfWeek } from '@prisma/client';
+import { supportRepository } from './support.repository';
+import type { CreateRuleInput, UpdateRuleInput } from './support.schema';
 import {
   NotFoundError,
   ForbiddenError,
   ConflictError,
   BadRequestError,
-} from "../../utils/AppError";
+} from '../../utils/AppError';
 
 const DAY_INDEX: Record<DayOfWeek, number> = {
-  SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3,
-  THURSDAY: 4, FRIDAY: 5, SATURDAY: 6,
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
 };
 
 const GENERATION_WINDOW_DAYS = 60;
 
 function combineDateAndTime(date: Date, time: string): Date {
-  const parts = time.split(":");
+  const parts = time.split(':');
   const hours = Number(parts[0]);
   const minutes = Number(parts[1]);
 
@@ -49,8 +54,8 @@ export const supportService = {
 
   async updateRule(doctorId: string, ruleId: string, input: UpdateRuleInput) {
     const rule = await supportRepository.findRuleById(ruleId);
-    if (!rule) throw new NotFoundError("Rule not found");
-    if (rule.doctorId !== doctorId) throw new ForbiddenError("Not authorized to modify this rule");
+    if (!rule) throw new NotFoundError('Rule not found');
+    if (rule.doctorId !== doctorId) throw new ForbiddenError('Not authorized to modify this rule');
 
     const updated = await supportRepository.updateRule(ruleId, input);
     if (updated.isActive) {
@@ -61,8 +66,8 @@ export const supportService = {
 
   async deleteRule(doctorId: string, ruleId: string) {
     const rule = await supportRepository.findRuleById(ruleId);
-    if (!rule) throw new NotFoundError("Rule not found");
-    if (rule.doctorId !== doctorId) throw new ForbiddenError("Not authorized to delete this rule");
+    if (!rule) throw new NotFoundError('Rule not found');
+    if (rule.doctorId !== doctorId) throw new ForbiddenError('Not authorized to delete this rule');
     return supportRepository.deleteRule(ruleId);
   },
 
@@ -79,15 +84,19 @@ export const supportService = {
     const horizon = addDays(today, GENERATION_WINDOW_DAYS);
     const candidateDates: Date[] = [];
 
-    if (rule.type === "CUSTOM") {
+    if (rule.type === 'CUSTOM') {
       if (rule.customDate && !isBefore(rule.customDate, today)) {
         candidateDates.push(rule.customDate);
       }
     } else {
       for (let d = today; isBefore(d, horizon); d = addDays(d, 1)) {
-        if (rule.type === "DAILY") {
+        if (rule.type === 'DAILY') {
           candidateDates.push(d);
-        } else if (rule.type === "WEEKLY" && rule.dayOfWeek && d.getDay() === DAY_INDEX[rule.dayOfWeek]) {
+        } else if (
+          rule.type === 'WEEKLY' &&
+          rule.dayOfWeek &&
+          d.getDay() === DAY_INDEX[rule.dayOfWeek]
+        ) {
           candidateDates.push(d);
         }
       }
@@ -118,24 +127,24 @@ export const supportService = {
 
   async setMeetingLink(doctorId: string, slotId: string, meetingLink: string) {
     const slot = await supportRepository.findSlotById(slotId);
-    if (!slot) throw new NotFoundError("Slot not found");
-    if (slot.doctorId !== doctorId) throw new ForbiddenError("Not authorized to modify this slot");
+    if (!slot) throw new NotFoundError('Slot not found');
+    if (slot.doctorId !== doctorId) throw new ForbiddenError('Not authorized to modify this slot');
     return supportRepository.updateSlot(slotId, { meetingLink });
   },
 
   async completeSession(doctorId: string, slotId: string) {
     const slot = await supportRepository.findSlotWithBooking(slotId);
-    if (!slot) throw new NotFoundError("Slot not found");
-    if (slot.doctorId !== doctorId) throw new ForbiddenError("Not authorized to modify this slot");
-    if (!slot.booking || slot.booking.status !== "ACCEPTED") {
-      throw new ConflictError("No accepted booking to complete");
+    if (!slot) throw new NotFoundError('Slot not found');
+    if (slot.doctorId !== doctorId) throw new ForbiddenError('Not authorized to modify this slot');
+    if (!slot.booking || slot.booking.status !== 'ACCEPTED') {
+      throw new ConflictError('No accepted booking to complete');
     }
 
     return supportRepository.runTransaction(async (tx) => {
-      await tx.availabilitySlot.update({ where: { id: slotId }, data: { status: "COMPLETED" } });
+      await tx.availabilitySlot.update({ where: { id: slotId }, data: { status: 'COMPLETED' } });
       return tx.sessionBooking.update({
         where: { id: slot.booking!.id },
-        data: { status: "COMPLETED" },
+        data: { status: 'COMPLETED' },
       });
     });
   },
@@ -144,15 +153,15 @@ export const supportService = {
   async applyToSlot(userId: string, slotId: string) {
     return supportRepository.runTransaction(async (tx) => {
       const slot = await tx.availabilitySlot.findUnique({ where: { id: slotId } });
-      if (!slot) throw new NotFoundError("Slot not found");
-      if (slot.status !== "OPEN") {
-        throw new ConflictError("This slot is no longer available");
+      if (!slot) throw new NotFoundError('Slot not found');
+      if (slot.status !== 'OPEN') {
+        throw new ConflictError('This slot is no longer available');
       }
 
       const booking = await tx.sessionBooking.create({
-        data: { slotId, userId, status: "PENDING" },
+        data: { slotId, userId, status: 'PENDING' },
       });
-      await tx.availabilitySlot.update({ where: { id: slotId }, data: { status: "BOOKED" } });
+      await tx.availabilitySlot.update({ where: { id: slotId }, data: { status: 'BOOKED' } });
 
       return booking;
     });
@@ -168,18 +177,22 @@ export const supportService = {
 
   async respondToBooking(doctorId: string, bookingId: string, accept: boolean) {
     const booking = await supportRepository.findBookingById(bookingId);
-    if (!booking) throw new NotFoundError("Booking not found");
-    if (booking.slot.doctorId !== doctorId) throw new ForbiddenError("Not authorized to respond to this booking");
-    if (booking.status !== "PENDING") throw new ConflictError("Booking already responded to");
+    if (!booking) throw new NotFoundError('Booking not found');
+    if (booking.slot.doctorId !== doctorId)
+      throw new ForbiddenError('Not authorized to respond to this booking');
+    if (booking.status !== 'PENDING') throw new ConflictError('Booking already responded to');
 
     return supportRepository.runTransaction(async (tx) => {
       const updated = await tx.sessionBooking.update({
         where: { id: bookingId },
-        data: { status: accept ? "ACCEPTED" : "REJECTED", respondedAt: new Date() },
+        data: { status: accept ? 'ACCEPTED' : 'REJECTED', respondedAt: new Date() },
       });
 
       if (!accept) {
-        await tx.availabilitySlot.update({ where: { id: booking.slotId }, data: { status: "OPEN" } });
+        await tx.availabilitySlot.update({
+          where: { id: booking.slotId },
+          data: { status: 'OPEN' },
+        });
       }
 
       return updated;
@@ -188,18 +201,19 @@ export const supportService = {
 
   async cancelBooking(userId: string, bookingId: string) {
     const booking = await supportRepository.findBookingById(bookingId);
-    if (!booking) throw new NotFoundError("Booking not found");
-    if (booking.userId !== userId) throw new ForbiddenError("Not authorized to cancel this booking");
-    if (!["PENDING", "ACCEPTED"].includes(booking.status)) {
-      throw new ConflictError("Booking cannot be cancelled in its current state");
+    if (!booking) throw new NotFoundError('Booking not found');
+    if (booking.userId !== userId)
+      throw new ForbiddenError('Not authorized to cancel this booking');
+    if (!['PENDING', 'ACCEPTED'].includes(booking.status)) {
+      throw new ConflictError('Booking cannot be cancelled in its current state');
     }
 
     return supportRepository.runTransaction(async (tx) => {
       const updated = await tx.sessionBooking.update({
         where: { id: bookingId },
-        data: { status: "CANCELLED", cancelledAt: new Date() },
+        data: { status: 'CANCELLED', cancelledAt: new Date() },
       });
-      await tx.availabilitySlot.update({ where: { id: booking.slotId }, data: { status: "OPEN" } });
+      await tx.availabilitySlot.update({ where: { id: booking.slotId }, data: { status: 'OPEN' } });
       return updated;
     });
   },
@@ -207,10 +221,10 @@ export const supportService = {
   // --- Ratings ---
   async rateSession(userId: string, bookingId: string, score: number, comment?: string) {
     const booking = await supportRepository.findBookingById(bookingId);
-    if (!booking) throw new NotFoundError("Booking not found");
-    if (booking.userId !== userId) throw new ForbiddenError("Not authorized to rate this booking");
-    if (booking.status !== "COMPLETED") {
-      throw new ConflictError("Can only rate completed sessions");
+    if (!booking) throw new NotFoundError('Booking not found');
+    if (booking.userId !== userId) throw new ForbiddenError('Not authorized to rate this booking');
+    if (booking.status !== 'COMPLETED') {
+      throw new ConflictError('Can only rate completed sessions');
     }
 
     return supportRepository.createRating({
@@ -219,5 +233,31 @@ export const supportService = {
       score,
       comment,
     });
+  },
+
+  // --- Stats ---
+  async getDoctorStats(doctorId: string) {
+    const [completedSessions, totalBeneficiaries, ratingStats] = await Promise.all([
+      supportRepository.countCompletedSessionsByDoctor(doctorId),
+      supportRepository.countUniqueBeneficiariesByDoctor(doctorId),
+      supportRepository.getDoctorRatingStats(doctorId),
+    ]);
+
+    const averageRating = ratingStats._avg.score ?? 0;
+    const totalRatings = ratingStats._count.score ?? 0;
+    const roundedRating = Math.round(averageRating * 10) / 10;
+
+    return {
+      completedSessions,
+      totalBeneficiaries,
+      averageRating: roundedRating,
+      totalRatings,
+      ratingLabel: `${roundedRating} من 5 عبر ${totalRatings} تقييم`,
+    };
+  },
+
+  // --- Upcoming sessions ---
+  async getUpcomingSessions(doctorId: string, limit = 3) {
+    return supportRepository.findUpcomingBookingsForDoctor(doctorId, limit);
   },
 };

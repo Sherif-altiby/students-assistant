@@ -48,7 +48,6 @@ export const supportController = {
     const slots = await supportService.listOpenSlots(doctorId);
     res.status(StatusCodes.OK).json({ status: 'success', data: slots });
   }),
-  
 
   setMeetingLink: asyncHandler(async (req: Request, res: Response) => {
     const { slotId } = slotIdParamSchema.parse(req.params);
@@ -66,7 +65,7 @@ export const supportController = {
   // --- Bookings ---
   apply: asyncHandler(async (req: Request, res: Response) => {
     const { slotId } = slotIdParamSchema.parse(req.params);
-     
+
     const booking = await supportService.applyToSlot(req.user!.id, slotId);
     res.status(StatusCodes.CREATED).json({ status: 'success', data: booking });
   }),
@@ -100,5 +99,17 @@ export const supportController = {
     const { score, comment } = rateSessionSchema.parse(req.body);
     const rating = await supportService.rateSession(req.user!.id, bookingId, score, comment);
     res.status(StatusCodes.CREATED).json({ status: 'success', data: rating });
+  }),
+
+  // --- Stats ---
+  getStats: asyncHandler(async (req: Request, res: Response) => {
+    const stats = await supportService.getDoctorStats(req.user!.id);
+    res.status(StatusCodes.OK).json({ status: 'success', data: stats });
+  }),
+
+  // --- Upcoming sessions ---
+  getUpcomingSessions: asyncHandler(async (req: Request, res: Response) => {
+    const sessions = await supportService.getUpcomingSessions(req.user!.id, 3);
+    res.status(StatusCodes.OK).json({ status: 'success', data: sessions });
   }),
 };

@@ -1,14 +1,13 @@
- import type {
+import type {
   DoctorAvailabilityRule,
   AvailabilitySlot,
   SessionBooking,
   SessionRating,
   Prisma,
-} from "@prisma/client";
-import { prisma } from "../../config/prisma";
+} from '@prisma/client';
+import { prisma } from '../../config/prisma';
 
 export const supportRepository = {
-  // --- Rules ---
   createRule(data: Prisma.DoctorAvailabilityRuleCreateInput): Promise<DoctorAvailabilityRule> {
     return prisma.doctorAvailabilityRule.create({ data });
   },
@@ -20,7 +19,7 @@ export const supportRepository = {
   findRulesByDoctor(doctorId: string): Promise<DoctorAvailabilityRule[]> {
     return prisma.doctorAvailabilityRule.findMany({
       where: { doctorId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
   },
 
@@ -28,7 +27,10 @@ export const supportRepository = {
     return prisma.doctorAvailabilityRule.findMany({ where: { isActive: true } });
   },
 
-  updateRule(id: string, data: Prisma.DoctorAvailabilityRuleUpdateInput): Promise<DoctorAvailabilityRule> {
+  updateRule(
+    id: string,
+    data: Prisma.DoctorAvailabilityRuleUpdateInput
+  ): Promise<DoctorAvailabilityRule> {
     return prisma.doctorAvailabilityRule.update({ where: { id }, data });
   },
 
@@ -36,7 +38,6 @@ export const supportRepository = {
     return prisma.doctorAvailabilityRule.delete({ where: { id } });
   },
 
-  // --- Slots ---
   createManySlots(data: Prisma.AvailabilitySlotCreateManyInput[]): Promise<Prisma.BatchPayload> {
     return prisma.availabilitySlot.createMany({ data, skipDuplicates: true });
   },
@@ -51,8 +52,8 @@ export const supportRepository = {
 
   findOpenSlotsByDoctor(doctorId: string, fromDate: Date): Promise<AvailabilitySlot[]> {
     return prisma.availabilitySlot.findMany({
-      where: { doctorId, status: "OPEN", startTime: { gte: fromDate } },
-      orderBy: { startTime: "asc" },
+      where: { doctorId, status: 'OPEN', startTime: { gte: fromDate } },
+      orderBy: { startTime: 'asc' },
     });
   },
 
@@ -60,7 +61,6 @@ export const supportRepository = {
     return prisma.availabilitySlot.update({ where: { id }, data });
   },
 
-  // --- Bookings ---
   createBooking(data: Prisma.SessionBookingCreateInput): Promise<SessionBooking> {
     return prisma.sessionBooking.create({ data });
   },
@@ -73,7 +73,7 @@ export const supportRepository = {
     return prisma.sessionBooking.findMany({
       where: { userId },
       include: { slot: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
   },
 
@@ -81,7 +81,7 @@ export const supportRepository = {
     return prisma.sessionBooking.findMany({
       where: { slot: { doctorId } },
       include: { slot: true, user: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
   },
 
@@ -89,13 +89,49 @@ export const supportRepository = {
     return prisma.sessionBooking.update({ where: { id }, data });
   },
 
-  // --- Ratings ---
   createRating(data: Prisma.SessionRatingCreateInput): Promise<SessionRating> {
     return prisma.sessionRating.create({ data });
   },
 
-  // --- Transactions (composite operations spanning multiple tables) ---
   runTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return prisma.$transaction(fn);
+  },
+
+  // --- Stats ---
+  countCompletedSessionsByDoctor(doctorId: string): Promise<number> {
+    return prisma.sessionBooking.count({
+      where: { slot: { doctorId }, status: 'COMPLETED' },
+    });
+  },
+
+  countUniqueBeneficiariesByDoctor(doctorId: string): Promise<number> {
+    return prisma.sessionBooking
+      .findMany({
+        where: { slot: { doctorId }, status: 'COMPLETED' },
+        select: { userId: true },
+        distinct: ['userId'],
+      })
+      .then((rows) => rows.length);
+  },
+
+  getDoctorRatingStats(doctorId: string) {
+    return prisma.sessionRating.aggregate({
+      where: { booking: { slot: { doctorId } } },
+      _avg: { score: true },
+      _count: { score: true },
+    });
+  },
+
+  // --- Upcoming sessions ---
+  findUpcomingBookingsForDoctor(doctorId: string, limit: number) {
+    return prisma.sessionBooking.findMany({
+      where: {
+        status: 'ACCEPTED',
+        slot: { doctorId, startTime: { gte: new Date() } },
+      },
+      include: { slot: true, user: true },
+      orderBy: { slot: { startTime: 'asc' } },
+      take: limit,
+    });
   },
 };
