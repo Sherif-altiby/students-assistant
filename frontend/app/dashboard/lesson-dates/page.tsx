@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarDays, PencilLine, Plus, Trash2 } from "lucide-react";
+import { format, parseISO, startOfDay } from "date-fns";
+import { arSA } from "date-fns/locale";
+import { CalendarDays, CalendarIcon, PencilLine, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type LessonDate = {
   id: string;
@@ -37,6 +41,62 @@ function getDayName(value: string) {
   return new Intl.DateTimeFormat("ar-EG", {
     weekday: "long",
   }).format(new Date(`${value}T00:00:00`));
+}
+
+function getDateValue(dateValue: string | undefined) {
+  return dateValue ? new Date(`${dateValue}T00:00:00`) : undefined;
+}
+
+function FieldDatePicker({
+  label,
+  value,
+  onChange,
+  minDate,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (date: Date | undefined) => void;
+  minDate?: Date;
+  placeholder: string;
+}) {
+  const selectedValue = getDateValue(value);
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium text-foreground">{label}</Label>
+      <Popover>
+        <PopoverTrigger>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full justify-between rounded-xl border-border/70 bg-muted/30 px-3 font-normal text-foreground"
+          >
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4 text-primary" />
+              <span className={value ? "text-foreground" : "text-muted-foreground"}>
+                {value ? format(parseISO(value), "PPP", { locale: arSA }) : placeholder}
+              </span>
+            </div>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto rounded-2xl border-border/50 p-0 shadow-xl" align="start">
+          <Calendar
+            mode="single"
+            selected={selectedValue}
+            onSelect={onChange}
+            locale={arSA}
+            className="p-1"
+            disabled={(date) => {
+              if (date < startOfDay(new Date())) return true;
+              if (minDate && date < startOfDay(minDate)) return true;
+              return false;
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 }
 
 export default function LessonDatesPage() {
@@ -116,6 +176,17 @@ export default function LessonDatesPage() {
     }
   }
 
+  function handleDateChange(field: "fromDate" | "toDate") {
+    return (date: Date | undefined) => {
+      if (!date) return;
+
+      setForm((current) => ({
+        ...current,
+        [field]: format(date, "yyyy-MM-dd"),
+      }));
+    };
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -139,35 +210,20 @@ export default function LessonDatesPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="from-date" className="text-sm font-medium text-foreground">
-                من
-              </Label>
-              <Input
-                id="from-date"
-                type="date"
-                value={form.fromDate}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, fromDate: event.target.value }))
-                }
-                className="h-11"
-              />
-            </div>
+            <FieldDatePicker
+              label="من"
+              value={form.fromDate}
+              onChange={handleDateChange("fromDate")}
+              placeholder="اختر تاريخ البداية"
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="to-date" className="text-sm font-medium text-foreground">
-                إلى
-              </Label>
-              <Input
-                id="to-date"
-                type="date"
-                value={form.toDate}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, toDate: event.target.value }))
-                }
-                className="h-11"
-              />
-            </div>
+            <FieldDatePicker
+              label="إلى"
+              value={form.toDate}
+              onChange={handleDateChange("toDate")}
+              minDate={form.fromDate ? getDateValue(form.fromDate) : undefined}
+              placeholder="اختر تاريخ النهاية"
+            />
           </div>
 
           {error && (

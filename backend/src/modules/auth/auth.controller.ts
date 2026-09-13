@@ -40,7 +40,7 @@ export const authController = {
 
   refresh: asyncHandler(async (req: Request, res: Response) => {
     const token = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
-    if (!token) {
+    if (!token) { 
       throw new UnauthorizedError('Missing refresh token');
     }
 
@@ -50,7 +50,12 @@ export const authController = {
   }),
 
   logout: asyncHandler(async (_req: Request, res: Response) => {
-    res.clearCookie(REFRESH_COOKIE_NAME, { path: '/api/v1/auth' });
+    res.clearCookie(REFRESH_COOKIE_NAME, {
+      path: '/',
+      secure: env.isProduction,
+      sameSite: 'lax',
+      httpOnly: true,
+    });
     res.status(StatusCodes.NO_CONTENT).send();
   }),
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Loader2, CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { arSA } from "date-fns/locale";
 import {
   Dialog,
@@ -44,6 +44,11 @@ export function CreateStudyTableDialog({ onCreate, isCreating }: CreateStudyTabl
   const [endDate, setEndDate] = useState<Date>();
   const [numberOfDays, setNumberOfDays] = useState("7");
 
+  const tableTypeLabels: Record<StudyTableType, string> = {
+    DATE_RANGE: "فترة زمنية محددة",
+    NUMBER_OF_DAYS: "عدد أيام",
+  };
+
   function reset() {
     setTitle("");
     setType("DATE_RANGE");
@@ -74,6 +79,8 @@ export function CreateStudyTableDialog({ onCreate, isCreating }: CreateStudyTabl
     setOpen(false);
     reset();
   }
+
+  const isPastOrTodayDisabled = (date: Date) => date < startOfDay(new Date());
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -121,7 +128,7 @@ export function CreateStudyTableDialog({ onCreate, isCreating }: CreateStudyTabl
             <label className="text-sm font-semibold block"> نوع الجدول </label>
             <Select value={type} onValueChange={(v) => setType(v as StudyTableType)} >
               <SelectTrigger className=" !h-11 w-full rounded-2xl bg-muted/30 border-border/60 ">
-                <SelectValue />
+                <SelectValue>{tableTypeLabels[type]}</SelectValue>
               </SelectTrigger>
               <SelectContent className=" rounded-2xl p-2 " >
 
@@ -155,14 +162,19 @@ export function CreateStudyTableDialog({ onCreate, isCreating }: CreateStudyTabl
                         { item.value ? format( item.value, "PPP", { locale: arSA } ) : "اختر التاريخ" }
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className=" rounded-2xl p-0 shadow-xl " >
+                    <PopoverContent className="w-auto rounded-2xl border-border/50 p-0 shadow-xl" align="start">
 
                       <Calendar
                         mode="single"
                         selected={item.value}
                         onSelect={item.set}
                         locale={arSA}
-                        disabled={index === 1 && startDate ? (date) => date < startDate : undefined}
+                        className="p-1"
+                        disabled={(date) => {
+                          if (date < startOfDay(new Date())) return true;
+                          if (index === 1 && startDate && date < startOfDay(startDate)) return true;
+                          return false;
+                        }}
                       />
 
                     </PopoverContent>

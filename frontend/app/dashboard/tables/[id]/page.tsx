@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { CalendarDays, Loader2, Pencil, Trash2, Video } from "lucide-react";
+import { CalendarDays, CloudDownload, Loader2, Pencil, Trash2, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -165,7 +165,7 @@ export default function StudyTableDetailPage() {
               {isDownloadingPdf ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Video className="h-4 w-4" />
+                 <CloudDownload className="h-4 w-4" />
               )}
               {isDownloadingPdf ? 'جاري التحميل...' : 'تحميل الجدول'}
             </Button>

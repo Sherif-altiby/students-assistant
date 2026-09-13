@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { 
-  Loader2, 
-  X, 
-  BookOpen, 
-  Layers, 
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Loader2,
+  X,
+  BookOpen,
+  Layers,
   ListChecks,
   Check,
   ChevronRight,
   Calendar,
-  ClipboardList
+  ClipboardList,
+  Plus,
 } from "lucide-react";
 import {
   Dialog,
@@ -31,7 +32,7 @@ import type {
   UpdateDaySubjectsPayload,
 } from "@/types/study-table";
 import { STATIC_SUBJECTS, Track } from "@/data/subjects-data";
- import { formatDayHeading } from "@/data/date";
+import { formatDayHeading } from "@/data/date";
 import { useAuthStore } from "@/store/useAuthStore";
 
 interface DaySubjectsEditorDialogProps {
@@ -91,9 +92,11 @@ export function DaySubjectsEditorDialog({
 }: DaySubjectsEditorDialogProps) {
   const user = useAuthStore((s) => s.user);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [subjectIndex, setSubjectIndex] = useState<string>("");
-  const [chapterIndex, setChapterIndex] = useState<string>("");
+  const [subjectBlocks, setSubjectBlocks] = useState<
+    Array<{ id: string; subjectIndex: string; chapterIndex: string }>
+  >([{ id: "block-1", subjectIndex: "", chapterIndex: "" }]);
   const [activeTab, setActiveTab] = useState<"select" | "summary">("select");
+  const nextBlockId = useRef(1);
 
   // Filter subjects based on user's track
   const filteredSubjects = useMemo(() => {
@@ -107,16 +110,80 @@ export function DaySubjectsEditorDialog({
   // Reset selections when day changes or filtered subjects change
   useEffect(() => {
     setSelected(buildInitialSelection(day, filteredSubjects));
-    setSubjectIndex("");
-    setChapterIndex("");
+    setSubjectBlocks([{ id: "block-1", subjectIndex: "", chapterIndex: "" }]);
     setActiveTab("select");
   }, [day, filteredSubjects]);
 
-  const si = subjectIndex === "" ? null : Number(subjectIndex);
-  const ci = chapterIndex === "" ? null : Number(chapterIndex);
+  const addSubjectBlock = () => {
+    setSubjectBlocks((prev) => [
+      ...prev,
+      {
+        id: `block-${nextBlockId.current++}`,
+        subjectIndex: "",
+        chapterIndex: "",
+      },
+    ]);
+  };
 
-  const chapters = si !== null ? filteredSubjects[si]?.chapters ?? [] : [];
-  const lessons = si !== null && ci !== null ? chapters[ci]?.lessons ?? [] : [];
+  const removeSubjectBlock = (blockId: string) => {
+    setSubjectBlocks((prev) => {
+      const blockToRemove = prev.find((block) => block.id === blockId);
+      if (!blockToRemove) return prev;
+
+      const subjectIndex = blockToRemove.subjectIndex === "" ? null : Number(blockToRemove.subjectIndex);
+      const chapterIndex = blockToRemove.chapterIndex === "" ? null : Number(blockToRemove.chapterIndex);
+
+      if (subjectIndex !== null && chapterIndex !== null && filteredSubjects[subjectIndex]) {
+        const chapter = filteredSubjects[subjectIndex].chapters[chapterIndex];
+        if (chapter) {
+          setSelected((current) => {
+            const next = new Set(current);
+            chapter.lessons.forEach((_, lessonIndex) => {
+              next.delete(lessonKey(subjectIndex, chapterIndex, lessonIndex));
+            });
+            return next;
+          });
+        }
+      }
+
+      return prev.filter((block) => block.id !== blockId);
+    });
+  };
+
+  const updateSubjectBlock = (
+    blockId: string,
+    updates: Partial<{ subjectIndex: string; chapterIndex: string }>,
+  ) => {
+    setSubjectBlocks((prev) =>
+      prev.map((block) => {
+        if (block.id !== blockId) return block;
+        const nextBlock = { ...block, ...updates };
+        if (updates.subjectIndex !== undefined && updates.subjectIndex !== block.subjectIndex) {
+          const oldSubjectIndex = block.subjectIndex === "" ? null : Number(block.subjectIndex);
+          const oldChapterIndex = block.chapterIndex === "" ? null : Number(block.chapterIndex);
+
+          if (oldSubjectIndex !== null && oldChapterIndex !== null) {
+            const oldChapter = filteredSubjects[oldSubjectIndex]?.chapters[oldChapterIndex];
+            if (oldChapter) {
+              setSelected((current) => {
+                const next = new Set(current);
+                oldChapter.lessons.forEach((_, lessonIndex) => {
+                  next.delete(lessonKey(oldSubjectIndex, oldChapterIndex, lessonIndex));
+                });
+                return next;
+              });
+            }
+          }
+
+          if (updates.subjectIndex !== "") {
+            nextBlock.chapterIndex = "";
+          }
+        }
+
+        return nextBlock;
+      }),
+    );
+  };
 
   const subjectOptions = useMemo(
     () =>
@@ -129,29 +196,35 @@ export function DaySubjectsEditorDialog({
 
   const chapterOptions = useMemo(
     () =>
-      chapters.map((chapter, index) => ({
-        value: String(index),
-        label: chapter.title,
-      })),
-    [chapters],
+      subjectBlocks.map((block) => {
+        const si = block.subjectIndex === "" ? null : Number(block.subjectIndex);
+        const chapters = si !== null ? filteredSubjects[si]?.chapters ?? [] : [];
+        return chapters.map((chapter, index) => ({
+          value: String(index),
+          label: chapter.title,
+        }));
+      }),
+    [subjectBlocks, filteredSubjects],
   );
 
   const summaryItems = useMemo(() => {
-    return Array.from(selected).map((key) => {
-      const { si, ci, li } = parseLessonKey(key);
-      const subject = filteredSubjects[si];
-      if (!subject) return null;
-      const chapter = subject.chapters[ci];
-      if (!chapter) return null;
-      const lesson = chapter.lessons[li];
-      if (!lesson) return null;
-      return {
-        key,
-        subject: subject.title,
-        chapter: chapter.title,
-        lesson: lesson.title,
-      };
-    }).filter((item): item is NonNullable<typeof item> => item !== null);
+    return Array.from(selected)
+      .map((key) => {
+        const { si, ci, li } = parseLessonKey(key);
+        const subject = filteredSubjects[si];
+        if (!subject) return null;
+        const chapter = subject.chapters[ci];
+        if (!chapter) return null;
+        const lesson = chapter.lessons[li];
+        if (!lesson) return null;
+        return {
+          key,
+          subject: subject.title,
+          chapter: chapter.title,
+          lesson: lesson.title,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
   }, [selected, filteredSubjects]);
 
   if (!day) return null;
@@ -231,11 +304,11 @@ export function DaySubjectsEditorDialog({
 
   return (
     <Dialog open={!!day} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col py-5 rounded-2xl">
+      <DialogContent className="sm:max-w-3xl w-2xl max-h-[90vh] flex flex-col overflow-hidden rounded-2xl p-0">
         {/* Enhanced Header with gradient background */}
         <div className="from-primary/5 via-primary/10 to-transparent px-6 py-5 border-b">
           <DialogHeader className="p-0">
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between mt-4">
               <div className="space-y-1">
                 <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-primary" />
@@ -295,122 +368,158 @@ export function DaySubjectsEditorDialog({
         </div>
 
         {/* Main content with scroll */}
-        <div className="flex-1 px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.6)_transparent] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-muted/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary/40 [&::-webkit-scrollbar-thumb:hover]:bg-primary/60">
           {activeTab === "select" ? (
             <div className="space-y-6">
               {/* Selection section with improved styling */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Subject selection */}
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                    المادة
-                  </label>
-                  <CustomSelect
-                    value={subjectIndex}
-                    onChange={(value) => {
-                      setSubjectIndex(value);
-                      setChapterIndex("");
-                    }}
-                    options={subjectOptions}
-                    placeholder="اختر المادة"
-                  />
-                </div>
-
-                {/* Chapter selection */}
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <Layers className="h-4 w-4 text-primary" />
-                    الفصل
-                  </label>
-                  <CustomSelect
-                    value={chapterIndex}
-                    onChange={(value) => setChapterIndex(value)}
-                    options={chapterOptions}
-                    placeholder={si !== null ? "اختر الفصل" : "اختر المادة أولاً"}
-                    disabled={si === null}
-                  />
-                </div>
-              </div>
-
-              {/* Lessons - enhanced display */}
-              {si !== null && ci !== null && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <ListChecks className="h-4 w-4 text-primary" />
-                      الدروس
-                      <span className="text-xs text-muted-foreground">
-                        ({lessons.length} درس)
-                      </span>
-                    </label>
+              {subjectBlocks.map((block, blockIndex) => (
+                <div key={block.id} className="border-b pb-6 last:border-b-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-foreground">
+                        المادة {blockIndex + 1}
+                    </h3>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="text-xs h-7"
-                      onClick={() => {
-                        const allKeys = lessons.map((_, li) => lessonKey(si, ci, li));
-                        const allSelected = allKeys.every(key => selected.has(key));
-                        setSelected(prev => {
-                          const next = new Set(prev);
-                          if (allSelected) {
-                            allKeys.forEach(key => next.delete(key));
-                          } else {
-                            allKeys.forEach(key => next.add(key));
-                          }
-                          return next;
-                        });
-                      }}
+                      onClick={() => removeSubjectBlock(block.id)}
+                      className="text-muted-foreground"
                     >
-                      {lessons.every((_, li) => selected.has(lessonKey(si, ci, li)))
-                        ? "إلغاء الكل"
-                        : "تحديد الكل"}
+                      <X className="h-4 w-4 mr-1" />
+                      إزالة  
                     </Button>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 rounded-xl border border-border bg-card p-4">
-                    {lessons.map((lesson, li) => {
-                      const key = lessonKey(si, ci, li);
-                      const isSelected = selected.has(key);
-                      return (
-                        <label
-                          key={lesson.title}
-                          className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer group",
-                            isSelected
-                              ? "bg-primary/10 border border-primary/30 hover:bg-primary/15"
-                              : "bg-muted/20 border border-transparent hover:bg-muted/30"
-                          )}
-                        >
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => toggleLesson(si, ci, li)}
-                            className="mt-0.5 data-[state=checked]:bg-primary"
-                          />
-                          <span className={cn(
-                            "text-sm flex-1",
-                            isSelected ? "font-medium text-foreground" : "text-muted-foreground"
-                          )}>
-                            {lesson.title}
-                          </span>
-                          {isSelected && (
-                            <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                          )}
-                        </label>
-                      );
-                    })}
-                    {lessons.length === 0 && (
-                      <div className="col-span-full text-center py-6">
-                        <p className="text-sm text-muted-foreground">
-                          لا توجد دروس في هذا الفصل
-                        </p>
-                      </div>
-                    )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Subject selection */}
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <BookOpen className="h-4 w-4 text-primary" />
+                        المادة
+                      </label>
+                      <CustomSelect
+                        value={block.subjectIndex}
+                        onChange={(value) => {
+                          updateSubjectBlock(block.id, { subjectIndex: value });
+                        }}
+                        options={subjectOptions}
+                        placeholder="اختر المادة"
+                      />
+                    </div>
+
+                    {/* Chapter selection */}
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <Layers className="h-4 w-4 text-primary" />
+                        الفصل
+                      </label>
+                      <CustomSelect
+                        value={block.chapterIndex}
+                        onChange={(value) => {
+                          updateSubjectBlock(block.id, { chapterIndex: value });
+                        }}
+                        options={chapterOptions[blockIndex]}
+                        placeholder={
+                          block.subjectIndex !== ""
+                            ? "اختر الفصل"
+                            : "اختر المادة أولاً"
+                        }
+                        disabled={block.subjectIndex === ""}
+                      />
+                    </div>
                   </div>
+
+                  {/* Lessons - enhanced display */}
+                  {block.subjectIndex !== "" && block.chapterIndex !== "" && (
+                    <div className="space-y-3 mt-4">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                          <ListChecks className="h-4 w-4 text-primary" />
+                          الدروس
+                          <span className="text-xs text-muted-foreground">
+                            ({block.chapterIndex !== "" ? filteredSubjects[Number(block.subjectIndex)].chapters[Number(block.chapterIndex)].lessons.length : 0} درس)
+                          </span>
+                        </label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => {
+                            const allKeys = Array.from({ length: filteredSubjects[Number(block.subjectIndex)].chapters[Number(block.chapterIndex)].lessons.length }, (_, li) => lessonKey(Number(block.subjectIndex), Number(block.chapterIndex), li));
+                            const allSelected = allKeys.every(key => selected.has(key));
+                            setSelected(prev => {
+                              const next = new Set(prev);
+                              if (allSelected) {
+                                allKeys.forEach(key => next.delete(key));
+                              } else {
+                                allKeys.forEach(key => next.add(key));
+                              }
+                              return next;
+                            });
+                          }}
+                        >
+                          {Array.from({ length: filteredSubjects[Number(block.subjectIndex)].chapters[Number(block.chapterIndex)].lessons.length }).every((_, li) => selected.has(lessonKey(Number(block.subjectIndex), Number(block.chapterIndex), li)))
+                            ? "إلغاء الكل"
+                            : "تحديد الكل"}
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 rounded-xl border border-border bg-card p-4">
+                        {Array.from({ length: filteredSubjects[Number(block.subjectIndex)].chapters[Number(block.chapterIndex)].lessons.length }).map((_, li) => {
+                          const key = lessonKey(Number(block.subjectIndex), Number(block.chapterIndex), li);
+                          const isSelected = selected.has(key);
+                          return (
+                            <label
+                              key={li}
+                              className={cn(
+                                "flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer group",
+                                isSelected
+                                  ? "bg-primary/10 border border-primary/30 hover:bg-primary/15"
+                                  : "bg-muted/20 border border-transparent hover:bg-muted/30"
+                              )}
+                            >
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleLesson(Number(block.subjectIndex), Number(block.chapterIndex), li)}
+                                className="mt-0.5 data-[state=checked]:bg-primary"
+                              />
+                              <span className={cn(
+                                "text-sm flex-1",
+                                isSelected ? "font-medium text-foreground" : "text-muted-foreground"
+                              )}>
+                                {filteredSubjects[Number(block.subjectIndex)].chapters[Number(block.chapterIndex)].lessons[li].title}
+                              </span>
+                              {isSelected && (
+                                <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                              )}
+                            </label>
+                          );
+                        })}
+                        {filteredSubjects[Number(block.subjectIndex)].chapters[Number(block.chapterIndex)].lessons.length === 0 && (
+                          <div className="col-span-full text-center py-6">
+                            <p className="text-sm text-muted-foreground">
+                              لا توجد دروس في هذا الفصل
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
+
+              {/* Add block button */}
+              <div className="pt-4">
+                <Button
+                  variant="outline"
+                  onClick={addSubjectBlock}
+                  className="w-full"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  إضافة مادة جديدة
+                </Button>
+              </div>
 
               {/* Empty state - enhanced */}
-              {si === null && (
+              {subjectBlocks.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="rounded-full bg-muted/30 p-4 mb-4">
                     <BookOpen className="h-8 w-8 text-muted-foreground/50" />
@@ -509,7 +618,7 @@ export function DaySubjectsEditorDialog({
               </Badge>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-5">
             <Button
               variant="ghost"
               onClick={onClose}
