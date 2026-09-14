@@ -1,8 +1,3 @@
-// prisma/models/user.prisma
-
-
-
-// Lifecycle for accounts created by an admin (invite -> accept -> active)
 enum UserStatus {
   PENDING // created by admin, invite email sent, password not set yet
   ACTIVE // normal signup, or invite accepted
@@ -26,7 +21,6 @@ model User {
   parentPhone String?         @unique @map("parent_phone")
   country     String?
 
-  // --- Invitation flow (role = DOCTOR) ---
   invitationToken          String?   @unique @map("invitation_token")
   invitationTokenExpiresAt DateTime? @map("invitation_token_expires_at")
 
@@ -39,6 +33,8 @@ model User {
   completedHabits CompletedHabit[]
 
   taskHistories TaskHistory[]
+
+  lessonDates LessonDate[]
 
   messages  Message[]
   reactions Reaction[]

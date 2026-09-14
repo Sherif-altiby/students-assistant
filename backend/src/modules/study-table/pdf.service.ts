@@ -65,18 +65,6 @@ function toLocaleDate(d: Date | string | null | undefined): string {
   );
 }
 
-function formatShortDate(d: Date | string | null | undefined): string {
-  if (!d) return '';
-  const date = new Date(d);
-  return formatNumber(
-    date.toLocaleDateString('ar-EG', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }),
-  );
-}
-
 function formatDayLabel(dayNumber: number): string {
   const simpleOrdinals = [
     'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس',
@@ -139,7 +127,6 @@ const COLUMNS = ['المادة', 'الفصل', 'الدرس', 'الحالة'];
 function buildDayHtml(day: any, index: number): string {
   const dayLabel = escapeHtml(formatDayLabel(index + 1));
   const dateLabel = escapeHtml(toLocaleDate(day.date));
-  const shortDate = escapeHtml(formatShortDate(day.date));
 
   type Row = { subject: string; chapter: string; lesson: string; completed: boolean };
   const rows: Row[] = [];
@@ -701,31 +688,29 @@ export const pdfService = {
     console.log('[pdf] launching browser...');
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
-      protocolTimeout: 60000,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+      ],
     });
-    console.log('[pdf] browser launched');
 
     try {
       const page = await browser.newPage();
-      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
-
-      const html = buildHtml(studyTable);
-      await page.setContent(html, { waitUntil: 'load', timeout: 30000 });
-
-      const pdf = await page.pdf({
-        format: 'A4',
-        landscape: false,
-        margin: { top: '12mm', bottom: '14mm', left: '10mm', right: '10mm' },
-        printBackground: true,
-        preferCSSPageSize: true,
+      await page.setContent(buildHtml(studyTable), {
+        waitUntil: 'load',
       });
-      console.log('[pdf] pdf generated, bytes =', pdf.length);
 
-      return Buffer.from(pdf);
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        landscape: false,
+      });
+
+      return Buffer.from(pdfBuffer);
     } finally {
       await browser.close();
-      console.log('[pdf] browser closed');
     }
   },
 };

@@ -4,7 +4,6 @@ import { supportService } from './support.service';
 import {
   createRuleSchema,
   updateRuleSchema,
-  applyToSlotSchema,
   respondToBookingSchema,
   setMeetingLinkSchema,
   rateSessionSchema,

@@ -1,4 +1,4 @@
-import { AppError, NotFoundError } from "../../utils/AppError";
+import { NotFoundError } from "../../utils/AppError";
 import { chatRepository } from "./chat.repository";
 import { SendMessageInput, ReactInput } from "./chat.types";
  

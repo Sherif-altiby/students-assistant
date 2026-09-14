@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { userController } from './user.controller';
 import { validate } from '../../middlewares/validate';
 import { authenticate } from '../../middlewares/authenticate';
-import { createUserSchema, getUserSchema, updateUserSchema, inviteDoctorSchema, acceptInvitationSchema, } from './user.schema';
+import { acceptInvitationSchema, inviteDoctorSchema } from './user.schema';
 import { authorize } from '../../middlewares/authorize';
 
 const router = Router();

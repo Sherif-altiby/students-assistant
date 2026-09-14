@@ -59,7 +59,7 @@ export const taskController = {
 
     const history = await taskService.getHistoryDayDetails(req.user!.id, date);
 
-    res.status(StatusCodes.OK).json({
+    return res.status(StatusCodes.OK).json({
       status: 'success',
       data: history,
     });

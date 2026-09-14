@@ -1,9 +1,9 @@
 // prisma/models/message.prisma
 model Message {
-  id        String   @id @default(uuid())
-  content   String
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  content String
+  userId  String @map("user_id")
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   replyToId String?   @map("reply_to_id")
   replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
