@@ -46,8 +46,8 @@ export function MeetingLinkDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-sm [&>button]:hidden">
+        <DialogHeader className="text-start">
           <DialogTitle>رابط الجلسة</DialogTitle>
           <DialogDescription>
             أضف رابط الاجتماع الذي سيستخدمه المريض للانضمام إلى الجلسة.

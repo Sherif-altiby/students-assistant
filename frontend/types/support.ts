@@ -151,6 +151,9 @@ export interface DoctorSummary {
   country: string | null;
   createdAt: string;
   updatedAt: string;
+  averageRating?: number;
+  totalRatings?: number;
+  ratingLabel?: string;
 }
 
 export interface ListDoctorsParams {

@@ -26,8 +26,8 @@ const NAV_ITEMS = [
   { href: "/dashboard/habits", label: "العادات", icon: Repeat },
   { href: "/dashboard/tables", label: "الجداول", icon: Table },
   { href: "/dashboard/lesson-dates", label: "مواعيد الدروس", icon: CalendarDays },
+  { href: "/dashboard/support", label: "الدعم النفسي", icon: HeartHandshake },
   { href: "/dashboard/chat", label: "الدردشات", icon: MessageCircleCode },
-  // { href: "/dashboard/support", label: "الدعم النفسي", icon: HeartHandshake },
   // { href: "/dashboard/consultations", label: "الاستشارات", icon: MessageCircleQuestion,},
 ];
 

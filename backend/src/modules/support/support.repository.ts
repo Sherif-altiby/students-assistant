@@ -50,9 +50,20 @@ export const supportRepository = {
     return prisma.availabilitySlot.findUnique({ where: { id }, include: { booking: true } });
   },
 
-  findOpenSlotsByDoctor(doctorId: string, fromDate: Date): Promise<AvailabilitySlot[]> {
+  findOpenSlotsByDoctor(
+    doctorId: string,
+    fromDate: Date,
+    toDate?: Date,
+  ): Promise<AvailabilitySlot[]> {
     return prisma.availabilitySlot.findMany({
-      where: { doctorId, status: 'OPEN', startTime: { gte: fromDate } },
+      where: {
+        doctorId,
+        status: 'OPEN',
+        startTime: {
+          gte: fromDate,
+          ...(toDate ? { lte: toDate } : {}),
+        },
+      },
       orderBy: { startTime: 'asc' },
     });
   },

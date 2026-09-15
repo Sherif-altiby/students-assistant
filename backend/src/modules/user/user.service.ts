@@ -11,6 +11,7 @@ import {
 import { ConflictError, NotFoundError, BadRequestError } from '../../utils/AppError';
 import { env } from '../../config/env'; // adjust import if your env loader lives elsewhere
 import { sendDoctorInvitationEmail } from '../../utils/mailer';
+import { prisma } from '../../config/prisma';
 
 const SALT_ROUNDS = 10;
 const INVITATION_TOKEN_TTL_HOURS = 48;
@@ -33,6 +34,73 @@ const toSafeUser = (user: User): SafeUser => {
     ...safeUser
   } = user;
   return safeUser;
+};
+
+const attachDoctorRatings = async (doctors: SafeUser[]) => {
+  if (doctors.length === 0) {
+    return doctors as Array<SafeUser & {
+      averageRating?: number;
+      totalRatings?: number;
+      ratingLabel?: string;
+    }>;
+  }
+
+  const doctorIds = doctors.map((doctor) => doctor.id);
+  const ratings = await prisma.sessionRating.findMany({
+    where: {
+      booking: {
+        slot: {
+          doctorId: { in: doctorIds },
+        },
+      },
+    },
+    select: {
+      score: true,
+      booking: {
+        select: {
+          slot: {
+            select: {
+              doctorId: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const map = new Map<string, { total: number; sum: number }>();
+
+  for (const rating of ratings) {
+    const doctorId = rating.booking?.slot?.doctorId;
+    if (!doctorId) continue;
+
+    const existing = map.get(doctorId) ?? { total: 0, sum: 0 };
+    existing.total += 1;
+    existing.sum += rating.score;
+    map.set(doctorId, existing);
+  }
+
+  return doctors.map((doctor) => {
+    const stats = map.get(doctor.id);
+
+    if (!stats) {
+      return {
+        ...doctor,
+        averageRating: 0,
+        totalRatings: 0,
+        ratingLabel: 'لا توجد تقييمات بعد',
+      };
+    }
+
+    const averageRating = Number((stats.sum / stats.total).toFixed(1));
+
+    return {
+      ...doctor,
+      averageRating,
+      totalRatings: stats.total,
+      ratingLabel: `${averageRating} من 5 عبر ${stats.total} تقييم`,
+    };
+  });
 };
 
 export const userService = {
@@ -105,8 +173,11 @@ export const userService = {
       userRepository.countDoctors({ search: params.search }),
     ]);
 
+    const safeUsers = users.map(toSafeUser);
+    const enrichedUsers = await attachDoctorRatings(safeUsers);
+
     return {
-      users: users.map(toSafeUser),
+      users: enrichedUsers,
       total,
       page: params.page,
       limit: params.limit,

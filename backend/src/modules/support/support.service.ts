@@ -122,7 +122,13 @@ export const supportService = {
 
   // --- Slots ---
   async listOpenSlots(doctorId: string) {
-    return supportRepository.findOpenSlotsByDoctor(doctorId, new Date());
+    const now = new Date();
+    // Set to start of today (00:00:00)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    // Set to end of current month (23:59:59)
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    return supportRepository.findOpenSlotsByDoctor(doctorId, today, monthEnd);
   },
 
   async setMeetingLink(doctorId: string, slotId: string, meetingLink: string) {

@@ -1,11 +1,22 @@
 import 'dotenv/config';
 import { prisma } from '../src/config/prisma';
 
-import { Gender, EducationLevel, Track, TaskFrequency, StudyTableType } from '@prisma/client';
+import { Gender, EducationLevel, Track, TaskFrequency, StudyTableType, Role, UserStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const START_DATE = new Date('2026-06-01T00:00:00.000Z');
 const END_DATE = new Date('2026-07-20T00:00:00.000Z');
+
+// Seed login accounts for quick local testing.
+const STUDENT_LOGIN = {
+  email: 'student@studentsassistant.com',
+  password: 'Student123!',
+};
+
+const DOCTOR_LOGIN = {
+  email: 'doctor@studentsassistant.com',
+  password: 'Doctor123!',
+};
 
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -100,20 +111,34 @@ async function main() {
   await prisma.task.deleteMany();
   await prisma.user.deleteMany();
 
-  console.log('👤 Creating user...');
-  const password = await hashPassword('Password123!');
+  console.log('👤 Creating seed login accounts...');
+  const studentPassword = await hashPassword(STUDENT_LOGIN.password);
+  const doctorPassword = await hashPassword(DOCTOR_LOGIN.password);
 
-  const user = await prisma.user.create({
+  const student = await prisma.user.create({
     data: {
       name: 'أحمد محمود',
-      email: 'ahmed.mahmoud@example.com',
+      email: STUDENT_LOGIN.email,
       phone: '01012345678',
-      password,
+      password: studentPassword,
       gender: Gender.MALE,
       level: EducationLevel.GENERAL_SECONDARY,
       track: Track.SCIENCE_MATH,
       parentPhone: '01098765432',
       country: 'مصر',
+      role: Role.USER,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  const doctor = await prisma.user.create({
+    data: {
+      name: 'د. محمد علي',
+      email: DOCTOR_LOGIN.email,
+      phone: '01055555555',
+      password: doctorPassword,
+      role: Role.DOCTOR,
+      status: UserStatus.ACTIVE,
     },
   });
 
@@ -128,7 +153,7 @@ async function main() {
       data: {
         title,
         frequency: TaskFrequency.EVERY_DAY,
-        userId: user.id,
+        userId: student.id,
         createdAt: START_DATE,
       },
     });
@@ -142,7 +167,7 @@ async function main() {
   const habits = [];
   for (const title of HABIT_TITLES) {
     const habit = await prisma.habit.create({
-      data: { title, userId: user.id, createdAt: START_DATE },
+      data: { title, userId: student.id, createdAt: START_DATE },
     });
     habits.push(habit);
   }
@@ -159,7 +184,7 @@ async function main() {
       type: StudyTableType.DATE_RANGE,
       startDate: START_DATE,
       endDate: END_DATE,
-      userId: user.id,
+      userId: student.id,
     },
   });
 
@@ -173,7 +198,7 @@ async function main() {
       type: StudyTableType.NUMBER_OF_DAYS,
       startDate: recentTableStart,
       endDate: END_DATE,
-      userId: user.id,
+      userId: student.id,
     },
   });
 
@@ -199,7 +224,7 @@ async function main() {
         data: {
           title,
           frequency: TaskFrequency.TODAY,
-          userId: user.id,
+          userId: student.id,
           createdAt: date,
         },
       });
@@ -208,7 +233,7 @@ async function main() {
       if (chance(0.7)) {
         await prisma.taskHistory.create({
           data: {
-            userId: user.id,
+            userId: student.id,
             taskId: task.id,
             date,
             completedAt: date,
@@ -225,7 +250,7 @@ async function main() {
       if (chance(0.75)) {
         await prisma.taskHistory.create({
           data: {
-            userId: user.id,
+            userId: student.id,
             taskId: task.id,
             date,
             completedAt: date,
@@ -242,7 +267,7 @@ async function main() {
       if (chance(0.65)) {
         await prisma.completedHabit.create({
           data: {
-            userId: user.id,
+            userId: student.id,
             habitId: habit.id,
             date,
             completedAt: date,
@@ -282,7 +307,7 @@ async function main() {
             if (chance(0.6)) {
               await prisma.studyLessonCompletion.create({
                 data: {
-                  userId: user.id,
+                  userId: student.id,
                   lessonId: lesson.id,
                   completedAt: date,
                 },
@@ -321,7 +346,7 @@ async function main() {
           if (chance(0.8)) {
             await prisma.studyLessonCompletion.create({
               data: {
-                userId: user.id,
+                userId: student.id,
                 lessonId: lesson.id,
                 completedAt: date,
               },
@@ -334,7 +359,8 @@ async function main() {
   }
 
   console.log('✅ Seed complete:');
-  console.log(`   user: ${user.email}`);
+  console.log(`   student: ${student.email} / ${STUDENT_LOGIN.password}`);
+  console.log(`   doctor: ${doctor.email} / ${DOCTOR_LOGIN.password}`);
   console.log(`   tasks created: ${taskCount + everydayTasks.length}`);
   console.log(`   task history rows: ${taskHistoryCount}`);
   console.log(`   habits: ${habits.length}, completions: ${habitCompletionCount}`);
