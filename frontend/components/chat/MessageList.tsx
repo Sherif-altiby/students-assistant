@@ -20,8 +20,8 @@ function dayLabel(iso: string): string {
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
   const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  if (sameDay(date, today)) return "Today";
-  if (sameDay(date, yesterday)) return "Yesterday";
+  if (sameDay(date, today)) return "اليوم";
+  if (sameDay(date, yesterday)) return "الأمس";
   return date.toLocaleDateString([], { month: "long", day: "numeric" });
 }
 
@@ -77,8 +77,8 @@ export function MessageList({
     <div className="relative flex-1 overflow-hidden pb-3">
       <div
         ref={containerRef}
-        // className="custom-scrollbar h-full overflow-y-auto px-4 py-3"
-          className="h-full overflow-y-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        // Apply chat background to the scroll area so the pattern is visible
+        className="h-full overflow-y-auto px-4 py-3 chat-background [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 
       >
         {messages.map((message, i) => {

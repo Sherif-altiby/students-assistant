@@ -6,40 +6,39 @@
 
 @custom-variant dark (&:is(.dark *));
 
- 
- :root {
+:root {
   --background: #ffffff;
-  --foreground: #1f2937; /* gray-800, cool ink instead of flat black */
+  --foreground: #050505;
   --card: #ffffff;
-  --card-foreground: #1f2937;
+  --card-foreground: #050505;
   --popover: #ffffff;
-  --popover-foreground: #1f2937;
-  --primary: #3b82f6; /* blue-500 */
+  --popover-foreground: #050505;
+  --primary: #1877f2;
   --primary-foreground: #ffffff;
-  --secondary: #f3f4f6; /* cool gray, not neutral */
-  --secondary-foreground: #374151; /* gray-700 */
-  --muted: #f9fafb; /* gray-50 */
-  --muted-foreground: #6b7280; /* gray-500 */
-  --accent: #f3fbfd; /* cyan-50 — subtle complement to primary */
-  --accent-foreground: #047f94; /* cyan-700 */
-  --destructive: #d6455d; /* warm coral-red, harmonizes with blue/cyan family */
+  --secondary: #f0f2f5;
+  --secondary-foreground: #050505;
+  --muted: #f0f2f5;
+  --muted-foreground: #65676b;
+  --accent: #e7f3ff;
+  --accent-foreground: #1877f2;
+  --destructive: #fa383e;
   --destructive-foreground: #ffffff;
-  --border: #e5e7eb; /* gray-200 */
-  --input: #e5e7eb;
-  --ring: #3b82f6;
-  --chart-1: #3b82f6; /* blue-500 */
-  --chart-2: #06b6d4; /* cyan-500 */
-  --chart-3: #6366f1; /* indigo-ish, complements */
-  --chart-4: #eab308; /* yellow-500 */
-  --chart-5: #ec4899; /* pink-500 */
-  --sidebar: #f9fafb; /* gray-50 */
-  --sidebar-foreground: #1f2937;
-  --sidebar-primary: #3b82f6;
+  --border: #ced0d4;
+  --input: #ced0d4;
+  --ring: #1877f2;
+  --chart-1: #1877f2;
+  --chart-2: #42b72a;
+  --chart-3: #f7b928;
+  --chart-4: #fa383e;
+  --chart-5: #a033ff;
+  --sidebar: #f0f2f5;
+  --sidebar-foreground: #050505;
+  --sidebar-primary: #1877f2;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f3fbfd;
-  --sidebar-accent-foreground: #047f94;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #3b82f6;
+  --sidebar-accent: #e7f3ff;
+  --sidebar-accent-foreground: #1877f2;
+  --sidebar-border: #ced0d4;
+  --sidebar-ring: #1877f2;
   --font-sans: Inter, sans-serif;
   --font-serif: Source Serif 4, serif;
   --font-mono: JetBrains Mono, monospace;
@@ -63,38 +62,38 @@
 }
 
 .dark {
-  --background: #111827; /* gray-900, cool navy-black */
-  --foreground: #f9fafb; /* gray-50 */
-  --card: #1f2937; /* gray-800 */
-  --card-foreground: #f9fafb;
-  --popover: #1f2937;
-  --popover-foreground: #f9fafb;
-  --primary: #609af8; /* blue-400, lifted for AA contrast on dark bg */
-  --primary-foreground: #183462; /* blue-900, near-black navy text on bright button */
-  --secondary: #1f2937; /* gray-800 */
-  --secondary-foreground: #d1d5db; /* gray-300 */
-  --muted: #1f2937;
-  --muted-foreground: #9ca3af; /* gray-400 */
-  --accent: #024955; /* cyan-900, dark teal */
-  --accent-foreground: #94e0ed; /* cyan-200, light teal */
-  --destructive: #f06bac; /* pink-400, softened coral for dark backgrounds */
+  --background: #18191a;
+  --foreground: #e4e6eb;
+  --card: #242526;
+  --card-foreground: #e4e6eb;
+  --popover: #242526;
+  --popover-foreground: #e4e6eb;
+  --primary: #2d88ff;
+  --primary-foreground: #ffffff;
+  --secondary: #3a3b3c;
+  --secondary-foreground: #e4e6eb;
+  --muted: #3a3b3c;
+  --muted-foreground: #b0b3b8;
+  --accent: #263951;
+  --accent-foreground: #2d88ff;
+  --destructive: #ff5c5c;
   --destructive-foreground: #ffffff;
-  --border: #374151; /* gray-700 */
-  --input: #374151;
-  --ring: #609af8;
-  --chart-1: #609af8; /* blue-400 */
-  --chart-2: #35c4dc; /* cyan-400 */
-  --chart-3: #85b2f9; /* blue-300 */
-  --chart-4: #f2d066; /* yellow-300 */
-  --chart-5: #f06bac; /* pink-400 */
-  --sidebar: #111827;
-  --sidebar-foreground: #f9fafb;
-  --sidebar-primary: #609af8;
-  --sidebar-primary-foreground: #183462;
-  --sidebar-accent: #024955;
-  --sidebar-accent-foreground: #94e0ed;
-  --sidebar-border: #374151;
-  --sidebar-ring: #609af8;
+  --border: #3e4042;
+  --input: #3e4042;
+  --ring: #2d88ff;
+  --chart-1: #2d88ff;
+  --chart-2: #4cd964;
+  --chart-3: #f7b928;
+  --chart-4: #ff5c5c;
+  --chart-5: #b666ff;
+  --sidebar: #242526;
+  --sidebar-foreground: #e4e6eb;
+  --sidebar-primary: #2d88ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #263951;
+  --sidebar-accent-foreground: #2d88ff;
+  --sidebar-border: #3e4042;
+  --sidebar-ring: #2d88ff;
   --font-sans: Inter, sans-serif;
   --font-serif: Source Serif 4, serif;
   --font-mono: JetBrains Mono, monospace;
@@ -208,4 +207,70 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   opacity: 0.8;
+}
+
+
+ /* ============================================
+   Chat Background
+   Educational icon-tile wallpaper with layered
+   gradient depth. Colors flow from theme tokens.
+   Symbols are randomly scattered for a natural,
+   hand-drawn feel.
+   ============================================ */
+
+.chat-background {
+  position: relative;
+  isolation: isolate;
+
+  /* Base color — falls back to token if defined */
+  background-color: var(--secondary, #f4f6f8);
+
+  /* Layered depth: soft radial highlights over the tile pattern */
+  background-image:
+    radial-gradient(
+      ellipse 80% 60% at 50% 0%,
+      color-mix(in srgb, var(--primary, #1877f2) 3%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 100% 100%,
+      color-mix(in srgb, var(--primary, #1877f2) 2%, transparent) 0%,
+      transparent 55%
+    ),
+    url("data:image/svg+xml,%3Csvg width='240' height='240' viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23475569' stroke-width='1.6' opacity='.22' stroke-linecap='round' stroke-linejoin='round'%3E%3C!-- Open book (top-left, tilted) --%3E%3Cg transform='translate(18 24) rotate(-14 22 22)'%3E%3Cpath d='M0 4v20c0 2 1 3 3 3h15c3 0 5-2 5-4V4c0-2-2-4-5-4H3C1 0 0 1 0 4z'/%3E%3Cpath d='M23 4v20c0 2 1 3 3 3h15c3 0 5-2 5-4V4c0-2-2-4-5-4H26c-2 0-3 1-3 4z'/%3E%3Cpath d='M23 4v23'/%3E%3C/g%3E%3C!-- Graduation cap (top-center, tilted right) --%3E%3Cg transform='translate(96 16) rotate(9 22 15)'%3E%3Cpath d='M0 6l22 10L0 26l-22-10z'/%3E%3Cpath d='M12 16v12c0 3-5 5-12 5s-12-2-12-5V16'/%3E%3Cpath d='M22 16v10'/%3E%3Ccircle cx='22' cy='28' r='2'/%3E%3C/g%3E%3C!-- Pencil (top-right, tilted) --%3E%3Cg transform='translate(176 18) rotate(38 22 22)'%3E%3Cpath d='M0 0l22 22-10 10L-10 10z'/%3E%3Cpath d='M0 0l-6-6-8 8 6 6'/%3E%3Cpath d='M22 22l6 6'/%3E%3C/g%3E%3C!-- Ruler (mid-left, tilted slightly) --%3E%3Cg transform='translate(24 82) rotate(-6 19 7)'%3E%3Crect x='0' y='0' width='38' height='14' rx='2'/%3E%3Cpath d='M6 0v5M14 0v5M22 0v5M30 0v5'/%3E%3C/g%3E%3C!-- Calculator (center, slight tilt) --%3E%3Cg transform='translate(94 76) rotate(4 15 19)'%3E%3Crect x='0' y='0' width='30' height='38' rx='4'/%3E%3Crect x='5' y='5' width='20' height='8' rx='1'/%3E%3Ccircle cx='9' cy='20' r='1.5' fill='%23475569'/%3E%3Ccircle cx='17' cy='20' r='1.5' fill='%23475569'/%3E%3Ccircle cx='25' cy='20' r='1.5' fill='%23475569'/%3E%3Ccircle cx='9' cy='28' r='1.5' fill='%23475569'/%3E%3Ccircle cx='17' cy='28' r='1.5' fill='%23475569'/%3E%3Ccircle cx='25' cy='28' r='1.5' fill='%23475569'/%3E%3C/g%3E%3C!-- Lightbulb (mid-right, tilted) --%3E%3Cg transform='translate(176 76) rotate(-11 9 9)'%3E%3Cpath d='M6 0c-5 0-9 4-9 10 0 4 2 6 4 8v4h10v-4c2-2 4-4 4-8 0-6-4-10-9-10z'/%3E%3Cpath d='M-4 22v4M2 22v4'/%3E%3Cpath d='M-6 29h8'/%3E%3C/g%3E%3C!-- Stack of books (lower-left, tilted) --%3E%3Cg transform='translate(20 138) rotate(7 23 12)'%3E%3Crect x='0' y='0' width='42' height='7' rx='1'/%3E%3Crect x='3' y='8' width='36' height='7' rx='1'/%3E%3Crect x='-3' y='16' width='46' height='7' rx='1'/%3E%3C/g%3E%3C!-- Globe (lower-center, slight tilt) --%3E%3Cg transform='translate(96 132) rotate(-5 16 16)'%3E%3Ccircle cx='16' cy='16' r='16'/%3E%3Cpath d='M0 16h32M16 0c-5 5-5 27 0 32M16 0c5 5 5 27 0 32M1 9h30M1 23h30'/%3E%3C/g%3E%3C!-- Microscope (lower-right, tilted) --%3E%3Cg transform='translate(172 138) rotate(12 6 10)'%3E%3Cpath d='M0 0l-8 14h14L0 0z'/%3E%3Cpath d='M-8 14v6M2 14v6M-12 20h18'/%3E%3Cpath d='M0 0v-4c0-4-3-6-5-6s-5 2-5 6'/%3E%3C/g%3E%3C!-- Test tube (bottom-left, tilted) --%3E%3Cg transform='translate(26 196) rotate(-18 6 16)'%3E%3Cpath d='M0 0v20c0 4 3 6 6 6s6-2 6-6V0'/%3E%3Cpath d='M0 0h12'/%3E%3Cpath d='M0 12h12'/%3E%3C/g%3E%3C!-- Open book with lines (bottom-center, tilted) --%3E%3Cg transform='translate(92 198) rotate(6 22 12)'%3E%3Cpath d='M0 2v22c0 2 1 3 3 3h14c3 0 5-2 5-4V2c0-2-2-4-5-4H3C1-2 0-1 0 2z'/%3E%3Cpath d='M22 3v22c0 2 1 3 3 3h14c3 0 5-2 5-4V2c0-2-2-4-5-4H25c-2 0-3 1-3 3z'/%3E%3Cpath d='M6 10h10M6 16h10M28 10h10M28 16h10'/%3E%3C/g%3E%3C!-- Medal (bottom-right, tilted) --%3E%3Cg transform='translate(178 200) rotate(-14 10 12)'%3E%3Ccircle cx='10' cy='12' r='9'/%3E%3Cpath d='M10 7l1.5 3 3.5.5-2.5 2.5.5 3.5-3-1.5-3 1.5.5-3.5-2.5-2.5 3.5-.5z'/%3E%3Cpath d='M5 2L2-6M15 2l3-8'/%3E%3C/g%3E%3C!-- Decorative filler dots (scattered) --%3E%3Ccircle cx='84' cy='52' r='2'/%3E%3Ccircle cx='146' cy='88' r='2'/%3E%3Ccircle cx='60' cy='120' r='2'/%3E%3Ccircle cx='200' cy='60' r='2'/%3E%3Ccircle cx='40' cy='62' r='2'/%3E%3Ccircle cx='160' cy='196' r='2'/%3E%3Ccircle cx='108' cy='116' r='2'/%3E%3Ccircle cx='220' cy='180' r='2'/%3E%3C!-- Accent marks (scattered lines) --%3E%3Cpath d='M148 44h14M148 50h10'/%3E%3Cpath d='M32 178h20M32 184h14'/%3E%3Cpath d='M198 108h16M198 114h11'/%3E%3C/g%3E%3C/svg%3E");
+
+  background-repeat: no-repeat, no-repeat, repeat;
+  background-size: 100% 100%, 100% 100%, 240px 240px;
+  background-position: center top, center bottom, top left;
+  background-attachment: scroll, scroll, scroll;
+}
+
+/* Dark theme — same structure, softer tones */
+.dark .chat-background {
+  background-color: var(--background, #18191a);
+
+  background-image:
+    radial-gradient(
+      ellipse 80% 60% at 50% 0%,
+      color-mix(in srgb, var(--primary, #2d88ff) 6%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 100% 100%,
+      color-mix(in srgb, var(--primary, #2d88ff) 4%, transparent) 0%,
+      transparent 55%
+    ),
+    url("data:image/svg+xml,%3Csvg width='240' height='240' viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23cbd5e1' stroke-width='1.3' opacity='.045' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg transform='translate(18 24) rotate(-14 22 22)'%3E%3Cpath d='M0 4v20c0 2 1 3 3 3h15c3 0 5-2 5-4V4c0-2-2-4-5-4H3C1 0 0 1 0 4z'/%3E%3Cpath d='M23 4v20c0 2 1 3 3 3h15c3 0 5-2 5-4V4c0-2-2-4-5-4H26c-2 0-3 1-3 4z'/%3E%3Cpath d='M23 4v23'/%3E%3C/g%3E%3Cg transform='translate(96 16) rotate(9 22 15)'%3E%3Cpath d='M0 6l22 10L0 26l-22-10z'/%3E%3Cpath d='M12 16v12c0 3-5 5-12 5s-12-2-12-5V16'/%3E%3Cpath d='M22 16v10'/%3E%3Ccircle cx='22' cy='28' r='2'/%3E%3C/g%3E%3Cg transform='translate(176 18) rotate(38 22 22)'%3E%3Cpath d='M0 0l22 22-10 10L-10 10z'/%3E%3Cpath d='M0 0l-6-6-8 8 6 6'/%3E%3Cpath d='M22 22l6 6'/%3E%3C/g%3E%3Cg transform='translate(24 82) rotate(-6 19 7)'%3E%3Crect x='0' y='0' width='38' height='14' rx='2'/%3E%3Cpath d='M6 0v5M14 0v5M22 0v5M30 0v5'/%3E%3C/g%3E%3Cg transform='translate(94 76) rotate(4 15 19)'%3E%3Crect x='0' y='0' width='30' height='38' rx='4'/%3E%3Crect x='5' y='5' width='20' height='8' rx='1'/%3E%3Ccircle cx='9' cy='20' r='1.5' fill='%23cbd5e1'/%3E%3Ccircle cx='17' cy='20' r='1.5' fill='%23cbd5e1'/%3E%3Ccircle cx='25' cy='20' r='1.5' fill='%23cbd5e1'/%3E%3Ccircle cx='9' cy='28' r='1.5' fill='%23cbd5e1'/%3E%3Ccircle cx='17' cy='28' r='1.5' fill='%23cbd5e1'/%3E%3Ccircle cx='25' cy='28' r='1.5' fill='%23cbd5e1'/%3E%3C/g%3E%3Cg transform='translate(176 76) rotate(-11 9 9)'%3E%3Cpath d='M6 0c-5 0-9 4-9 10 0 4 2 6 4 8v4h10v-4c2-2 4-4 4-8 0-6-4-10-9-10z'/%3E%3Cpath d='M-4 22v4M2 22v4'/%3E%3Cpath d='M-6 29h8'/%3E%3C/g%3E%3Cg transform='translate(20 138) rotate(7 23 12)'%3E%3Crect x='0' y='0' width='42' height='7' rx='1'/%3E%3Crect x='3' y='8' width='36' height='7' rx='1'/%3E%3Crect x='-3' y='16' width='46' height='7' rx='1'/%3E%3C/g%3E%3Cg transform='translate(96 132) rotate(-5 16 16)'%3E%3Ccircle cx='16' cy='16' r='16'/%3E%3Cpath d='M0 16h32M16 0c-5 5-5 27 0 32M16 0c5 5 5 27 0 32M1 9h30M1 23h30'/%3E%3C/g%3E%3Cg transform='translate(172 138) rotate(12 6 10)'%3E%3Cpath d='M0 0l-8 14h14L0 0z'/%3E%3Cpath d='M-8 14v6M2 14v6M-12 20h18'/%3E%3Cpath d='M0 0v-4c0-4-3-6-5-6s-5 2-5 6'/%3E%3C/g%3E%3Cg transform='translate(26 196) rotate(-18 6 16)'%3E%3Cpath d='M0 0v20c0 4 3 6 6 6s6-2 6-6V0'/%3E%3Cpath d='M0 0h12'/%3E%3Cpath d='M0 12h12'/%3E%3C/g%3E%3Cg transform='translate(92 198) rotate(6 22 12)'%3E%3Cpath d='M0 2v22c0 2 1 3 3 3h14c3 0 5-2 5-4V2c0-2-2-4-5-4H3C1-2 0-1 0 2z'/%3E%3Cpath d='M22 3v22c0 2 1 3 3 3h14c3 0 5-2 5-4V2c0-2-2-4-5-4H25c-2 0-3 1-3 3z'/%3E%3Cpath d='M6 10h10M6 16h10M28 10h10M28 16h10'/%3E%3C/g%3E%3Cg transform='translate(178 200) rotate(-14 10 12)'%3E%3Ccircle cx='10' cy='12' r='9'/%3E%3Cpath d='M10 7l1.5 3 3.5.5-2.5 2.5.5 3.5-3-1.5-3 1.5.5-3.5-2.5-2.5 3.5-.5z'/%3E%3Cpath d='M5 2L2-6M15 2l3-8'/%3E%3C/g%3E%3Ccircle cx='84' cy='52' r='2'/%3E%3Ccircle cx='146' cy='88' r='2'/%3E%3Ccircle cx='60' cy='120' r='2'/%3E%3Ccircle cx='200' cy='60' r='2'/%3E%3Ccircle cx='40' cy='62' r='2'/%3E%3Ccircle cx='160' cy='196' r='2'/%3E%3Ccircle cx='108' cy='116' r='2'/%3E%3Ccircle cx='220' cy='180' r='2'/%3E%3Cpath d='M148 44h14M148 50h10'/%3E%3Cpath d='M32 178h20M32 184h14'/%3E%3Cpath d='M198 108h16M198 114h11'/%3E%3C/g%3E%3C/svg%3E");
+
+  background-repeat: no-repeat, no-repeat, repeat;
+  background-size: 100% 100%, 100% 100%, 240px 240px;
+  background-position: center top, center bottom, top left;
+}
+
+/* Respect users who prefer reduced motion / less visual noise */
+@media (prefers-reduced-transparency: reduce) {
+  .chat-background,
+  .dark .chat-background {
+    background-image: none;
+  }
 }

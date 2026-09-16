@@ -26,10 +26,10 @@ export function ReactionChips({ counts, myReaction, onReact }: ReactionChipsProp
           key={r.type}
           onClick={() => onReact(r.type)}
           className={cn(
-            "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
+            "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium shadow-xs backdrop-blur-sm transition-all hover:scale-105 active:scale-95",
             myReaction === r.type
-              ? "border-primary/30 bg-primary/10 text-primary"
-              : "border-border bg-card text-muted-foreground hover:bg-muted",
+              ? "border-primary/40 bg-primary/10 text-primary"
+              : "border-border/70 bg-card/90 text-muted-foreground hover:bg-muted",
           )}
         >
           <span className="text-xs leading-none">{r.emoji}</span>

@@ -26,6 +26,7 @@ const HISTORY_KEY = ["chat", "history"] as const;
 export function useChat() {
   const queryClient = useQueryClient();
   const currentUserId = useAuthStore((s) => s.user?.id);
+  const currentUser = useAuthStore((s) => s.user);
 
   const [isConnected, setIsConnected] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -50,10 +51,16 @@ export function useChat() {
     const handleDisconnect = () => setIsConnected(false);
 
     const handleNewMessage = (message: ChatMessage) => {
-      queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => [
-        ...old,
-        message,
-      ]);
+      queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => {
+        // If we already have this message (by id), ignore it to avoid duplicates
+        if (old.some((m) => m.id === message.id)) return old;
+
+        // Remove any optimistic placeholder that matches this incoming message
+        const filtered = old.filter(
+          (m) => !(m.id.startsWith("tmp-") && m.content === message.content && m.userId === message.userId),
+        );
+        return [...filtered, message];
+      });
       // only autoscroll if the message is from me, or we're already near bottom
       queueMicrotask(() => scrollToBottom());
     };
@@ -126,14 +133,51 @@ export function useChat() {
         replyToId: replyTo?.id,
       };
 
-      getSocket().emit(CHAT_EVENTS.MESSAGE_SEND, payload, (ack: SocketAck) => {
-        console.log("SEND ACK:", ack); // temporary debug
+      // create optimistic message
+      const tmpId = `tmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      const now = new Date().toISOString();
+      const optimisticMessage: ChatMessage = {
+        id: tmpId,
+        content: trimmed,
+        userId: currentUserId ?? "",
+        replyToId: replyTo?.id ?? null,
+        createdAt: now,
+        updatedAt: now,
+        user: {
+          id: currentUser?.id ?? "",
+          name: currentUser?.name ?? "You",
+        },
+        replyTo: null,
+        reactions: [],
+      } as ChatMessage;
 
+      queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => [...old, optimisticMessage]);
+      queueMicrotask(() => scrollToBottom());
+
+      getSocket().emit(CHAT_EVENTS.MESSAGE_SEND, payload, (ack: SocketAck<{ id?: string; message?: ChatMessage }>) => {
         setIsSending(false);
         if (!ack.success) {
+          // remove optimistic message
+          queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => old.filter((m) => m.id !== tmpId));
           console.error("Failed to send message:", ack.message);
           return;
         }
+
+        // If server returned the saved message in ack, replace optimistic entry
+        if (ack.data && (ack.data.message || ack.data.id)) {
+          const serverMsg = ack.data.message
+            ? (ack.data.message as ChatMessage)
+            : { ...(optimisticMessage as ChatMessage), id: ack.data.id } as ChatMessage;
+
+          queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => {
+            // remove optimistic placeholder(s) that match
+            const filtered = old.filter(
+              (m) => !(m.id === tmpId || (m.id.startsWith("tmp-") && m.content === serverMsg.content && m.userId === serverMsg.userId)),
+            );
+            return [...filtered, serverMsg];
+          });
+        }
+
         setReplyTo(null);
       });
     },

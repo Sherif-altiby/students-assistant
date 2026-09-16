@@ -19,6 +19,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "overrides": {
+    "deepmerge-ts": "^8.0.0"
+  },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "6.19.3",

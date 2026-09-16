@@ -53,7 +53,7 @@ export function MessageInput({
   const isNearLimit = value.length > MAX_LENGTH - 200;
 
   return (
-    <div className="border-t sticky rounded-lg  border-border bg-card px-4 py-3  bottom-4">
+    <div className="border-t sticky rounded-lg px-4 py-3  bottom-4">
       <div
         className={cn(
           "rounded-2xl border bg-background transition-colors",
@@ -72,10 +72,10 @@ export function MessageInput({
               <div className="flex items-center gap-2 border-b border-border px-3.5 py-2">
                 <Reply size={13} className="shrink-0 text-primary" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-foreground">
+                  <p className="  font-medium text-foreground">
                     Replying to {replyTo.user.name}
                   </p>
-                  <p className="truncate text-xs text-muted-foreground">{replyTo.content}</p>
+                  <p className="truncate   text-muted-foreground">{replyTo.content}</p>
                 </div>
                 <Button
                   type="button"
@@ -88,12 +88,12 @@ export function MessageInput({
                   <X size={13} />
                 </Button>
               </div>
-            )}
+            )} 
           </div>
         </div>
 
         <div className="flex items-center  gap-2 p-2">
-          <div className="relative flex-1">
+          <div className="relative h-full flex-1">
             <Textarea
               ref={textareaRef}
               value={value}
@@ -101,10 +101,10 @@ export function MessageInput({
               onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder={disabled ? "Connecting..." : "Type a message..."}
+              placeholder={disabled ? "جاري الاتصال..." : "اكتب رسالة..."}
               disabled={disabled || isSending}
               rows={1}
-              className="min-h-[40px] resize-none border-0 bg-transparent p-2 text-sm leading-relaxed shadow-none focus-visible:ring-0"
+              className="min-h-[40px] text-[15px] resize-none border-0 bg-transparent p-2   leading-relaxed shadow-none focus-visible:ring-0"
               style={{ maxHeight: "140px" }}
             />
             {isNearLimit && (

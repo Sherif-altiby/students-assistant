@@ -40,8 +40,10 @@ export default function DashboardLayout({
       <Sidebar />
       <main className="flex-1 h-screen overflow-y-auto  custom-scrollbar">
         <Header />
-        <div className="px-4 py-4">
-          <RoleGuard allowedRoles={["USER"]}>{children}</RoleGuard>
+        <div className=" ">
+          {/* <RoleGuard allowedRoles={["USER"]}> */}
+            {children}
+            {/* </RoleGuard> */}
         </div>
       </main>
     </div>

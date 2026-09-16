@@ -5,7 +5,7 @@ import { Gender, EducationLevel, Track, TaskFrequency, StudyTableType, Role, Use
 import bcrypt from 'bcryptjs';
 
 const START_DATE = new Date('2026-06-01T00:00:00.000Z');
-const END_DATE = new Date('2026-07-20T00:00:00.000Z');
+const END_DATE = new Date();
 
 // Seed login accounts for quick local testing.
 const STUDENT_LOGIN = {
@@ -206,8 +206,9 @@ async function main() {
   // Day-by-day generation: tasks, task histories, habit
   // completions, and study-day content for both study tables
   // ------------------------------------------------------------
-  console.log('🗓️  Generating daily data (June 1 - July 20, 2026)...');
-
+  console.log('🗓️  Generating daily data (June 1 - ' + END_DATE.toISOString().split('T')[0] + ')...');
+  // Progress counter to make long-running seeding visible
+  let _dayIndex = 0;
   let taskCount = 0;
   let taskHistoryCount = 0;
   let habitCompletionCount = 0;
@@ -216,6 +217,10 @@ async function main() {
   let lessonCompletionCount = 0;
 
   for (const date of dateRange(START_DATE, END_DATE)) {
+    _dayIndex++;
+    if (_dayIndex % 10 === 0) {
+      console.log(`   · generated up to ${date.toISOString().split('T')[0]} (${_dayIndex} days)`);
+    }
     // --- TODAY tasks: 1-3 one-off tasks per day, ~70% completed
     const numTodayTasks = randomInt(1, 3);
     for (let i = 0; i < numTodayTasks; i++) {
