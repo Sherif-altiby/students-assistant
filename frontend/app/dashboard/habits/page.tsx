@@ -29,7 +29,7 @@ export default function HabitsPage() {
   } = useHabits();
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col p-4 gap-6">
       <PageHeader
         title="العادات"
         description="ابنِ عادات مذاكرة ثابتة وتابع تتابعك يومًا بعد يوم"

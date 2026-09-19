@@ -87,7 +87,7 @@ export function MessageList({
             !prev || dayLabel(prev.createdAt) !== dayLabel(message.createdAt);
 
           return (
-            <div key={message.id}>
+            <div key={`${i}-${message.id}`}>
               {showDivider && (
                 <div className="my-4 flex items-center gap-3">
                   <div className="h-px flex-1 bg-border" />

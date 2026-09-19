@@ -1,19 +1,18 @@
 import type { Metadata } from "next";
-import { El_Messiri } from "next/font/google";
-
+import { Cairo } from "next/font/google";
 
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { QueryProvider } from "@/components/QueryClientProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
-const elMessiri = El_Messiri({
+// Cairo is a variable font, so every weight (200–1000) is available
+// without listing them.
+const cairo = Cairo({
   subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-el-messiri",
-}); 
-
- 
+  variable: "--font-cairo",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "ثانوية أسيستنت | لوحة متابعة الطالب",
@@ -26,13 +25,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar" dir="rtl" className={elMessiri.className}> 
+    <html lang="ar" dir="rtl" className={cairo.className}>
       <body>
-          <QueryProvider>
-            <AuthProvider>
-               <ThemeProvider>{children}</ThemeProvider>
-            </AuthProvider>
-          </QueryProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

@@ -1,7 +1,14 @@
 import 'dotenv/config';
 import { prisma } from '../src/config/prisma';
 
-import { Gender, EducationLevel, Track, TaskFrequency, StudyTableType, Role, UserStatus } from '@prisma/client';
+import {
+  EducationLevel,
+  Track,
+  TaskFrequency,
+  StudyTableType,
+  Role,
+  UserStatus,
+} from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const START_DATE = new Date('2026-06-01T00:00:00.000Z');
@@ -121,9 +128,8 @@ async function main() {
       email: STUDENT_LOGIN.email,
       phone: '01012345678',
       password: studentPassword,
-      gender: Gender.MALE,
-      level: EducationLevel.GENERAL_SECONDARY,
-      track: Track.SCIENCE_MATH,
+      level: EducationLevel.BACHELOR,
+      track: Track.BACHELOR_SECOND_MEDICAL,
       parentPhone: '01098765432',
       country: 'مصر',
       role: Role.USER,
@@ -206,7 +212,9 @@ async function main() {
   // Day-by-day generation: tasks, task histories, habit
   // completions, and study-day content for both study tables
   // ------------------------------------------------------------
-  console.log('🗓️  Generating daily data (June 1 - ' + END_DATE.toISOString().split('T')[0] + ')...');
+  console.log(
+    '🗓️  Generating daily data (June 1 - ' + END_DATE.toISOString().split('T')[0] + ')...'
+  );
   // Progress counter to make long-running seeding visible
   let _dayIndex = 0;
   let taskCount = 0;

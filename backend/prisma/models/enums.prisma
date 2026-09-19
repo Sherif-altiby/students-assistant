@@ -1,8 +1,3 @@
-enum Gender {
-  MALE
-  FEMALE
-}
-
 enum Role {
   USER
   ADMIN
@@ -10,15 +5,24 @@ enum Role {
 }
 
 enum EducationLevel {
-  GENERAL_SECONDARY // ثانوية عامة
-  AZHARI_SECONDARY // ثانوية أزهرية
+  SECONDARY_GENERAL // الثانوية العامة
+  SECONDARY_AZHARI // ثانوية أزهرية
+  BACHELOR // البكالوريا
 }
 
 enum Track {
-  SCIENCE_MATH // علمي رياضة (عامة فقط)
-  SCIENCE_SCIENCE // علمي علوم (عامة فقط)
-  SCIENCE // علمي (أزهرية فقط)
-  LITERARY // أدبي (عامة وأزهرية)
+  // For ثانوية عامة and ثانوية أزهرية
+  SECONDARY_FIRST_YEAR // الصف الأول الثانوي
+  SECONDARY_SECOND_YEAR // الصف الثاني الثانوي
+  SECONDARY_THIRD_SCIENCE_MATH // الصف الثالث الثانوي - علمي رياضة
+  SECONDARY_THIRD_SCIENCE_SCIENCE // الصف الثالث الثانوي - علمي علوم
+  SECONDARY_THIRD_LITERARY // الصف الثالث الثانوي - ادبي
+  
+  // For البكالوريا
+  BACHELOR_FIRST_YEAR // الصف الاول بكالوريا
+  BACHELOR_SECOND_MEDICAL // الصف الثاني بكالوريا - طب وعلوم الحياة
+  BACHELOR_SECOND_BUSINESS // الصف الثاني بكالوريا - الاعمال
+  BACHELOR_SECOND_ARTS // الصف الثاني بكالوريا - اداب وفنون
 }
 
 enum StudyTableType {

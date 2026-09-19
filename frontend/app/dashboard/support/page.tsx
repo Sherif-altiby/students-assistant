@@ -95,7 +95,7 @@ export default function SupportPage() {
   const completedCount = bookings.filter((booking) => booking.status === "COMPLETED").length;
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6 p-4"  >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">

@@ -19,7 +19,7 @@ export default function DoctorsPage() {
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
+    <div className="mx-auto max-w-5xl space-y-6 p-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">الأطباء</h1>
         <p className="text-muted-foreground">اختر طبيبًا لعرض مواعيده المتاحة والحجز</p>

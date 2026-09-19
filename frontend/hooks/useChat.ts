@@ -59,7 +59,16 @@ export function useChat() {
         const filtered = old.filter(
           (m) => !(m.id.startsWith("tmp-") && m.content === message.content && m.userId === message.userId),
         );
-        return [...filtered, message];
+        
+        // Ensure no duplicate IDs in the final array
+        const messageIds = new Set<string>();
+        const deduped = [...filtered, message].filter((m) => {
+          if (messageIds.has(m.id)) return false;
+          messageIds.add(m.id);
+          return true;
+        });
+        
+        return deduped;
       });
       // only autoscroll if the message is from me, or we're already near bottom
       queueMicrotask(() => scrollToBottom());
@@ -170,11 +179,20 @@ export function useChat() {
             : { ...(optimisticMessage as ChatMessage), id: ack.data.id } as ChatMessage;
 
           queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => {
-            // remove optimistic placeholder(s) that match
+            // remove optimistic placeholder(s) that match and avoid duplicates
             const filtered = old.filter(
               (m) => !(m.id === tmpId || (m.id.startsWith("tmp-") && m.content === serverMsg.content && m.userId === serverMsg.userId)),
             );
-            return [...filtered, serverMsg];
+            
+            // Ensure no duplicate IDs in the final array
+            const messageIds = new Set<string>();
+            const deduped = [...filtered, serverMsg].filter((m) => {
+              if (messageIds.has(m.id)) return false;
+              messageIds.add(m.id);
+              return true;
+            });
+            
+            return deduped;
           });
         }
 

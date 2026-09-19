@@ -68,17 +68,10 @@ export default function DashboardOverviewPage() {
       cancelled = true;
     };
   }, []);
-
-  const completedTasks = tasks.filter((t) => t.completed).length;
-  const pendingTasks = tasks.length - completedTasks;
  
 
-  const habitChartData = habits.map((h) => ({
-    name: h.title.length > 10 ? `${h.title.slice(0, 10)}…` : h.title,
-  }));
-
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 px-4">
       <div>
         <div className="mb-2 flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />

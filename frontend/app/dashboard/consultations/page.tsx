@@ -55,7 +55,7 @@ export default function ConsultationsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col p-4 gap-6">
       <div>
         <h1 className="font-display text-2xl font-extrabold text-ink">
           الاستشارات

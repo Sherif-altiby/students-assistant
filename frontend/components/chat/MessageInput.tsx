@@ -53,7 +53,7 @@ export function MessageInput({
   const isNearLimit = value.length > MAX_LENGTH - 200;
 
   return (
-    <div className="border-t sticky rounded-lg px-4 py-3  bottom-4">
+    <div className=" sticky rounded-lg px-4 py-3  bottom-4">
       <div
         className={cn(
           "rounded-2xl border bg-background transition-colors",

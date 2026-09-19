@@ -260,7 +260,7 @@ export default function LessonDatesPage() {
   const selectedDayStyle = form.dayName ? DAY_STYLES[form.dayName] : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       <PageHeader
         title="مواعيد الدروس"
         description="تابع جدولك الأسبوعي، وأضف أو حدّث أو احذف مواعيدك بسهولة."

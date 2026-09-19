@@ -47,7 +47,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4" >
       <PageHeader
         title="المهام الدراسية"
         description="نظّم مهام مذاكرتك اليومية، تابع تقدّمك، وأنجز أهدافك خطوة بخطوة."

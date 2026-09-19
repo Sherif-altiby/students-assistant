@@ -12,10 +12,6 @@ model User {
   role     Role       @default(USER)
   status   UserStatus @default(ACTIVE)
 
-  // --- Student-only fields ---
-  // Required for role = USER at the application layer (see user.schema.ts),
-  // but must be optional here because ADMIN/DOCTOR rows won't have them.
-  gender      Gender?
   level       EducationLevel?
   track       Track?
   parentPhone String?         @unique @map("parent_phone")
