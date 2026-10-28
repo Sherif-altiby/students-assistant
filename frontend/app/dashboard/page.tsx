@@ -71,7 +71,7 @@ export default function DashboardOverviewPage() {
  
 
   return (
-    <div className="flex flex-col gap-8 px-4">
+    <div className="flex flex-col gap-8 p-4">
       <div>
         <div className="mb-2 flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />

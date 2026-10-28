@@ -23,17 +23,7 @@ export default function DashboardLayout({
     }
   }, [isBootstrapping, user, router]);
 
-  if (isBootstrapping) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-paper">
-        <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
+   
 
   return (
     <div className="flex h-screen bg-paper ">
