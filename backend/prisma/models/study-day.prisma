@@ -7,11 +7,46 @@ model StudyDay {
   studyTableId String     @map("study_table_id")
   studyTable   StudyTable @relation(fields: [studyTableId], references: [id], onDelete: Cascade)
 
-  subjects StudySubject[]
+  subjects StudyDaySubject[]
 
   createdAt DateTime @default(now())
 
   @@unique([studyTableId, date])
   @@index([studyTableId])
   @@map("study_days")
+}
+
+// A catalog subject planned into a specific study day.
+model StudyDaySubject {
+  id String @id @default(uuid())
+
+  dayId String   @map("day_id")
+  day   StudyDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  subjectId String       @map("subject_id")
+  subject   StudySubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  // The lessons the student plans to cover for this subject on this day.
+  lessons StudyDayLesson[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([dayId, subjectId])
+  @@index([dayId])
+  @@index([subjectId])
+  @@map("study_day_subjects")
+}
+
+model StudyDayLesson {
+  id String @id @default(uuid())
+
+  daySubjectId String          @map("day_subject_id")
+  daySubject   StudyDaySubject @relation(fields: [daySubjectId], references: [id], onDelete: Cascade)
+
+  lessonId String      @map("lesson_id")
+  lesson   StudyLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([daySubjectId, lessonId])
+  @@index([lessonId])
+  @@map("study_day_lessons")
 }

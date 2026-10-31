@@ -4,14 +4,27 @@ model StudyLesson {
 
   title String
 
+  // Position among its siblings (syllabus order matters).
+  order Int @default(0)
+
+  // The chapter this lesson belongs to. Sub-lessons keep the same chapterId
+  // as their top-level lesson, so "all lessons of a chapter" is one query.
   chapterId String       @map("chapter_id")
   chapter   StudyChapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
+  // Self-reference for nested lessons, e.g.
+
+  parentId String?       @map("parent_id")
+  parent   StudyLesson?  @relation("LessonTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children StudyLesson[] @relation("LessonTree")
+
   completions StudyLessonCompletion[]
+  dayLessons  StudyDayLesson[]
 
   createdAt DateTime @default(now())
 
   @@index([chapterId])
+  @@index([parentId])
   @@map("study_lessons")
 }
 
@@ -26,7 +39,8 @@ model StudyLessonCompletion {
   lessonId String      @map("lesson_id")
   lesson   StudyLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  @@unique([lessonId])
+  // Lessons are now shared across users, so uniqueness is per user + lesson.
+  @@unique([userId, lessonId])
   @@index([userId])
   @@index([lessonId])
   @@map("study_lesson_completions")

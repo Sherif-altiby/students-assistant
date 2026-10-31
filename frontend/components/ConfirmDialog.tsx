@@ -15,7 +15,7 @@ import { AlertTriangle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ConfirmDialogProps {
-  trigger: React.ReactNode;
+  trigger: React.ReactElement;
   title: string;
   description: string;
   confirmLabel?: string;
@@ -35,7 +35,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <AlertDialog>
-      <AlertDialogTrigger >{trigger}</AlertDialogTrigger>
+      <AlertDialogTrigger render={trigger} />
       <AlertDialogContent className="max-w-sm rounded-2xl border-none shadow-2xl p-6">
         <AlertDialogHeader className="flex flex-col items-center text-center gap-3 sm:text-center">
           <div

@@ -8,7 +8,6 @@ import type {
 } from "@/types";
 
 export async function login(payload: LoginPayload) {
-  console.log(api)
   const res = await api.post<AuthResponse>("/auth/login", payload);
   return res.data.data;
 }

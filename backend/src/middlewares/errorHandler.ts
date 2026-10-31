@@ -51,6 +51,20 @@ export const errorHandler = (
     return;
   }
 
+  if (
+    err instanceof SyntaxError &&
+    'status' in err &&
+    err.status === 400 &&
+    'type' in err &&
+    err.type === 'entity.parse.failed'
+  ) {
+    res.status(400).json({
+      status: 'error',
+      message: 'Invalid JSON request body. Remove trailing commas and check the JSON syntax.',
+    });
+    return;
+  }
+
   // Unexpected/programming error: log full detail, expose nothing.
   logger.error('Unhandled error', err);
   const body: ErrorResponseBody = {

@@ -47,7 +47,15 @@ This keeps business logic testable and decoupled from both HTTP and the database
    npm install
    ```
 
-2. **Configure environment**
+2. **Install the browser used for PDF generation**
+
+   ```bash
+   npx puppeteer browsers install chrome
+   ```
+
+   Run this after installing dependencies in each environment that generates PDFs.
+
+3. **Configure environment**
 
    ```bash
    cp .env.example .env
@@ -59,19 +67,19 @@ This keeps business logic testable and decoupled from both HTTP and the database
    DATABASE_URL="postgresql://user:password@localhost:5432/app_db?schema=public"
    ```
 
-3. **Generate the Prisma client**
+4. **Generate the Prisma client**
 
    ```bash
    npx prisma generate
    ```
 
-4. **Run the first migration** (creates the `users` table)
+5. **Run the first migration** (creates the `users` table)
 
    ```bash
    npx prisma migrate dev --name init
    ```
 
-5. **Start the dev server**
+6. **Start the dev server**
 
    ```bash
    npm run dev

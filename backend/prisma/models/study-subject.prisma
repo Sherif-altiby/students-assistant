@@ -2,16 +2,15 @@
 model StudySubject {
   id String @id @default(uuid())
 
-  title String
-
-  dayId String   @map("day_id")
-  day   StudyDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  title String @unique
 
   chapters StudyChapter[]
 
+  // Where this subject has been planned into a study day.
+  dayUsages StudyDaySubject[]
+
   createdAt DateTime @default(now())
 
-  @@index([dayId])
   @@map("study_subjects")
 }
 
@@ -20,13 +19,20 @@ model StudyChapter {
 
   title String
 
+  order Int @default(0)
+
   subjectId String       @map("subject_id")
   subject   StudySubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  parentId String?        @map("parent_id")
+  parent   StudyChapter?  @relation("ChapterTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children StudyChapter[] @relation("ChapterTree")
 
   lessons StudyLesson[]
 
   createdAt DateTime @default(now())
 
   @@index([subjectId])
+  @@index([parentId])
   @@map("study_chapters")
 }

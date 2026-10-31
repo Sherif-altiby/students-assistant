@@ -7,6 +7,7 @@ import { studyTableRouter } from '../modules/study-table/study-table.routes';
 import { chatRouter } from '../modules/chat/chat.routes';
 import { supportRouter } from '../modules/support/support.routes';
 import { lessonDateRouter } from '../modules/lesson-date/lesson-date.routes';
+import { subjectRouter } from '../modules/subject/Subject.routes';
  
 const router = Router(); 
 
@@ -19,5 +20,6 @@ router.use('/study-table', studyTableRouter);
 router.use('/chat', chatRouter);
 router.use('/support', supportRouter);
 router.use('/lesson-dates', lessonDateRouter);
+router.use('/subjects', subjectRouter)
 
 export { router as apiRouter };

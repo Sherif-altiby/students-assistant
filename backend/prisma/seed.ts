@@ -107,6 +107,8 @@ const SUBJECT_POOL = [
 async function main() {
   console.log('🧹 Clearing existing data...');
   await prisma.studyLessonCompletion.deleteMany();
+  await prisma.studyDayLesson.deleteMany();
+  await prisma.studyDaySubject.deleteMany();
   await prisma.studyLesson.deleteMany();
   await prisma.studyChapter.deleteMany();
   await prisma.studySubject.deleteMany();
@@ -223,6 +225,92 @@ async function main() {
   let studyDayCount = 0;
   let lessonCount = 0;
   let lessonCompletionCount = 0;
+  const studyCatalog = new Map<string, { id: string; lessons: Array<{ id: string }> }>();
+
+  console.log('📖 Creating shared study catalog...');
+  for (const subjectTitle of SUBJECT_POOL) {
+    const subject = await prisma.studySubject.create({
+      data: { title: subjectTitle },
+    });
+    const subjectLessons: Array<{ id: string }> = [];
+    const chapterCount = randomInt(1, 2);
+
+    for (let c = 1; c <= chapterCount; c++) {
+      const chapter = await prisma.studyChapter.create({
+        data: { title: `الفصل ${c}`, subjectId: subject.id, order: c },
+      });
+
+      const lessonsInChapter = randomInt(1, 3);
+      for (let l = 1; l <= lessonsInChapter; l++) {
+        const lesson = await prisma.studyLesson.create({
+          data: { title: `الدرس ${l}`, chapterId: chapter.id, order: l },
+        });
+        subjectLessons.push(lesson);
+        lessonCount++;
+
+        const subLessonCount = randomInt(0, 2);
+        for (let sub = 1; sub <= subLessonCount; sub++) {
+          const subLesson = await prisma.studyLesson.create({
+            data: {
+              title: `الجزء ${sub}`,
+              chapterId: chapter.id,
+              parentId: lesson.id,
+              order: sub,
+            },
+          });
+          subjectLessons.push(subLesson);
+          lessonCount++;
+        }
+      }
+    }
+
+    studyCatalog.set(subjectTitle, { id: subject.id, lessons: subjectLessons });
+  }
+
+  const completedLessonIds = new Set<string>();
+  async function addStudyDay(
+    studyTableId: string,
+    date: Date,
+    subjectCount: number,
+    completionChance: number
+  ) {
+    const studyDay = await prisma.studyDay.create({
+      data: { date, studyTableId },
+    });
+    studyDayCount++;
+
+    const subjectsToday = sample([...studyCatalog.entries()], subjectCount);
+    for (const [, catalogSubject] of subjectsToday) {
+      const daySubject = await prisma.studyDaySubject.create({
+        data: { dayId: studyDay.id, subjectId: catalogSubject.id },
+      });
+      const lessonsForDay = sample(
+        catalogSubject.lessons,
+        randomInt(1, Math.min(3, catalogSubject.lessons.length))
+      );
+
+      await prisma.studyDayLesson.createMany({
+        data: lessonsForDay.map((lesson) => ({
+          daySubjectId: daySubject.id,
+          lessonId: lesson.id,
+        })),
+      });
+
+      for (const lesson of lessonsForDay) {
+        if (!completedLessonIds.has(lesson.id) && chance(completionChance)) {
+          await prisma.studyLessonCompletion.create({
+            data: {
+              userId: student.id,
+              lessonId: lesson.id,
+              completedAt: date,
+            },
+          });
+          completedLessonIds.add(lesson.id);
+          lessonCompletionCount++;
+        }
+      }
+    }
+  }
 
   for (const date of dateRange(START_DATE, END_DATE)) {
     _dayIndex++;
@@ -293,81 +381,12 @@ async function main() {
     // --- Study day content on the main table (skip ~15% of days,
     // like weekends off or rest days)
     if (chance(0.85)) {
-      const studyDay = await prisma.studyDay.create({
-        data: { date, studyTableId: mainStudyTable.id },
-      });
-      studyDayCount++;
-
-      const subjectsToday = sample(SUBJECT_POOL, randomInt(2, 3));
-      for (const subjectTitle of subjectsToday) {
-        const subject = await prisma.studySubject.create({
-          data: { title: subjectTitle, dayId: studyDay.id },
-        });
-
-        const chapterCount = randomInt(1, 2);
-        for (let c = 1; c <= chapterCount; c++) {
-          const chapter = await prisma.studyChapter.create({
-            data: { title: `الفصل ${c}`, subjectId: subject.id },
-          });
-
-          const lessonsInChapter = randomInt(1, 3);
-          for (let l = 1; l <= lessonsInChapter; l++) {
-            const lesson = await prisma.studyLesson.create({
-              data: { title: `الدرس ${l}`, chapterId: chapter.id },
-            });
-            lessonCount++;
-
-            if (chance(0.6)) {
-              await prisma.studyLessonCompletion.create({
-                data: {
-                  userId: student.id,
-                  lessonId: lesson.id,
-                  completedAt: date,
-                },
-              });
-              lessonCompletionCount++;
-            }
-          }
-        }
-      }
+      await addStudyDay(mainStudyTable.id, date, randomInt(2, 3), 0.6);
     }
 
     // --- Study day content on the intensive last-two-weeks table
     if (date >= recentTableStart) {
-      const sprintDay = await prisma.studyDay.create({
-        data: { date, studyTableId: finalSprintTable.id },
-      });
-      studyDayCount++;
-
-      const subjectsToday = sample(SUBJECT_POOL, randomInt(1, 2));
-      for (const subjectTitle of subjectsToday) {
-        const subject = await prisma.studySubject.create({
-          data: { title: subjectTitle, dayId: sprintDay.id },
-        });
-
-        const chapter = await prisma.studyChapter.create({
-          data: { title: 'مراجعة نهائية', subjectId: subject.id },
-        });
-
-        const lessonsInChapter = randomInt(1, 2);
-        for (let l = 1; l <= lessonsInChapter; l++) {
-          const lesson = await prisma.studyLesson.create({
-            data: { title: `مراجعة سريعة ${l}`, chapterId: chapter.id },
-          });
-          lessonCount++;
-
-          if (chance(0.8)) {
-            await prisma.studyLessonCompletion.create({
-              data: {
-                userId: student.id,
-                lessonId: lesson.id,
-                completedAt: date,
-              },
-            });
-            lessonCompletionCount++;
-          }
-        }
-      }
+      await addStudyDay(finalSprintTable.id, date, randomInt(1, 2), 0.8);
     }
   }
 
