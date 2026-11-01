@@ -16,6 +16,7 @@ model User {
   track       Track?
   parentPhone String?         @unique @map("parent_phone")
   country     String?
+  timezone    String          @default("Africa/Cairo")
 
   invitationToken          String?   @unique @map("invitation_token")
   invitationTokenExpiresAt DateTime? @map("invitation_token_expires_at")
@@ -25,6 +26,8 @@ model User {
 
   studyTables       StudyTable[]
   lessonCompletions StudyLessonCompletion[]
+  studySessions     StudySession[]
+  notifications     Notification[]
 
   completedHabits CompletedHabit[]
 

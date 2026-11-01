@@ -107,10 +107,10 @@ const SUBJECT_POOL = [
 async function main() {
   console.log('🧹 Clearing existing data...');
   await prisma.studyLessonCompletion.deleteMany();
-  await prisma.studyDayLesson.deleteMany();
-  await prisma.studyDaySubject.deleteMany();
+  await prisma.studySession.deleteMany();
+  await prisma.studyTableSubject.deleteMany();
   await prisma.studyLesson.deleteMany();
-  await prisma.studyChapter.deleteMany();
+  await prisma.studyUnit.deleteMany();
   await prisma.studySubject.deleteMany();
   await prisma.studyDay.deleteMany();
   await prisma.studyTable.deleteMany();
@@ -182,17 +182,18 @@ async function main() {
 
   // ------------------------------------------------------------
   // Study tables
-  //  - one long DATE_RANGE table spanning the whole period
-  //  - one shorter NUMBER_OF_DAYS table for the last 14 days
+  //  - one long CUSTOM table spanning the whole period
+  //  - one shorter CUSTOM table for the last 14 days
   // ------------------------------------------------------------
   console.log('📚 Creating study tables...');
   const mainStudyTable = await prisma.studyTable.create({
     data: {
       title: 'جدول مراجعة الترم الثاني',
-      type: StudyTableType.DATE_RANGE,
+      type: StudyTableType.CUSTOM,
       startDate: START_DATE,
       endDate: END_DATE,
       userId: student.id,
+      allSubjects: true,
     },
   });
 
@@ -203,10 +204,11 @@ async function main() {
   const finalSprintTable = await prisma.studyTable.create({
     data: {
       title: `جدول مراجعة مكثفة (${RECENT_TABLE_DAYS} يوم)`,
-      type: StudyTableType.NUMBER_OF_DAYS,
+      type: StudyTableType.CUSTOM,
       startDate: recentTableStart,
       endDate: END_DATE,
       userId: student.id,
+      allSubjects: true,
     },
   });
 
@@ -226,6 +228,10 @@ async function main() {
   let lessonCount = 0;
   let lessonCompletionCount = 0;
   const studyCatalog = new Map<string, { id: string; lessons: Array<{ id: string }> }>();
+  const usedLessonsByTable = new Map<string, Set<string>>([
+    [mainStudyTable.id, new Set()],
+    [finalSprintTable.id, new Set()],
+  ]);
 
   console.log('📖 Creating shared study catalog...');
   for (const subjectTitle of SUBJECT_POOL) {
@@ -233,34 +239,20 @@ async function main() {
       data: { title: subjectTitle },
     });
     const subjectLessons: Array<{ id: string }> = [];
-    const chapterCount = randomInt(1, 2);
+    const unitCount = randomInt(1, 2);
 
-    for (let c = 1; c <= chapterCount; c++) {
-      const chapter = await prisma.studyChapter.create({
-        data: { title: `الفصل ${c}`, subjectId: subject.id, order: c },
+    for (let unitOrder = 1; unitOrder <= unitCount; unitOrder++) {
+      const unit = await prisma.studyUnit.create({
+        data: { title: `الوحدة ${unitOrder}`, subjectId: subject.id, order: unitOrder },
       });
 
-      const lessonsInChapter = randomInt(1, 3);
-      for (let l = 1; l <= lessonsInChapter; l++) {
+      const lessonsInUnit = randomInt(1, 3);
+      for (let lessonOrder = 1; lessonOrder <= lessonsInUnit; lessonOrder++) {
         const lesson = await prisma.studyLesson.create({
-          data: { title: `الدرس ${l}`, chapterId: chapter.id, order: l },
+          data: { title: `الدرس ${lessonOrder}`, unitId: unit.id, order: lessonOrder },
         });
         subjectLessons.push(lesson);
         lessonCount++;
-
-        const subLessonCount = randomInt(0, 2);
-        for (let sub = 1; sub <= subLessonCount; sub++) {
-          const subLesson = await prisma.studyLesson.create({
-            data: {
-              title: `الجزء ${sub}`,
-              chapterId: chapter.id,
-              parentId: lesson.id,
-              order: sub,
-            },
-          });
-          subjectLessons.push(subLesson);
-          lessonCount++;
-        }
       }
     }
 
@@ -279,25 +271,33 @@ async function main() {
     });
     studyDayCount++;
 
+    const usedLessons = usedLessonsByTable.get(studyTableId)!;
     const subjectsToday = sample([...studyCatalog.entries()], subjectCount);
+    let sessionIndex = 0;
     for (const [, catalogSubject] of subjectsToday) {
-      const daySubject = await prisma.studyDaySubject.create({
-        data: { dayId: studyDay.id, subjectId: catalogSubject.id },
-      });
+      const availableLessons = catalogSubject.lessons.filter((lesson) => !usedLessons.has(lesson.id));
       const lessonsForDay = sample(
-        catalogSubject.lessons,
-        randomInt(1, Math.min(3, catalogSubject.lessons.length))
+        availableLessons,
+        Math.min(1, availableLessons.length)
       );
 
-      await prisma.studyDayLesson.createMany({
-        data: lessonsForDay.map((lesson) => ({
-          daySubjectId: daySubject.id,
-          lessonId: lesson.id,
-        })),
-      });
-
       for (const lesson of lessonsForDay) {
-        if (!completedLessonIds.has(lesson.id) && chance(completionChance)) {
+        usedLessons.add(lesson.id);
+        const completed = chance(completionChance);
+        await prisma.studySession.create({
+          data: {
+            userId: student.id,
+            studyTableId,
+            dayId: studyDay.id,
+            subjectId: catalogSubject.id,
+            lessonId: lesson.id,
+            order: sessionIndex,
+            completedAt: completed ? date : null,
+          },
+        });
+        sessionIndex++;
+
+        if (completed && !completedLessonIds.has(lesson.id)) {
           await prisma.studyLessonCompletion.create({
             data: {
               userId: student.id,

@@ -17,7 +17,7 @@ enum Track {
   SECONDARY_THIRD_SCIENCE_MATH // الصف الثالث الثانوي - علمي رياضة
   SECONDARY_THIRD_SCIENCE_SCIENCE // الصف الثالث الثانوي - علمي علوم
   SECONDARY_THIRD_LITERARY // الصف الثالث الثانوي - ادبي
-  
+
   // For البكالوريا
   BACHELOR_FIRST_YEAR // الصف الاول بكالوريا
   BACHELOR_SECOND_MEDICAL // الصف الثاني بكالوريا - طب وعلوم الحياة
@@ -26,8 +26,15 @@ enum Track {
 }
 
 enum StudyTableType {
-  DATE_RANGE
-  NUMBER_OF_DAYS
+  WEEKLY
+  MONTHLY
+  CUSTOM
+  GLOBAL
+}
+
+enum NotificationType {
+  LATE_STUDY
+  DATE_CONFLICT
 }
 
 enum TaskFrequency {

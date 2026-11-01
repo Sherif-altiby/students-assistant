@@ -6,11 +6,20 @@
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly isOperational: boolean;
+  public readonly code?: string;
+  public readonly details?: unknown;
 
-  constructor(message: string, statusCode: number, isOperational = true) {
+  constructor(
+    message: string,
+    statusCode: number,
+    isOperational = true,
+    options?: { code?: string; details?: unknown }
+  ) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = isOperational;
+    this.code = options?.code;
+    this.details = options?.details;
 
     Object.setPrototypeOf(this, new.target.prototype);
     Error.captureStackTrace(this, this.constructor);
@@ -18,20 +27,26 @@ export class AppError extends Error {
 }
 
 export class BadRequestError extends AppError {
-  constructor(message = 'Bad request') {
-    super(message, 400);
+  constructor(message = 'Bad request', options?: { code?: string; details?: unknown }) {
+    super(message, 400, true, options);
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(message = 'Resource not found') {
-    super(message, 404);
+  constructor(message = 'Resource not found', options?: { code?: string; details?: unknown }) {
+    super(message, 404, true, options);
   }
 }
 
 export class ConflictError extends AppError {
-  constructor(message = 'Resource already exists') {
-    super(message, 409);
+  constructor(message = 'Resource already exists', options?: { code?: string; details?: unknown }) {
+    super(message, 409, true, options);
+  }
+}
+
+export class UnprocessableEntityError extends AppError {
+  constructor(message = 'Unable to process request', options?: { code?: string; details?: unknown }) {
+    super(message, 422, true, options);
   }
 }
 

@@ -45,7 +45,12 @@ export const errorHandler = (
   }
 
   if (err instanceof AppError) {
-    const body: ErrorResponseBody = { status: 'error', message: err.message };
+    const body: ErrorResponseBody & { code?: string; details?: unknown } = {
+      status: 'error',
+      message: err.message,
+    };
+    if (err.code) body.code = err.code;
+    if (err.details !== undefined) body.details = err.details;
     if (env.isDevelopment) body.stack = err.stack;
     res.status(err.statusCode).json(body);
     return;

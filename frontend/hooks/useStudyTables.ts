@@ -1,46 +1,91 @@
-// hooks/useStudyTables.ts
-
 "use client";
 
 import { useState } from "react";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createStudyTable, deleteStudyTable, listStudyTables } from "@/lib/study-table";
-import type { CreateStudyTablePayload } from "@/types/study-table";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  createStudyTable,
+  deleteStudyTable,
+  downloadStudyTablePdf,
+  generateStudyTable,
+  listStudyTables,
+  updateStudyTable,
+} from "@/lib/study-table";
+import type {
+  GenerateStudyTableInput,
+  StudyTableInput,
+  StudyTableUpdateInput,
+} from "@/types/study-table";
 
 const PAGE_SIZE = 10;
 
 export function useStudyTables() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
-
-  const query = useQuery({
+  const tablesQuery = useQuery({
     queryKey: ["study-tables", page],
     queryFn: () => listStudyTables({ page, limit: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["study-tables"] });
-
+  const invalidateTables = () => queryClient.invalidateQueries({ queryKey: ["study-tables"] });
   const createMutation = useMutation({
-    mutationFn: (payload: CreateStudyTablePayload) => createStudyTable(payload),
-    onSuccess: invalidate,
+    mutationFn: (payload: StudyTableInput) => createStudyTable(payload),
+    onSuccess: invalidateTables,
+    onError: () => toast.error("تعذر إنشاء جدول المذاكرة"),
   });
-
+  const generateMutation = useMutation({
+    mutationFn: ({ payload, preview }: { payload: GenerateStudyTableInput; preview: boolean }) =>
+      generateStudyTable(payload, preview),
+    onSuccess: (result, variables) => {
+      if (!variables.preview) invalidateTables();
+      return result;
+    },
+    onError: () => toast.error("تعذر إنشاء الجدول تلقائياً، تحقق من البيانات"),
+  });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: StudyTableUpdateInput }) =>
+      updateStudyTable(id, payload),
+    onSuccess: async () => {
+      await invalidateTables();
+      toast.success("تم تحديث الجدول");
+    },
+    onError: () => toast.error("تعذر تحديث الجدول"),
+  });
   const deleteMutation = useMutation({
     mutationFn: deleteStudyTable,
-    onSuccess: invalidate,
+    onSuccess: async () => {
+      await invalidateTables();
+      toast.success("تم حذف الجدول");
+    },
+    onError: () => toast.error("تعذر حذف الجدول"),
+  });
+  const downloadMutation = useMutation({
+    mutationFn: downloadStudyTablePdf,
+    onError: () => toast.error("تعذر تحميل ملف الجدول"),
   });
 
   return {
-    tables: query.data?.data ?? [],
-    pagination: query.data?.pagination,
-    isLoading: query.isLoading,
+    tables: tablesQuery.data?.data ?? [],
+    pagination: tablesQuery.data?.pagination,
+    isLoading: tablesQuery.isLoading,
+    error: tablesQuery.error,
     page,
     setPage,
-
-    createTable: createMutation.mutate,
+    createTableAsync: createMutation.mutateAsync,
     isCreating: createMutation.isPending,
-
-    deleteTable: deleteMutation.mutate,
+    generateTableAsync: generateMutation.mutateAsync,
+    isGenerating: generateMutation.isPending,
+    updateTableAsync: updateMutation.mutateAsync,
+    isUpdating: updateMutation.isPending,
+    deleteTableAsync: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
+    downloadPdfAsync: downloadMutation.mutateAsync,
+    isDownloadingPdf: downloadMutation.isPending,
   };
 }

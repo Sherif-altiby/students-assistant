@@ -115,6 +115,96 @@ Base path: `/api/v1`
 
 All responses follow the shape `{ status: 'success' | 'error', data?, message?, errors? }`.
 
+### Subject catalog
+
+The shared catalog follows `Subject -> Unit -> Lesson`. Only administrators can
+change catalog data; authenticated users can read it. List responses are
+paginated and subject detail returns ordered units and lessons.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/subjects?page=1&limit=10` | Paginated summaries with `unitsCount` and `lessonsCount` |
+| GET | `/subjects/:id` | Subject with ordered `units[]` and each unit's `lessons[]` |
+| POST | `/subjects` | Create a subject with optional nested units and lessons |
+| PATCH / DELETE | `/subjects/:id` | Rename or delete a subject |
+| POST | `/subjects/:id/units` | Add a unit (optionally with lessons) |
+| PATCH / DELETE | `/units/:id` | Rename/reposition or delete a unit |
+| PUT | `/subjects/:id/units/order` | Reorder using `{ "unitIds": ["uuid", "..."] }` |
+| POST | `/units/:id/lessons` | Add a lesson |
+| PATCH / DELETE | `/lessons/:id` | Rename/move/reposition or delete a lesson |
+| PUT | `/units/:id/lessons/order` | Reorder using `{ "lessonIds": ["uuid", "..."] }` |
+
+Example create request:
+
+```json
+{
+  "title": "Sample JSON",
+  "units": [
+    {
+      "title": "Item 1",
+      "lessons": [{ "title": "Lesson 1" }, { "title": "Lesson 2" }]
+    }
+  ]
+}
+```
+
+Subject and unit deletes cascade through lessons, study sessions, and lesson
+completions. Existing study days remain attached to their tables and may become
+empty.
+
+#### Applying the hierarchy migration
+
+Back up the database before applying these migrations. The hierarchy migration
+preserves unit and lesson UUIDs, flattens nested unit titles and leaf lesson
+titles, and removes sessions/completions that referred to non-leaf lessons. It
+reports the number of removed rows with a PostgreSQL `NOTICE`. A follow-up
+migration aligns the unit and lesson order defaults with the Prisma schema.
+
+From `backend`:
+
+```bash
+npx prisma migrate status
+npx prisma migrate deploy
+npm run prisma:generate
+```
+
+The migration is intentionally not reversible: the removed parent lessons,
+their sessions/completions, and the original nested names/order cannot be
+reconstructed from the flattened rows. To roll back, restore a database backup
+made before deployment (including `_prisma_migrations`); do not use
+`prisma migrate resolve --rolled-back` as a substitute for restoring the data.
+
+### Study tables
+
+Study-session dates use `YYYY-MM-DD`; sessions have no start/end times.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/study-table?page=1&limit=10` | List the signed-in user's tables |
+| POST | `/study-table` | Create an empty table |
+| POST | `/study-table/generate?preview=true` | Preview a generated plan |
+| POST | `/study-table/generate` | Generate and save a plan |
+| GET | `/study-table/:id` | Get a table with days and sessions |
+| PATCH | `/study-table/:id` | Update the owned table's title, subjects, or type-specific dates |
+| DELETE | `/study-table/:id` | Delete the owned table and its schedule |
+| GET | `/study-table/:id/progress` | Get total, per-subject, and per-unit progress |
+| GET | `/study-table/:id/pdf` | Download a paginated PDF |
+| POST | `/study-table/:id/sessions` | Add a session using `{ "subjectId": "...", "lessonId": "...", "date": "YYYY-MM-DD" }` (or `dayId`) |
+| PATCH / DELETE | `/study-table/sessions/:id` | Update or remove an owned session |
+| PUT | `/study-table/days/:dayId/sessions` | Replace and reorder a day's sessions |
+| POST / DELETE | `/study-table/sessions/:id/complete` | Complete or uncomplete a session |
+
+Weekly inputs need only `startDate`; monthly inputs use `month` (English or Arabic month name, or 1–12) and optional `year`; custom and global inputs use `startDate` and `endDate`. Generated plans accept `schedule: { "studyWeekdays": [0, 1, 2, 3, 4, 5, 6], "maxSessionsPerDay": 3 }`.
+
+### Notifications
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/notifications?page=1&limit=20` | Get a page of the signed-in user's notifications |
+| GET | `/notifications/unread-count` | Get the unread count |
+| PATCH | `/notifications/:id/read` | Mark one notification as read |
+| POST | `/notifications/read-all` | Mark all notifications as read |
+
 ## Design decisions / best practices applied
 
 - **Strict TypeScript** (`strict`, `noUncheckedIndexedAccess`, `noUnusedLocals`, etc.) catches bugs at compile time.

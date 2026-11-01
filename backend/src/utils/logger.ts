@@ -3,6 +3,11 @@
 const timestamp = () => new Date().toISOString();
 
 export const logger = {
+  debug: (message: string, meta?: unknown) => {
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug(`[${timestamp()}] DEBUG: ${message}`, meta ?? '');
+    }
+  },
   info: (message: string, meta?: unknown) =>
     console.log(`[${timestamp()}] INFO: ${message}`, meta ?? ''),
   warn: (message: string, meta?: unknown) =>

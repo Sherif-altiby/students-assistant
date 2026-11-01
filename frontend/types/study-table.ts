@@ -1,4 +1,13 @@
-export type StudyTableType = "DATE_RANGE" | "NUMBER_OF_DAYS";
+export type StudyTableType = "WEEKLY" | "MONTHLY" | "CUSTOM" | "GLOBAL";
+export type StudySessionStatus = "UPCOMING" | "IN_PROGRESS" | "COMPLETED" | "LATE";
+export type SubjectScope = "ALL" | string[];
+
+export interface StudyTableSubject {
+  id: string;
+  studyTableId: string;
+  subjectId: string;
+  subject: { id: string; title: string };
+}
 
 export interface StudyTableSummary {
   id: string;
@@ -6,59 +15,14 @@ export interface StudyTableSummary {
   type: StudyTableType;
   startDate: string;
   endDate: string;
+  month: number | null;
+  year: number | null;
+  monthName?: string;
+  allSubjects: boolean;
+  subjects: StudyTableSubject[];
   userId: string;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface StudyTableDaySimple {
-  id: string;
-  date: string;
-  studyTableId: string;
-  createdAt: string;
-}
-
-export interface StudyTableCreateResponse extends StudyTableSummary {
-  days: StudyTableDaySimple[];
-}
-
-export interface LessonCompletion {
-  id: string;
-  completedAt: string;
-  userId: string;
-  lessonId: string;
-}
-
-export interface DayLesson {
-  id: string;
-  title: string;
-  chapterId: string;
-  createdAt: string;
-  completions: LessonCompletion[];
-}
-
-export interface DayChapter {
-  id: string;
-  title: string;
-  subjectId: string;
-  createdAt: string;
-  lessons: DayLesson[];
-}
-
-export interface DaySubject {
-  id: string;
-  title: string;
-  dayId: string;
-  createdAt: string;
-  chapters: DayChapter[];
-}
-
-export interface StudyTableDayDetailed extends StudyTableDaySimple {
-  subjects: DaySubject[];
-}
-
-export interface StudyTableDetail extends StudyTableSummary {
-  days: StudyTableDayDetailed[];
 }
 
 export interface PaginationMeta {
@@ -75,43 +39,219 @@ export interface ListStudyTablesResponse {
   pagination: PaginationMeta;
 }
 
-// ---- create payloads ----
-export interface CreateStudyTableDateRangePayload {
+export interface StudySession {
+  id: string;
+  order: number;
+  dayId: string;
+  studyTableId: string;
+  subjectId: string;
+  lessonId: string;
+  date: string;
+  completedAt: string | null;
+  lateNotifiedAt: string | null;
+  subject: { id: string; title: string };
+  lesson: {
+    id: string;
+    title: string;
+    unit: { id: string; title: string };
+  };
+  status: StudySessionStatus;
+}
+
+export interface StudyTableDay {
+  id: string;
+  date: string;
+  studyTableId: string;
+  createdAt: string;
+  sessions: StudySession[];
+}
+
+export interface PlannedDay<TSession = StudySession> {
+  date: string;
+  sessions: TSession[];
+}
+
+export interface PlannedWeek<TSession = StudySession> {
+  week: number;
+  startDate: string;
+  endDate: string;
+  days: PlannedDay<TSession>[];
+}
+
+export interface PlannedMonth<TSession = StudySession> {
+  month: number;
+  year: number;
+  monthName: string;
+  weeks: PlannedWeek<TSession>[];
+}
+
+export interface StudyTableDetail extends StudyTableSummary {
+  days: StudyTableDay[];
+  months?: PlannedMonth[];
+}
+
+export interface StudyTableProgress {
+  total: number;
+  completed: number;
+  upcoming: number;
+  inProgress: number;
+  late: number;
+  percent: number;
+  byStatus: Record<StudySessionStatus, number>;
+  asOfDate: string;
+  subjects: Array<{
+    subjectId: string;
+    subjectTitle: string;
+    total: number;
+    completed: number;
+    upcoming: number;
+    inProgress: number;
+    late: number;
+    percent: number;
+    units: Array<{
+      unitId: string;
+      unitTitle: string;
+      total: number;
+      completed: number;
+      upcoming: number;
+      inProgress: number;
+      late: number;
+      percent: number;
+    }>;
+  }>;
+}
+
+export interface WeeklyStudyTableInput {
   title: string;
-  type: "DATE_RANGE";
+  type: "WEEKLY";
+  subjects: SubjectScope;
+  startDate: string;
+}
+
+export interface DatedStudyTableInput {
+  title: string;
+  type: "CUSTOM" | "GLOBAL";
+  subjects: SubjectScope;
   startDate: string;
   endDate: string;
 }
 
-export interface CreateStudyTableNumberOfDaysPayload {
+export type StudyTableRangeInput = WeeklyStudyTableInput | DatedStudyTableInput;
+
+export interface MonthlyStudyTableInput {
   title: string;
-  type: "NUMBER_OF_DAYS";
-  numberOfDays: number;
+  type: "MONTHLY";
+  subjects: SubjectScope;
+  month: number | string;
+  year?: number;
 }
 
-export type CreateStudyTablePayload =
-  | CreateStudyTableDateRangePayload
-  | CreateStudyTableNumberOfDaysPayload;
+export type StudyTableInput = StudyTableRangeInput | MonthlyStudyTableInput;
 
-export interface UpdateStudyTablePayload {
-  title: string;
+export interface StudyScheduleInput {
+  studyWeekdays: number[];
+  maxSessionsPerDay: number;
 }
 
-// ---- day subjects payload ----
-export interface DaySubjectsLessonPayload {
-  title: string;
+export type GenerateStudyTableInput = StudyTableInput & {
+  schedule: StudyScheduleInput;
+};
+
+export interface PlannedSession {
+  subjectId: string;
+  lessonId: string;
+  date: string;
+  order: number;
+  subject?: { id: string; title: string };
+  lesson?: {
+    id: string;
+    title: string;
+    unit: { id: string; title: string };
+  };
+  status?: StudySessionStatus;
 }
 
-export interface DaySubjectsChapterPayload {
-  title: string;
-  lessons: DaySubjectsLessonPayload[];
+export interface GeneratorSuggestion {
+  code: "INCREASE_DAILY_CAPACITY" | "ADD_STUDY_DAYS" | "EXTEND_DATE_RANGE";
+  message: string;
 }
 
-export interface DaySubjectsSubjectPayload {
-  title: string;
-  chapters: DaySubjectsChapterPayload[];
+export interface StudyTableGenerationResult {
+  preview?: boolean;
+  tableId?: string;
+  range?: { startDate: string; endDate: string; month?: number; year?: number };
+  sessions: Array<PlannedSession | StudySession>;
+  months?: PlannedMonth<PlannedSession | StudySession>[];
+  unscheduledLessonsCount: number;
+  totalLessons: number;
+  selectedSubjectsCount: number;
+  remainingLessonCount?: number;
+  capacity: number;
+  suggestions: GeneratorSuggestion[];
 }
 
-export interface UpdateDaySubjectsPayload {
-  subjects: DaySubjectsSubjectPayload[];
+interface StudySessionFields {
+  subjectId: string;
+  lessonId: string;
+  order?: number;
+}
+
+export type StudySessionInput = StudySessionFields & (
+  | { dayId: string; date?: never }
+  | { date: string; dayId?: never }
+);
+
+export type StudySessionReplacement = StudySessionFields;
+
+export type UpdateStudySessionInput = Partial<StudySessionFields> & {
+  dayId?: string;
+  date?: string;
+};
+
+export interface StudyTableUpdateInput {
+  title?: string;
+  startDate?: string;
+  endDate?: string;
+  month?: number | string;
+  year?: number;
+  subjects?: SubjectScope;
+}
+
+export interface StudySubjectDetails {
+  id: string;
+  title: string;
+  units: Array<{
+    id: string;
+    title: string;
+    order: number;
+    lessons: Array<{ id: string; title: string; order: number }>;
+  }>;
+}
+
+export interface StudySubjectSummary {
+  id: string;
+  title: string;
+  unitsCount: number;
+  lessonsCount: number;
+}
+
+export interface ListStudySubjectsResponse {
+  data: StudySubjectSummary[];
+  pagination: PaginationMeta;
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  body: string;
+  type: string;
+  data: unknown;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationListResponse {
+  notifications: NotificationItem[];
+  unreadCount: number;
+  pagination: PaginationMeta;
 }

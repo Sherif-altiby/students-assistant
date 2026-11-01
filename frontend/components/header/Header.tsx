@@ -1,11 +1,8 @@
 "use client";
 
-import { NotificationsButton, type NotificationItem } from "./NotificationsButton";
+import { NotificationsButton } from "./NotificationsButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserMenu } from "./UserMenu";
- 
-// Replace with real data from an API/hook once notifications exist server-side.
-const MOCK_NOTIFICATIONS: NotificationItem[] = [];
 
 export function Header() {
   return (
@@ -13,7 +10,7 @@ export function Header() {
       <div />
 
       <div className="flex items-center gap-1">
-        <NotificationsButton notifications={MOCK_NOTIFICATIONS} />
+        <NotificationsButton />
         <ThemeToggle />
         <div className="mx-2 h-6 w-px bg-border" />
         <UserMenu />

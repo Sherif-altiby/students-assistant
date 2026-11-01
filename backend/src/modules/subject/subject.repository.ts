@@ -1,14 +1,93 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
-import { ImportLesson, ImportSection } from './subject.schema';
+import { assignSyllabusOrder, moveIdToOrder, reorderIds } from './subject.order';
 
- 
-const siblingOrder = [{ order: 'asc' as const }, { createdAt: 'asc' as const }];
+const ordered = [{ order: 'asc' as const }, { id: 'asc' as const }];
+const graphInclude = {
+  units: {
+    orderBy: ordered,
+    include: { lessons: { orderBy: ordered } },
+  },
+} satisfies Prisma.StudySubjectInclude;
+
+async function setOrderedIds(
+  ids: string[],
+  existing: Array<{ id: string; order: number }>,
+  updateAll: (offset: number) => Promise<unknown>,
+  updateOne: (id: string, order: number) => Promise<unknown>,
+) {
+  const positions = reorderIds(existing, ids);
+  if (!positions) return false;
+  if (!positions.length) return true;
+
+  const maxOrder = Math.max(...existing.map(({ order }) => order));
+  const minOrder = Math.min(...existing.map(({ order }) => order));
+  const offset = maxOrder - minOrder + existing.length + 1;
+  await updateAll(offset);
+  await Promise.all(positions.map(({ id, order }) => updateOne(id, order)));
+  return true;
+}
+
+async function setUnitOrder(tx: Prisma.TransactionClient, subjectId: string, ids: string[]) {
+  const where = { subjectId };
+  const existing = await tx.studyUnit.findMany({
+    where,
+    orderBy: ordered,
+    select: { id: true, order: true },
+  });
+  return setOrderedIds(
+    ids,
+    existing,
+    (offset) => tx.studyUnit.updateMany({ where, data: { order: { increment: offset } } }),
+    (id, order) => tx.studyUnit.update({ where: { id }, data: { order } }),
+  );
+}
+
+async function setLessonOrder(tx: Prisma.TransactionClient, unitId: string, ids: string[]) {
+  const where = { unitId };
+  const existing = await tx.studyLesson.findMany({
+    where,
+    orderBy: ordered,
+    select: { id: true, order: true },
+  });
+  return setOrderedIds(
+    ids,
+    existing,
+    (offset) => tx.studyLesson.updateMany({ where, data: { order: { increment: offset } } }),
+    (id, order) => tx.studyLesson.update({ where: { id }, data: { order } }),
+  );
+}
 
 export const subjectRepository = {
-  // ───────────── Subject ─────────────
-
-  createSubject(data: { title: string }) {
-    return prisma.studySubject.create({ data });
+  async findAllSubjects(page: number, limit: number) {
+    const [subjects, totalItems] = await Promise.all([
+      prisma.studySubject.findMany({
+        orderBy: [{ title: 'asc' }, { id: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          units: { select: { _count: { select: { lessons: true } } } },
+        },
+      }),
+      prisma.studySubject.count(),
+    ]);
+    const totalPages = Math.ceil(totalItems / limit);
+    return {
+      data: subjects.map(({ id, title, units }) => ({
+        id,
+        title,
+        unitsCount: units.length,
+        lessonsCount: units.reduce((total, unit) => total + unit._count.lessons, 0),
+      })),
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
   },
 
   findSubjectById(id: string) {
@@ -19,141 +98,209 @@ export const subjectRepository = {
     return prisma.studySubject.findUnique({ where: { title } });
   },
 
-  findAllSubjects() {
-    return prisma.studySubject.findMany({
-      orderBy: { createdAt: 'asc' },
-      include: { _count: { select: { chapters: true } } },
+  findSubjectGraph(id: string) {
+    return prisma.studySubject.findUnique({
+      where: { id },
+      include: graphInclude,
     });
   },
 
-  updateSubject(id: string, data: { title?: string }) {
-    return prisma.studySubject.update({ where: { id }, data });
+  async createSubject(
+    title: string,
+    units: Array<{ title: string; lessons?: Array<{ title: string }> }>,
+  ) {
+    return prisma.$transaction(async (tx) => {
+      const subject = await tx.studySubject.create({ data: { title } });
+      for (const unit of assignSyllabusOrder(units)) {
+        await tx.studyUnit.create({
+          data: {
+            subjectId: subject.id,
+            title: unit.title,
+            order: unit.order,
+            lessons: {
+              create: unit.lessons,
+            },
+          },
+        });
+      }
+      return tx.studySubject.findUniqueOrThrow({
+        where: { id: subject.id },
+        include: graphInclude,
+      });
+    });
+  },
+
+  updateSubject(id: string, title: string) {
+    return prisma.studySubject.update({ where: { id }, data: { title } });
   },
 
   deleteSubject(id: string) {
     return prisma.studySubject.delete({ where: { id } });
   },
 
-  // Flat rows for a whole subject; the service assembles the tree.
-  async findSubjectGraph(id: string) {
-    const subject = await prisma.studySubject.findUnique({ where: { id } });
-    if (!subject) return null;
-
-    const [chapters, lessons] = await Promise.all([
-      prisma.studyChapter.findMany({ where: { subjectId: id }, orderBy: siblingOrder }),
-      prisma.studyLesson.findMany({
-        where: { chapter: { subjectId: id } },
-        orderBy: siblingOrder,
-      }),
-    ]);
-
-    return { subject, chapters, lessons };
+  findUnitById(id: string) {
+    return prisma.studyUnit.findUnique({ where: { id } });
   },
 
-  // ───────────── Chapter ─────────────
-
-  findChapterById(id: string) {
-    return prisma.studyChapter.findUnique({ where: { id } });
-  },
-
-  async nextChapterOrder(subjectId: string, parentId: string | null) {
-    const result = await prisma.studyChapter.aggregate({
-      where: { subjectId, parentId },
-      _max: { order: true },
+  async createUnit(
+    subjectId: string,
+    title: string,
+    lessons: Array<{ title: string }> = [],
+  ) {
+    return prisma.$transaction(async (tx) => {
+      const subject = await tx.studySubject.findUnique({
+        where: { id: subjectId },
+        select: { id: true },
+      });
+      if (!subject) return null;
+      const aggregate = await tx.studyUnit.aggregate({
+        where: { subjectId },
+        _max: { order: true },
+      });
+      return tx.studyUnit.create({
+        data: {
+          subjectId,
+          title,
+          order: (aggregate._max.order ?? 0) + 1,
+          lessons: {
+            create: lessons.map((lesson, index) => ({ title: lesson.title, order: index + 1 })),
+          },
+        },
+        include: { lessons: { orderBy: ordered } },
+      });
     });
-    return (result._max.order ?? -1) + 1;
   },
 
-  createChapter(data: {
-    title: string;
-    order: number;
-    subjectId: string;
-    parentId: string | null;
-  }) {
-    return prisma.studyChapter.create({ data });
+  async updateUnit(id: string, input: { title?: string; order?: number }) {
+    return prisma.$transaction(async (tx) => {
+      const unit = await tx.studyUnit.findUnique({ where: { id } });
+      if (!unit) return null;
+      if (input.order === undefined) {
+        return tx.studyUnit.update({ where: { id }, data: { title: input.title } });
+      }
+      const siblings = await tx.studyUnit.findMany({
+        where: { subjectId: unit.subjectId },
+        orderBy: ordered,
+        select: { id: true },
+      });
+      const ids = moveIdToOrder(siblings, id, input.order).map(({ id: siblingId }) => siblingId);
+      await setUnitOrder(tx, unit.subjectId, ids);
+      return tx.studyUnit.update({ where: { id }, data: { title: input.title } });
+    });
   },
 
-  updateChapter(id: string, data: { title?: string; order?: number; parentId?: string | null }) {
-    return prisma.studyChapter.update({ where: { id }, data });
+  async reorderUnits(subjectId: string, unitIds: string[]) {
+    return prisma.$transaction((tx) => setUnitOrder(tx, subjectId, unitIds));
   },
 
-  deleteChapter(id: string) {
-    return prisma.studyChapter.delete({ where: { id } });
+  deleteUnit(id: string) {
+    return prisma.$transaction(async (tx) => {
+      const unit = await tx.studyUnit.findUnique({ where: { id } });
+      if (!unit) return null;
+      await tx.studyUnit.delete({ where: { id } });
+      const remaining = await tx.studyUnit.findMany({
+        where: { subjectId: unit.subjectId },
+        orderBy: ordered,
+        select: { id: true },
+      });
+      await setUnitOrder(tx, unit.subjectId, remaining.map(({ id: unitId }) => unitId));
+      return unit;
+    });
   },
-
-  // ───────────── Lesson ─────────────
 
   findLessonById(id: string) {
     return prisma.studyLesson.findUnique({ where: { id } });
   },
 
-  async nextLessonOrder(chapterId: string, parentId: string | null) {
-    const result = await prisma.studyLesson.aggregate({
-      where: { chapterId, parentId },
-      _max: { order: true },
+  async createLesson(unitId: string, title: string) {
+    return prisma.$transaction(async (tx) => {
+      const unit = await tx.studyUnit.findUnique({
+        where: { id: unitId },
+        select: { id: true },
+      });
+      if (!unit) return null;
+      const aggregate = await tx.studyLesson.aggregate({
+        where: { unitId },
+        _max: { order: true },
+      });
+      return tx.studyLesson.create({
+        data: { unitId, title, order: (aggregate._max.order ?? 0) + 1 },
+      });
     });
-    return (result._max.order ?? -1) + 1;
   },
 
-  createLesson(data: { title: string; order: number; chapterId: string; parentId: string | null }) {
-    return prisma.studyLesson.create({ data });
+  async updateLesson(id: string, input: { title?: string; unitId?: string; order?: number }) {
+    return prisma.$transaction(async (tx) => {
+      const lesson = await tx.studyLesson.findUnique({ where: { id } });
+      if (!lesson) return null;
+      const targetUnitId = input.unitId ?? lesson.unitId;
+      if (targetUnitId !== lesson.unitId) {
+        const unit = await tx.studyUnit.findUnique({
+          where: { id: targetUnitId },
+          select: { id: true },
+        });
+        if (!unit) return null;
+        const aggregate = await tx.studyLesson.aggregate({
+          where: { unitId: targetUnitId },
+          _max: { order: true },
+        });
+        const moved = await tx.studyLesson.update({
+          where: { id },
+          data: {
+            title: input.title,
+            unitId: targetUnitId,
+            order: input.order ?? (aggregate._max.order ?? 0) + 1,
+          },
+        });
+        const remaining = await tx.studyLesson.findMany({
+          where: { unitId: lesson.unitId },
+          orderBy: ordered,
+          select: { id: true },
+        });
+        await setLessonOrder(tx, lesson.unitId, remaining.map(({ id: remainingId }) => remainingId));
+        if (input.order !== undefined) {
+          const targetLessons = await tx.studyLesson.findMany({
+            where: { unitId: targetUnitId },
+            orderBy: ordered,
+            select: { id: true },
+          });
+          const targetIds = moveIdToOrder(targetLessons, id, input.order)
+            .map(({ id: targetId }) => targetId);
+          await setLessonOrder(tx, targetUnitId, targetIds);
+        }
+        return moved;
+      }
+
+      if (input.order === undefined) {
+        return tx.studyLesson.update({ where: { id }, data: { title: input.title } });
+      }
+      const siblings = await tx.studyLesson.findMany({
+        where: { unitId: lesson.unitId },
+        orderBy: ordered,
+        select: { id: true },
+      });
+      const ids = moveIdToOrder(siblings, id, input.order).map(({ id: siblingId }) => siblingId);
+      await setLessonOrder(tx, lesson.unitId, ids);
+      return tx.studyLesson.update({ where: { id }, data: { title: input.title } });
+    });
   },
 
-  updateLesson(id: string, data: { title?: string; order?: number; parentId?: string | null }) {
-    return prisma.studyLesson.update({ where: { id }, data });
+  async reorderLessons(unitId: string, lessonIds: string[]) {
+    return prisma.$transaction((tx) => setLessonOrder(tx, unitId, lessonIds));
   },
 
   deleteLesson(id: string) {
-    return prisma.studyLesson.delete({ where: { id } });
-  },
-
-  // ───────────── Bulk import (all-or-nothing) ─────────────
-
-  importTree(title: string, sections: ImportSection[]) {
-    return prisma.$transaction(
-      async (tx) => {
-        const subject = await tx.studySubject.create({ data: { title } });
-
-        const createLessons = async (
-          items: ImportLesson[],
-          chapterId: string,
-          parentId: string | null
-        ): Promise<void> => {
-          for (const [index, item] of items.entries()) {
-            const lesson = await tx.studyLesson.create({
-              data: {
-                title: typeof item === 'string' ? item : item.title,
-                order: index,
-                chapterId,
-                parentId,
-              },
-            });
-
-            if (typeof item !== 'string' && item.children?.length) {
-              await createLessons(item.children, chapterId, lesson.id);
-            }
-          }
-        };
-
-        const createChapters = async (
-          nodes: ImportSection[],
-          parentId: string | null
-        ): Promise<void> => {
-          for (const [index, node] of nodes.entries()) {
-            const chapter = await tx.studyChapter.create({
-              data: { title: node.section, order: index, subjectId: subject.id, parentId },
-            });
-
-            await createLessons(node.items ?? [], chapter.id, null);
-            await createChapters(node.subsections ?? [], chapter.id);
-          }
-        };
-
-        await createChapters(sections, null);
-
-        return subject;
-      },
-      { timeout: 60_000 }
-    );
+    return prisma.$transaction(async (tx) => {
+      const lesson = await tx.studyLesson.findUnique({ where: { id } });
+      if (!lesson) return null;
+      await tx.studyLesson.delete({ where: { id } });
+      const remaining = await tx.studyLesson.findMany({
+        where: { unitId: lesson.unitId },
+        orderBy: ordered,
+        select: { id: true },
+      });
+      await setLessonOrder(tx, lesson.unitId, remaining.map(({ id: lessonId }) => lessonId));
+      return lesson;
+    });
   },
 };

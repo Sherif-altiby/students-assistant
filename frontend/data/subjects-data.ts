@@ -3,14 +3,14 @@ export interface StaticLesson {
   title: string;
 }
 
-export interface StaticChapter {
+export interface StaticUnit {
   title: string;
   lessons: StaticLesson[];
 }
 
 export interface StaticSubject {
   title: string;
-  chapters: StaticChapter[];
+  units: StaticUnit[];
   tracks: Track[]; // Which tracks can access this subject
 }
 
@@ -28,7 +28,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "الرياضيات",
     tracks: [Track.SCIENCE_MATH],
-    chapters: [
+    units: [
       {
         title: "الجبر والهندسة الفراغية",
         lessons: [
@@ -61,7 +61,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "الفيزياء",
     tracks: [Track.SCIENCE_MATH, Track.SCIENCE_SCIENCE, Track.SCIENCE],
-    chapters: [
+    units: [
       {
         title: "الميكانيكا الكلاسيكية",
         lessons: [
@@ -102,7 +102,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "الكيمياء",
     tracks: [Track.SCIENCE_MATH, Track.SCIENCE_SCIENCE, Track.SCIENCE],
-    chapters: [
+    units: [
       {
         title: "الكيمياء العامة",
         lessons: [
@@ -135,7 +135,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "الأحياء",
     tracks: [Track.SCIENCE_SCIENCE, Track.SCIENCE],
-    chapters: [
+    units: [
       {
         title: "الخلية ووظائفها",
         lessons: [
@@ -176,7 +176,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "الجيولوجيا والعلوم البيئية",
     tracks: [Track.SCIENCE_SCIENCE, Track.SCIENCE],
-    chapters: [
+    units: [
       {
         title: "علوم الأرض",
         lessons: [
@@ -201,7 +201,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "التفسير",
     tracks: [Track.SCIENCE, Track.LITERARY],
-    chapters: [
+    units: [
       {
         title: "علوم القرآن",
         lessons: [
@@ -224,7 +224,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "الحديث الشريف",
     tracks: [Track.SCIENCE, Track.LITERARY],
-    chapters: [
+    units: [
       {
         title: "مصطلح الحديث",
         lessons: [
@@ -247,7 +247,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "الفقه",
     tracks: [Track.SCIENCE, Track.LITERARY],
-    chapters: [
+    units: [
       {
         title: "العبادات",
         lessons: [
@@ -274,7 +274,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "التاريخ",
     tracks: [Track.LITERARY],
-    chapters: [
+    units: [
       {
         title: "التاريخ الإسلامي",
         lessons: [
@@ -298,7 +298,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "الجغرافيا",
     tracks: [Track.LITERARY],
-    chapters: [
+    units: [
       {
         title: "الجغرافيا الطبيعية",
         lessons: [
@@ -320,7 +320,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "الفلسفة وعلم النفس",
     tracks: [Track.LITERARY],
-    chapters: [
+    units: [
       {
         title: "الفلسفة",
         lessons: [
@@ -343,7 +343,7 @@ export const STATIC_SUBJECTS: StaticSubject[] = [
   {
     title: "اللغة العربية",
     tracks: [Track.LITERARY, Track.SCIENCE, Track.SCIENCE_MATH, Track.SCIENCE_SCIENCE],
-    chapters: [
+    units: [
       {
         title: "النحو",
         lessons: [

@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-assets.js",
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
@@ -14,7 +14,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsx --test src/modules/study-table/*.test.ts src/modules/subject/*.test.ts src/modules/notification/*.test.ts"
   },
   "keywords": [],
   "author": "",
@@ -38,6 +38,7 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.11.0",
     "nodemailer": "^9.0.3",
+    "pdf-lib": "^1.17.1",
     "pdfmake": "^0.3.11",
     "pg": "^8.22.0",
     "puppeteer": "^25.10.0",

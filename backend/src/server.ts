@@ -4,6 +4,8 @@ import { env } from './config/env';
 import { prisma } from './config/prisma';
 import { logger } from './utils/logger';
 import { initSocket } from './socket';
+import { runLateStudyScan } from './modules/study-table/study-lateness.cron';
+import { pdfService } from './modules/study-table/pdf.service';
 
 const start = async (): Promise<void> => {
   await prisma.$connect();
@@ -13,6 +15,14 @@ const start = async (): Promise<void> => {
   const httpServer = http.createServer(app);
 
   const io = initSocket(httpServer);
+  const lateStudyInterval = env.nodeEnv === 'test'
+    ? undefined
+    : setInterval(() => {
+      void runLateStudyScan().catch((error) => logger.error('Late study scan failed', error));
+    }, 60 * 60_000);
+  if (env.nodeEnv !== 'test') {
+    void runLateStudyScan().catch((error) => logger.error('Late study scan failed', error));
+  }
 
   httpServer.listen(env.port, () => {
     logger.info(`Server running in ${env.nodeEnv} mode on port ${env.port}`);
@@ -22,8 +32,10 @@ const start = async (): Promise<void> => {
     logger.info(`${signal} received: shutting down gracefully`);
 
     io.close(); // stops accepting new socket connections, closes existing ones
+    if (lateStudyInterval) clearInterval(lateStudyInterval);
 
     httpServer.close(async () => {
+      await pdfService.closeBrowser();
       await prisma.$disconnect();
       logger.info('Shutdown complete');
       process.exit(0);
