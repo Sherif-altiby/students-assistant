@@ -20,19 +20,27 @@ import {
   Loader2,
   CheckCircle2,
   AlertTriangle,
+  ListChecks,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { StatChip } from "@/components/dashboard/home/home-page-components";
 
 const FILTERS: {
   value: TaskProgressPeriod;
   label: string;
   icon: React.ReactNode;
 }[] = [
-  { value: "day", label: "يوم", icon: <Calendar className="w-3 h-3" /> },
-  { value: "week", label: "أسبوع", icon: <TrendingUp className="w-3 h-3" /> },
-  { value: "month", label: "شهر", icon: <Award className="w-3 h-3" /> },
+  { value: "day", label: "يوم", icon: <Calendar className="h-3.5 w-3.5" /> },
+  { value: "week", label: "أسبوع", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+  { value: "month", label: "شهر", icon: <Award className="h-3.5 w-3.5" /> },
 ];
+
+const PERIOD_NOUN: Record<TaskProgressPeriod, string> = {
+  day: "يوم",
+  week: "أسبوع",
+  month: "شهر",
+};
 
 // "2026-07-19" -> "19 يوليو" | "2026-07" -> "يوليو 2026"
 function formatPeriodLabel(period: string, filter: TaskProgressPeriod): string {
@@ -50,7 +58,6 @@ function formatPeriodLabel(period: string, filter: TaskProgressPeriod): string {
   });
 }
 
-// Custom tooltip
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload || !payload.length) return null;
 
@@ -60,57 +67,52 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   const { completed, total, completionRate } = row;
 
   return (
-    <div className="rounded-xl border border-border bg-popover p-4 shadow-lg">
-      <p className="mb-2 text-sm font-semibold text-popover-foreground">
-        {label}
-      </p>
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between gap-4 text-xs">
+    <div className="min-w-[170px] rounded-xl border border-border bg-popover p-3.5">
+      <p className="mb-2 text-sm font-bold text-popover-foreground">{label}</p>
+      <div className="space-y-1.5 text-xs">
+        <div className="flex items-center justify-between gap-4">
           <span className="flex items-center gap-1.5 text-muted-foreground">
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ backgroundColor: "var(--chart-1)" }}
             />
-            المهام المنجزة
+            أنجزت
           </span>
-          <span className="font-medium text-popover-foreground">
+          <span className="font-bold tabular-nums text-popover-foreground">
             {completed}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-4 text-xs">
+        <div className="flex items-center justify-between gap-4">
           <span className="flex items-center gap-1.5 text-muted-foreground">
             <span
-              className="inline-block h-2 w-2 rounded-full"
+              className="inline-block h-2 w-2 rounded-full opacity-40"
               style={{ backgroundColor: "var(--chart-2)" }}
             />
-            إجمالي المهام
+            الإجمالي
           </span>
-          <span className="font-medium text-popover-foreground">{total}</span>
+          <span className="font-bold tabular-nums text-popover-foreground">
+            {total}
+          </span>
         </div>
-        <div className="mt-1.5 border-t border-border pt-1.5">
-          <div className="flex items-center justify-between gap-4 text-xs">
-            <span className="text-muted-foreground">نسبة الإنجاز</span>
-            <span className="font-bold text-primary">{completionRate}%</span>
-          </div>
+        <div className="flex items-center justify-between gap-4 border-t border-border pt-1.5">
+          <span className="text-muted-foreground">نسبة الإنجاز</span>
+          <span className="font-extrabold tabular-nums text-primary">
+            {completionRate}%
+          </span>
         </div>
       </div>
     </div>
   );
 };
 
-// Thin, rounded, theme-aware scrollbar for the horizontally scrollable chart
 const ScrollbarStyles = () => (
   <style>{`
     .task-progress-scroll {
       scrollbar-width: thin;
       scrollbar-color: var(--border) transparent;
     }
-    .task-progress-scroll::-webkit-scrollbar {
-      height: 6px;
-    }
-    .task-progress-scroll::-webkit-scrollbar-track {
-      background: transparent;
-    }
+    .task-progress-scroll::-webkit-scrollbar { height: 6px; }
+    .task-progress-scroll::-webkit-scrollbar-track { background: transparent; }
     .task-progress-scroll::-webkit-scrollbar-thumb {
       background-color: var(--border);
       border-radius: 9999px;
@@ -129,7 +131,7 @@ export default function TaskProgressChart() {
     () =>
       points.map((point) => {
         // total should never be lower than completed; guard against
-        // inconsistent data from the API (e.g. total: 0 while completed: 1)
+        // inconsistent data from the API
         const total = Math.max(point.total, point.completed);
         const remaining = Math.max(total - point.completed, 0);
 
@@ -143,243 +145,232 @@ export default function TaskProgressChart() {
     [points, filter],
   );
 
-  const totalCompleted = useMemo(
-    () => chartData.reduce((sum, p) => sum + p.completed, 0),
-    [chartData],
-  );
+  const { totalCompleted, totalTasks, rate, average, best } = useMemo(() => {
+    const completed = chartData.reduce((sum, p) => sum + p.completed, 0);
+    const total = chartData.reduce((sum, p) => sum + p.total, 0);
+    return {
+      totalCompleted: completed,
+      totalTasks: total,
+      rate: total > 0 ? Math.round((completed / total) * 100) : 0,
+      average:
+        chartData.length > 0 ? Math.round(completed / chartData.length) : 0,
+      best:
+        chartData.length > 0 ? Math.max(...chartData.map((p) => p.completed)) : 0,
+    };
+  }, [chartData]);
 
-  const totalTasks = useMemo(
-    () => chartData.reduce((sum, p) => sum + p.total, 0),
-    [chartData],
-  );
-
-  const overallCompletionRate = useMemo(
-    () =>
-      totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0,
-    [totalTasks, totalCompleted],
-  );
-
-  const averagePerDay = useMemo(
-    () =>
-      chartData.length > 0
-        ? Math.round(totalCompleted / chartData.length)
-        : 0,
-    [chartData, totalCompleted],
-  );
-
-  const bestDay = useMemo(
-    () =>
-      chartData.length > 0
-        ? Math.max(...chartData.map((p) => p.completed))
-        : 0,
-    [chartData],
-  );
+  const noun = PERIOD_NOUN[filter];
 
   return (
-    <Card className="border border-border bg-card p-6 shadow-sm">
+    <Card className="gap-0 border border-border  p-5   sm:p-6">
       <ScrollbarStyles />
-      <div>
-        {/* Header */}
-        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold tracking-tight text-card-foreground">
+
+      {/* Header */}
+      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <ListChecks className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-extrabold tracking-tight text-card-foreground">
               تقدم المهام
             </h2>
-            {chartData.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {totalCompleted} من {totalTasks} مهمة ({overallCompletionRate}%)
-              </p>
-            )}
-          </div>
-
-          {/* Filter Buttons */}
-          <div
-            role="group"
-            aria-label="فلترة التقدم"
-            className="inline-flex rounded-lg border border-border bg-muted p-1"
-          >
-            {FILTERS.map(({ value, label, icon }) => {
-              const active = value === filter;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setFilter(value)}
-                  aria-pressed={active}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-200",
-                    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  )}
-                >
-                  {icon}
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </header>
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex h-72 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p>جارٍ تحميل تقدمك…</p>
-          </div>
-        )}
-
-        {/* Error State */}
-        {isError && (
-          <div className="flex h-72 flex-col items-center justify-center gap-2 text-sm">
-            <div className="rounded-full bg-destructive/10 p-3">
-              <AlertTriangle className="h-6 w-6 text-destructive" />
-            </div>
-            <p className="text-destructive">تعذر تحميل تقدمك</p>
             <p className="text-xs text-muted-foreground">
-              يرجى المحاولة مرة أخرى
+              {chartData.length > 0
+                ? `أنجزت ${totalCompleted} من ${totalTasks} مهمة`
+                : "تابع إنجازك يومًا بيوم"}
             </p>
           </div>
-        )}
+        </div>
 
-        {/* Empty State */}
-        {!isLoading && !isError && chartData.length === 0 && (
-          <div className="flex h-72 flex-col items-center justify-center gap-3 text-center">
-            <div className="rounded-full bg-muted p-4">
-              <CheckCircle2 className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-medium text-card-foreground">
-                لا توجد مهام منجزة بعد
-              </p>
-              <p className="text-sm text-muted-foreground">
-                أنجز مهمة وستظهر هنا 📝
-              </p>
-            </div>
+        {/* Filter */}
+        <div
+          role="group"
+          aria-label="فلترة التقدم"
+          className="inline-flex self-start rounded-full border border-border bg-muted p-1 sm:self-auto"
+        >
+          {FILTERS.map(({ value, label, icon }) => {
+            const active = value === filter;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFilter(value)}
+                aria-pressed={active}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors duration-200",
+                  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {icon}
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </header>
+
+      {/* Quick stats */}
+      {!isLoading && !isError && chartData.length > 0 && (
+        <div className="mb-5 flex gap-2.5">
+          <StatChip label="نسبة الإنجاز" value={rate} suffix="%" tone="primary" />
+          <StatChip label={`أفضل ${noun}`} value={best} suffix="مهمة" />
+          <StatChip label={`المتوسط لكل ${noun}`} value={average} suffix="مهمة" />
+        </div>
+      )}
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="flex h-72 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p>جارٍ تحميل تقدمك…</p>
+        </div>
+      )}
+
+      {/* Error */}
+      {isError && (
+        <div className="flex h-72 flex-col items-center justify-center gap-2 text-sm">
+          <div className="rounded-full bg-destructive/10 p-3">
+            <AlertTriangle className="h-6 w-6 text-destructive" />
           </div>
-        )}
+          <p className="font-semibold text-destructive">تعذر تحميل تقدمك</p>
+          <p className="text-xs text-muted-foreground">
+            تأكد من اتصالك بالإنترنت ثم حدّث الصفحة
+          </p>
+        </div>
+      )}
 
-        {/* Chart */}
-        {!isLoading && !isError && chartData.length > 0 && (
-          <div
-            className={cn(
-              "flex h-72 flex-col transition-opacity duration-300",
-              isFetching ? "opacity-60" : "opacity-100",
-            )}
-          >
-            {/* Scrollable area: axis, grid, and bars only */}
-            <div className="relative min-h-0 flex-1">
-              {/* Edge fades hinting there's more to scroll */}
-              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-card to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-card to-transparent" />
+      {/* Empty */}
+      {!isLoading && !isError && chartData.length === 0 && (
+        <div className="flex h-72 flex-col items-center justify-center gap-3 text-center">
+          <div className="rounded-full bg-primary/10 p-4">
+            <CheckCircle2 className="h-8 w-8 text-primary" />
+          </div>
+          <div className="space-y-1">
+            <p className="font-bold text-card-foreground">
+              لم تنجز أي مهمة بعد
+            </p>
+            <p className="text-sm text-muted-foreground">
+              أنجز أول مهمة وسيظهر تقدمك هنا ✅
+            </p>
+          </div>
+        </div>
+      )}
 
-              <div className="task-progress-scroll h-full overflow-x-auto overflow-y-hidden pb-2">
-                <div
-                  className="h-full"
-                  style={{
-                    minWidth: "100%",
-                    width: Math.max(chartData.length * 64, 100),
-                  }}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{ top: 8, right: 8, left: -8, bottom: 0 }}
-                      barGap={0}
-                      barSize={36}
+      {/* Chart */}
+      {!isLoading && !isError && chartData.length > 0 && (
+        <div
+          className={cn(
+            "flex h-72 flex-col transition-opacity duration-300",
+            isFetching ? "opacity-60" : "opacity-100",
+          )}
+        >
+          <div className="relative min-h-0 flex-1">
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-card to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-card to-transparent" />
+
+            <div className="task-progress-scroll h-full overflow-x-auto overflow-y-hidden pb-2">
+              <div
+                className="h-full"
+                style={{
+                  minWidth: "100%",
+                  width: Math.max(chartData.length * 64, 100),
+                }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 8, right: 8, left: -8, bottom: 0 }}
+                    barGap={0}
+                    barSize={36}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="4 4"
+                      stroke="var(--border)"
+                      vertical={false}
+                      opacity={0.6}
+                    />
+                    <XAxis
+                      dataKey="label"
+                      stroke="var(--muted-foreground)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      dy={8}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      stroke="var(--muted-foreground)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      dx={-4}
+                    />
+                    <Tooltip
+                      content={<CustomTooltip />}
+                      cursor={{ fill: "var(--muted)", opacity: 0.5 }}
+                    />
+
+                    <Bar
+                      dataKey="completed"
+                      stackId="tasks"
+                      radius={[6, 6, 0, 0]}
+                      animationDuration={800}
+                      animationEasing="ease-in-out"
                     >
-                      <CartesianGrid
-                        strokeDasharray="4 4"
-                        stroke="var(--border)"
-                        vertical={false}
-                        opacity={0.6}
-                      />
+                      {chartData.map((_, index) => (
+                        <Cell
+                          key={`completed-${index}`}
+                          fill="var(--chart-1)"
+                          className="transition-opacity hover:opacity-80"
+                        />
+                      ))}
+                    </Bar>
 
-                      <XAxis
-                        dataKey="label"
-                        stroke="var(--muted-foreground)"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                        dy={8}
-                      />
-
-                      <YAxis
-                        allowDecimals={false}
-                        stroke="var(--muted-foreground)"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                        dx={-4}
-                      />
-
-                      <Tooltip
-                        content={<CustomTooltip />}
-                        cursor={{ fill: "var(--muted)" }}
-                      />
-
-                      <Bar
-                        dataKey="completed"
-                        stackId="completed"
-                        fill="var(--chart-1)"
-                        radius={[4, 4, 0, 0]}
-                        animationDuration={800}
-                        animationEasing="ease-in-out"
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell
-                            key={`completed-${index}`}
-                            fill="var(--chart-1)"
-                            className="transition-opacity hover:opacity-80"
-                          />
-                        ))}
-                      </Bar>
-
-                      <Bar
-                        dataKey="remaining"
-                        stackId="completed"
-                        fill="var(--chart-2)"
-                        radius={[4, 4, 0, 0]}
-                        animationDuration={800}
-                        animationEasing="ease-in-out"
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell
-                            key={`remaining-${index}`}
-                            fill="var(--chart-2)"
-                            className="transition-opacity hover:opacity-80"
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-
-            {/* Fixed legend: stays in place, never scrolls horizontally */}
-            <div className="flex shrink-0 items-center justify-center gap-4 pt-3 text-xs">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: "var(--chart-1)" }}
-                />
-                <span className="text-muted-foreground">منجزة</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: "var(--chart-2)" }}
-                />
-                <span className="text-muted-foreground">متبقية</span>
+                    <Bar
+                      dataKey="remaining"
+                      stackId="tasks"
+                      radius={[6, 6, 0, 0]}
+                      animationDuration={800}
+                      animationEasing="ease-in-out"
+                    >
+                      {chartData.map((_, index) => (
+                        <Cell
+                          key={`remaining-${index}`}
+                          fill="var(--chart-2)"
+                          fillOpacity={0.35}
+                          className="transition-opacity hover:opacity-80"
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Stats Footer */}
-      </div>
+          {/* Fixed legend */}
+          <div className="flex shrink-0 items-center justify-center gap-5 pt-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: "var(--chart-1)" }}
+              />
+              <span className="font-medium text-muted-foreground">أنجزتها</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full opacity-40"
+                style={{ backgroundColor: "var(--chart-2)" }}
+              />
+              <span className="font-medium text-muted-foreground">المتبقية</span>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

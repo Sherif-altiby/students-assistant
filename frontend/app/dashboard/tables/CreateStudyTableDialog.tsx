@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import {
   Dialog,
   DialogContent,
@@ -247,16 +248,33 @@ export function CreateStudyTableDialog({
             </label>
             <label className="space-y-2 text-sm font-medium">
               نوع الجدول
-              <select className={inputClass} value={type} onChange={(event) => { setType(event.target.value as StudyTableType); invalidatePreview(); }}>
-                <option value="WEEKLY">أسبوعي</option><option value="MONTHLY">شهري</option>
-                <option value="CUSTOM">فترة مخصصة</option><option value="GLOBAL">خطة شاملة</option>
-              </select>
+              <CustomSelect
+                value={type}
+                onChange={(value) => {
+                  setType(value as StudyTableType);
+                  invalidatePreview();
+                }}
+                options={[
+                  { value: "WEEKLY", label: "أسبوعي" },
+                  { value: "MONTHLY", label: "شهري" },
+                  { value: "CUSTOM", label: "فترة مخصصة" },
+                  { value: "GLOBAL", label: "خطة شاملة" },
+                ]}
+              />
             </label>
             <label className="space-y-2 text-sm font-medium">
               طريقة الإنشاء
-              <select className={inputClass} value={mode} onChange={(event) => { setMode(event.target.value as typeof mode); invalidatePreview(); }}>
-                <option value="generate">توليد الجلسات تلقائياً</option><option value="empty">إنشاء جدول فارغ</option>
-              </select>
+              <CustomSelect
+                value={mode}
+                onChange={(value) => {
+                  setMode(value as typeof mode);
+                  invalidatePreview();
+                }}
+                options={[
+                  { value: "generate", label: "توليد الجلسات تلقائياً" },
+                  { value: "empty", label: "إنشاء جدول فارغ" },
+                ]}
+              />
             </label>
           </div>
 

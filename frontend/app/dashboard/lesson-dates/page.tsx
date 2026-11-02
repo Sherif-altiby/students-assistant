@@ -21,6 +21,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import {
   Table,
   TableBody,
@@ -418,30 +419,27 @@ export default function LessonDatesPage() {
                 <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
                 المادة
               </Label>
-              <select
+              <CustomSelect
                 id="lesson-date-subject"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={form.subject}
-                onChange={(e) => setForm((current) => ({ ...current, subject: e.target.value }))}
+                onChange={(subject) => setForm((current) => ({ ...current, subject }))}
                 disabled={subjectsQuery.isLoading || subjectsQuery.isError}
-                required
-              >
-                <option value="">
-                  {subjectsQuery.isLoading
+                placeholder={
+                  subjectsQuery.isLoading
                     ? "جارٍ تحميل المواد..."
                     : subjectsQuery.isError
                       ? "تعذر تحميل المواد"
                       : subjects.length
                         ? "اختر المادة"
-                        : "لا توجد مواد متاحة"}
-                </option>
-                {editingId && form.subject && !subjects.some((item) => item.title === form.subject) && (
-                  <option value={form.subject}>{form.subject} (المادة الحالية)</option>
-                )}
-                {subjects.map((item) => (
-                  <option key={item.id} value={item.title}>{item.title}</option>
-                ))}
-              </select>
+                        : "لا توجد مواد متاحة"
+                }
+                options={[
+                  ...(editingId && form.subject && !subjects.some((item) => item.title === form.subject)
+                    ? [{ value: form.subject, label: `${form.subject} (المادة الحالية)` }]
+                    : []),
+                  ...subjects.map((item) => ({ value: item.title, label: item.title })),
+                ]}
+              />
               {subjectsQuery.isError && (
                 <p role="alert" className="text-xs text-destructive">
                   تعذر تحميل موادك الدراسية. أعد المحاولة قبل إضافة موعد.

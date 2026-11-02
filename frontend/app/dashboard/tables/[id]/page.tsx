@@ -7,6 +7,7 @@ import { CloudDownload, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import {
   Dialog,
   DialogContent,
@@ -81,36 +82,38 @@ function DaySessionEditorRow({
   return <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-[1fr_1fr_auto]">
     <label className="space-y-1 text-sm">
       <span>المادة</span>
-      <select className={inputClass} value={session.subjectId}
-        onChange={(event) => onChange({ ...session, subjectId: event.target.value, lessonId: "" })}>
-        <option value="">اختر المادة</option>
-        {subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.title}</option>)}
-      </select>
+      <CustomSelect
+        value={session.subjectId}
+        onChange={(subjectId) => onChange({ ...session, subjectId, lessonId: "" })}
+        placeholder="اختر المادة"
+        options={subjects.map((subject) => ({ value: subject.id, label: subject.title }))}
+      />
     </label>
     <label className="space-y-1 text-sm">
       <span>الدرس</span>
-      <select className={inputClass} value={session.lessonId}
-        disabled={!session.subjectId || subjectQuery.isLoading || !lessons.length}
-        onChange={(event) => onChange({ ...session, lessonId: event.target.value })}>
-        <option value="">
-          {subjectQuery.isLoading
+      <CustomSelect
+        value={session.lessonId}
+        disabled={!session.subjectId || subjectQuery.isLoading || subjectQuery.isError || !lessons.length}
+        onChange={(lessonId) => onChange({ ...session, lessonId })}
+        placeholder={
+          subjectQuery.isLoading
             ? "جارٍ تحميل الدروس..."
             : subjectQuery.isError
               ? "تعذر تحميل الدروس"
               : lessons.length
                 ? "اختر الدرس"
-                : "لا توجد دروس بهذه المادة"}
-        </option>
-        {lessons.map((lesson) => {
+                : "لا توجد دروس بهذه المادة"
+        }
+        options={lessons.map((lesson) => {
           const alreadyScheduled = unavailableLessonIds.has(lesson.id)
             && lesson.id !== session.lessonId;
-          return (
-            <option key={lesson.id} value={lesson.id} disabled={alreadyScheduled}>
-              {lesson.title}{alreadyScheduled ? " — مضاف ليوم آخر" : ""}
-            </option>
-          );
+          return {
+            value: lesson.id,
+            label: `${lesson.title}${alreadyScheduled ? " — مضاف ليوم آخر" : ""}`,
+            disabled: alreadyScheduled,
+          };
         })}
-      </select>
+      />
       {subjectQuery.isError && <span role="alert" className="text-xs text-destructive">تعذر تحميل دروس المادة</span>}
       {lessons.length > 0 && selectableLessons.length === 0 && (
         <span className="text-xs text-muted-foreground">

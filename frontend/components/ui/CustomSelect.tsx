@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export type SelectOption = { value: string; label: string };
+export type SelectOption = { value: string; label: string; disabled?: boolean };
 
 interface CustomSelectProps {
   value: string;
@@ -44,21 +44,35 @@ export function CustomSelect({
     if (!open && (e.key === "Enter" || e.key === " " || e.key === "ArrowDown")) {
       e.preventDefault();
       setOpen(true);
-      setHighlighted(Math.max(0, options.findIndex((o) => o.value === value)));
+      const selectedIndex = options.findIndex((o) => o.value === value && !o.disabled);
+      setHighlighted(selectedIndex >= 0 ? selectedIndex : options.findIndex((o) => !o.disabled));
       return;
     }
     if (!open) return;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlighted((i) => Math.min(i + 1, options.length - 1));
+      setHighlighted((index) => {
+        for (let next = index + 1; next < options.length; next++) {
+          if (!options[next].disabled) return next;
+        }
+        return index;
+      });
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlighted((i) => Math.max(i - 1, 0));
+      setHighlighted((index) => {
+        for (let next = index - 1; next >= 0; next--) {
+          if (!options[next].disabled) return next;
+        }
+        return index;
+      });
     } else if (e.key === "Enter") {
       e.preventDefault();
-      onChange(options[highlighted].value);
-      setOpen(false);
+      const option = options[highlighted];
+      if (option && !option.disabled) {
+        onChange(option.value);
+        setOpen(false);
+      }
     } else if (e.key === "Escape") {
       setOpen(false);
     }
@@ -111,13 +125,17 @@ export function CustomSelect({
               key={opt.value}
               role="option"
               aria-selected={opt.value === value}
+              aria-disabled={opt.disabled}
               onMouseEnter={() => setHighlighted(i)}
               onClick={() => {
+                if (opt.disabled) return;
                 onChange(opt.value);
                 setOpen(false);
               }}
               className={`flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-sm transition-colors ${
-                i === highlighted
+                opt.disabled
+                  ? "cursor-not-allowed text-muted-foreground opacity-50"
+                  : i === highlighted
                   ? "bg-accent text-accent-foreground"
                   : "text-popover-foreground"
               }`}
