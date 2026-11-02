@@ -18,14 +18,14 @@ const TRACK_OPTIONS_BY_LEVEL: Record<
   RegisterPayload["level"],
   { value: RegisterPayload["track"]; label: string }[]
 > = {
-  AZHARI_SECONDARY: [
-    { value: "LITERATURE", label: "أدبي" },
+  SECONDARY_AZHARI: [
+    { value: "LITERARY", label: "أدبي" },
     { value: "SCIENCE", label: "علمي" },
   ],
-  GENERAL_SECONDARY: [
+  SECONDARY_GENERAL: [
     { value: "SCIENCE_MATH", label: "علمي رياضة" },
     { value: "SCIENCE_SCIENCE", label: "علمي علوم" },
-    { value: "LITERATURE", label: "أدبي" },
+    { value: "LITERARY", label: "أدبي" },
   ],
 };
 
@@ -35,8 +35,8 @@ const initialForm: RegisterPayload = {
   password: "",
   phone: "",
   gender: "MALE",
-  level: "AZHARI_SECONDARY",
-  track: TRACK_OPTIONS_BY_LEVEL.AZHARI_SECONDARY[0].value,
+  level: "SECONDARY_AZHARI",
+  track: TRACK_OPTIONS_BY_LEVEL.SECONDARY_AZHARI[0].value,
   parentPhone: "",
   country: "egypt",
 };
@@ -266,8 +266,8 @@ export default function RegisterPage() {
                   onChange={(v) => update("level", v as RegisterPayload["level"])}
                   hasError={!!fieldErrors.level}
                   options={[
-                    { value: "AZHARI_SECONDARY", label: "الثانوية الأزهرية" },
-                    { value: "GENERAL_SECONDARY", label: "الثانوية العامة" },
+                    { value: "SECONDARY_AZHARI", label: "الثانوية الأزهرية" },
+                    { value: "SECONDARY_GENERAL", label: "الثانوية العامة" },
                   ]}
                 />
                 {fieldErrors.level && (

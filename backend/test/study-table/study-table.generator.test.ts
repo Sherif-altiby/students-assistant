@@ -1,19 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { StudyTableType } from '@prisma/client';
-import { generateStudySessions, groupGlobalPlan } from './study-table.generator';
-import { getStudySessionStatus } from './study-table.status';
+import { generateStudySessions, groupGlobalPlan } from '../../src/modules/study-table/study-table.generator';
+import { getStudySessionStatus } from '../../src/modules/study-table/study-table.status';
 import {
   availableMonthsSchema,
   createStudyTableSchema,
   generateStudyTableSchema,
   parseMonth,
-} from './study-table.schema';
-import { GeneratorInput, GeneratorSubject } from './study-table.types';
-import { groupLateSessions } from './study-lateness.cron';
-import { getSessionCompletionUpdate, getUpdatedRange, getAvailableMonthRanges } from './study-table.service';
-import { monthlyRange } from './date-time';
-import { UnprocessableEntityError } from '../../utils/AppError';
+} from '../../src/modules/study-table/study-table.schema';
+import { GeneratorInput, GeneratorSubject } from '../../src/modules/study-table/study-table.types';
+import { groupLateSessions } from '../../src/modules/study-table/study-lateness.cron';
+import { getSessionCompletionUpdate, getUpdatedRange, getAvailableMonthRanges } from '../../src/modules/study-table/study-table.service';
+import { monthlyRange } from '../../src/modules/study-table/date-time';
+import { UnprocessableEntityError } from '../../src/utils/AppError';
 
 function makeSubject(id: string, lessonCount: number): GeneratorSubject {
   return {

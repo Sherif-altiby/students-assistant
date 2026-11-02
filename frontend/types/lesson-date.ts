@@ -11,13 +11,16 @@ export interface LessonDate {
   updatedAt?: string;
 }
 
-export interface LessonDateInput {
+interface LessonDateFields {
   subject: string;
   teacher: string;
-  dayName: string;
   startTime: string;
   endTime: string;
 }
 
-export type CreateLessonDatePayload = LessonDateInput;
-export type UpdateLessonDatePayload = Partial<LessonDateInput>;
+export type CreateLessonDatePayload = LessonDateFields &
+  (
+    | { dayName: string; dayNames?: never }
+    | { dayNames: string[]; dayName?: never }
+  );
+export type UpdateLessonDatePayload = Partial<LessonDateFields & { dayName: string }>;

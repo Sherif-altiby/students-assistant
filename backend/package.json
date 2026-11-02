@@ -14,7 +14,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "test": "tsx --test src/modules/study-table/*.test.ts src/modules/subject/*.test.ts src/modules/notification/*.test.ts"
+    "test": "tsx --test test/study-table/*.test.ts test/subject/*.test.ts test/notification/*.test.ts test/lesson-date/*.test.ts"
   },
   "keywords": [],
   "author": "",

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { PDFDocument } from 'pdf-lib';
 import { StudyTableType } from '@prisma/client';
-import { pdfService } from './pdf.service';
+import { pdfService } from '../../src/modules/study-table/pdf.service';
 
 test('study table PDFs paginate without a two-page cap', async () => {
   const start = new Date('2026-01-01T00:00:00.000Z');

@@ -37,7 +37,7 @@ export function useLessonDates() {
     onSuccess: (created) => {
       queryClient.setQueryData<LessonDate[]>(LESSON_DATES_KEY, (old) => [
         ...(old ?? []),
-        created,
+        ...created,
       ]);
     },
   });

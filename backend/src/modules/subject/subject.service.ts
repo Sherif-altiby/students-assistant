@@ -1,5 +1,7 @@
 import { BadRequestError, ConflictError, NotFoundError } from '../../utils/AppError';
 import { subjectRepository } from './subject.repository';
+import { getSubjectTitlesForTrack } from './subject-tracks';
+import { prisma } from '../../config/prisma';
 import {
   CreateSubjectInput,
   CreateUnitInput,
@@ -19,6 +21,15 @@ function unitNotFound(): never {
 
 function lessonNotFound(): never {
   throw new NotFoundError('الدرس غير موجود');
+}
+
+async function getVisibleSubjectTitles(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, track: true },
+  });
+  if (!user) throw new NotFoundError('المستخدم غير موجود');
+  return user.role === 'USER' ? getSubjectTitlesForTrack(user.track) : undefined;
 }
 
 function mapSubjectGraph(
@@ -53,11 +64,13 @@ function mapSubjectGraph(
 
 export const subjectService = {
   async listSubjects({ page, limit }: ListSubjectsQuery, userId: string) {
-    return subjectRepository.findAllSubjects(page, limit, userId);
+    const subjectTitles = await getVisibleSubjectTitles(userId);
+    return subjectRepository.findAllSubjects(page, limit, userId, subjectTitles);
   },
 
   async getSubject(id: string, userId: string) {
-    const subject = await subjectRepository.findSubjectGraph(id);
+    const subjectTitles = await getVisibleSubjectTitles(userId);
+    const subject = await subjectRepository.findSubjectGraph(id, subjectTitles);
     if (!subject) subjectNotFound();
     const lessonIds = subject.units.flatMap((unit) => unit.lessons.map((lesson) => lesson.id));
     const completionRows = lessonIds.length

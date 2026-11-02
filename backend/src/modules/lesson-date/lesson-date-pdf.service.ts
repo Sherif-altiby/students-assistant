@@ -49,7 +49,7 @@ function buildFontFaceCss(): string {
 // ------------------------------------------------------------------
 // Helpers
 // ------------------------------------------------------------------
-const DAY_ORDER = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const DAY_ORDER = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 const ARABIC_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
 
 type LessonDatePdfItem = {
@@ -108,8 +108,6 @@ function buildProgressRing(percent: number, size = 64): string {
 // ------------------------------------------------------------------
 // HTML builder
 // ------------------------------------------------------------------
-const COLUMNS = ['المادة', 'المعلم', 'الوقت'];
-
 function groupByDay(entries: LessonDatePdfItem[]) {
   const ordered = [...entries].sort((a, b) => {
     const dayDiff = DAY_ORDER.indexOf(a.dayName) - DAY_ORDER.indexOf(b.dayName);
@@ -120,59 +118,13 @@ function groupByDay(entries: LessonDatePdfItem[]) {
   return DAY_ORDER.map((day) => ({
     day,
     items: ordered.filter((item) => item.dayName === day),
-  })).filter((group) => group.items.length > 0);
-}
-
-function buildDayHtml(day: string, items: LessonDatePdfItem[], index: number): string {
-  const dayHeader = `
-    <div class="day-header">
-      <div class="day-header-right">
-        <div class="day-number">${formatNumber(index + 1)}</div>
-        <div class="day-titles">
-          <div class="day-label">${escapeHtml(day)}</div>
-          <div class="day-date">عدد الحصص: ${formatNumber(items.length)}</div>
-        </div>
-      </div>
-      <div class="day-header-left">
-        <div class="day-progress">
-          <span class="day-progress-value">${formatNumber(items.length)}</span>
-          <span class="day-progress-label">حصة</span>
-        </div>
-      </div>
-    </div>
-  `;
-
-  const tbody = items
-    .map(
-      (item, i) => `
-      <tr class="${i % 2 === 1 ? 'row-alt' : ''}">
-        <td class="cell-text cell-lesson">${escapeHtml(item.subject)}</td>
-        <td class="cell-text">${escapeHtml(item.teacher)}</td>
-        <td class="cell-status">
-          <span class="badge badge-time">
-            <span class="badge-dot"></span>
-            ${formatNumber(item.startTime)} - ${formatNumber(item.endTime)}
-          </span>
-        </td>
-      </tr>`,
-    )
-    .join('');
-
-  return `
-    ${dayHeader}
-    <table class="day-table">
-      <thead>
-        <tr>${COLUMNS.map((c) => `<th>${c}</th>`).join('')}</tr>
-      </thead>
-      <tbody>${tbody}</tbody>
-    </table>
-  `;
+  }));
 }
 
 function buildHtml(entries: LessonDatePdfItem[]): string {
   const groups = groupByDay(entries);
   const totalLessons = entries.length;
-  const totalDays = groups.length;
+  const totalDays = groups.filter((group) => group.items.length > 0).length;
   const uniqueSubjects = new Set(entries.map((e) => e.subject)).size;
   const uniqueTeachers = new Set(entries.map((e) => e.teacher)).size;
 
@@ -193,8 +145,25 @@ function buildHtml(entries: LessonDatePdfItem[]): string {
     )
     .join('');
 
-  const daysHtml = groups
-    .map((group, i) => `<div class="day-block">${buildDayHtml(group.day, group.items, i)}</div>`)
+  const lessonRows = groups
+    .map((group, i) => {
+      const cellContent = (render: (item: LessonDatePdfItem) => string) =>
+        group.items.length
+          ? group.items.map((item) => `<div class="lesson-cell-item">${render(item)}</div>`).join('')
+          : '<span class="empty-cell">—</span>';
+      return `
+      <tr class="${i % 2 === 1 ? 'row-alt' : ''}">
+        <td class="cell-day">${escapeHtml(group.day)}</td>
+        <td class="cell-status">${cellContent((item) => `
+          <span class="badge badge-time">
+            <span class="badge-dot"></span>
+            ${formatNumber(item.startTime)} - ${formatNumber(item.endTime)}
+          </span>
+        `)}</td>
+        <td class="cell-text cell-lesson">${cellContent((item) => escapeHtml(item.subject))}</td>
+        <td class="cell-text">${cellContent((item) => escapeHtml(item.teacher))}</td>
+      </tr>`;
+    })
     .join('');
 
   const generatedAt = formatNumber(
@@ -459,6 +428,7 @@ function buildHtml(entries: LessonDatePdfItem[]): string {
   }
 
   .day-table thead th:last-child { text-align: center; }
+  .day-table thead th:nth-child(2) { text-align: center; }
 
   .day-table tbody td {
     padding: 7px 10px;
@@ -474,7 +444,21 @@ function buildHtml(entries: LessonDatePdfItem[]): string {
 
   .cell-lesson { font-weight: 700; color: #1e2a4a; }
 
-  .cell-status { text-align: center !important; }
+  .cell-status { text-align: center !important; white-space: nowrap; }
+
+  .cell-day {
+    font-weight: 700;
+    color: #1e2a4a;
+    white-space: nowrap;
+  }
+
+  .lesson-cell-item + .lesson-cell-item {
+    border-top: 1px solid #e2e6ee;
+    margin-top: 5px;
+    padding-top: 5px;
+  }
+
+  .empty-cell { color: #9ca3af; }
 
   /* ---------------- Badges ---------------- */
   .badge {
@@ -563,7 +547,17 @@ function buildHtml(entries: LessonDatePdfItem[]): string {
 
   <div class="stats">${statsHtml}</div>
 
-  ${daysHtml}
+  <table class="day-table">
+    <thead>
+      <tr>
+        <th>اليوم</th>
+        <th>الوقت</th>
+        <th>المادة</th>
+        <th>المعلم</th>
+      </tr>
+    </thead>
+    <tbody>${lessonRows}</tbody>
+  </table>
 
   <div class="footer-text">
     <div class="footer-brand">

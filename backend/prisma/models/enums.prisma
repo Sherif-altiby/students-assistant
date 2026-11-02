@@ -4,6 +4,11 @@ enum Role {
   DOCTOR
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
 enum EducationLevel {
   SECONDARY_GENERAL // الثانوية العامة
   SECONDARY_AZHARI // ثانوية أزهرية
@@ -11,6 +16,11 @@ enum EducationLevel {
 }
 
 enum Track {
+  SCIENCE_MATH
+  SCIENCE_SCIENCE
+  SCIENCE
+  LITERARY
+
   // For ثانوية عامة and ثانوية أزهرية
   SECONDARY_FIRST_YEAR // الصف الأول الثانوي
   SECONDARY_SECOND_YEAR // الصف الثاني الثانوي

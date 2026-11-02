@@ -5,7 +5,7 @@ import {
   daySessionsSchema,
   generateStudyTableSchema,
   listStudyTablesSchema,
-} from './study-table.schema';
+} from '../../src/modules/study-table/study-table.schema';
 
 test('study-table list validation accepts the shared middleware request shape', () => {
   const parsed = listStudyTablesSchema.parse({

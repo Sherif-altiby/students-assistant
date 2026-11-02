@@ -1,6 +1,6 @@
 export type Gender = "MALE" | "FEMALE";
-export type Level = "AZHARI_SECONDARY" | "GENERAL_SECONDARY";
-export type Track = "SCIENCE" | "LITERATURE" | "SCIENCE_MATH" | "SCIENCE_SCIENCE";
+export type Level = "SECONDARY_AZHARI" | "SECONDARY_GENERAL";
+export type Track = "SCIENCE" | "LITERARY" | "SCIENCE_MATH" | "SCIENCE_SCIENCE";
 
 export interface User {
   id: string;

@@ -19,6 +19,7 @@ import {
 } from './date-time';
 import { generateStudySessions, groupGlobalPlan } from './study-table.generator';
 import { getSubjectScopeWhere } from './study-table.scope';
+import { getSubjectTitlesForTrack } from '../subject/subject-tracks';
 import { getStudySessionStatus } from './study-table.status';
 import {
   CreateStudyTableInput,
@@ -76,6 +77,15 @@ async function getTimezone(userId: string): Promise<string> {
     throw new BadRequestError('المنطقة الزمنية للمستخدم غير صالحة');
   }
   return user.timezone;
+}
+
+async function getSubjectTitlesForUser(userId: string): Promise<readonly string[] | undefined> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, track: true },
+  });
+  if (!user) throw new NotFoundError('المستخدم غير موجود');
+  return user.role === 'USER' ? getSubjectTitlesForTrack(user.track) : undefined;
 }
 
 function tableRange(input: StudyTableInput, timezone: string, now = new Date()): Range {
@@ -175,7 +185,15 @@ async function assertSubjectScope(
   tableId: string,
   allSubjects: boolean,
   subjectId: string,
+  subjectTitles?: readonly string[],
 ) {
+  if (subjectTitles !== undefined) {
+    const subject = await tx.studySubject.findFirst({
+      where: { id: subjectId, title: { in: [...subjectTitles] } },
+      select: { id: true },
+    });
+    if (!subject) throw new BadRequestError('المادة غير متاحة للمسار الدراسي');
+  }
   if (allSubjects) return;
   const subject = await tx.studyTableSubject.findUnique({
     where: { studyTableId_subjectId: { studyTableId: tableId, subjectId } },
@@ -192,9 +210,19 @@ async function assertLessonSubject(tx: Transaction, lessonId: string, subjectId:
   if (!lesson) throw new BadRequestError('الدرس لا يتبع المادة المحددة');
 }
 
-async function writeScope(tx: Transaction, tableId: string, scope: StudyTableInput['subjects']) {
+async function writeScope(
+  tx: Transaction,
+  tableId: string,
+  scope: StudyTableInput['subjects'],
+  subjectTitles?: readonly string[],
+) {
   if (scope !== 'ALL') {
-    const count = await tx.studySubject.count({ where: { id: { in: scope } } });
+    const count = await tx.studySubject.count({
+      where: {
+        id: { in: scope },
+        ...(subjectTitles ? { title: { in: [...subjectTitles] } } : {}),
+      },
+    });
     if (count !== scope.length) throw new BadRequestError('تتضمن المواد المحددة مادة غير موجودة');
   }
   await tx.studyTableSubject.deleteMany({ where: { studyTableId: tableId } });
@@ -248,10 +276,11 @@ async function listCatalog(
   tx: Transaction,
   scope: StudyTableInput['subjects'],
   userId: string,
+  subjectTitles?: readonly string[],
 ): Promise<{ subjects: GeneratorSubject[]; completed: Set<string> }> {
   const [subjects, completionRows] = await Promise.all([
     tx.studySubject.findMany({
-      where: getSubjectScopeWhere(scope),
+      where: getSubjectScopeWhere(scope, subjectTitles),
       orderBy: { title: 'asc' },
       include: {
         units: {
@@ -290,6 +319,7 @@ async function createTableRecord(
   input: StudyTableInput,
   range: Range,
   schedule?: GenerateStudyTableInput['schedule'],
+  subjectTitles?: readonly string[],
 ) {
   const allSubjects = input.subjects === 'ALL';
   const table = await tx.studyTable.create({
@@ -308,7 +338,7 @@ async function createTableRecord(
       } : {}),
     },
   });
-  if (!allSubjects) await writeScope(tx, table.id, input.subjects);
+  if (!allSubjects) await writeScope(tx, table.id, input.subjects, subjectTitles);
   await createDays(tx, table.id, range);
   return table;
 }
@@ -399,11 +429,12 @@ function percentage(value: number, total: number) {
 export const studyTableService = {
   async create(userId: string, input: CreateStudyTableInput) {
     const timezone = await getTimezone(userId);
+    const subjectTitles = await getSubjectTitlesForUser(userId);
     const range = tableRange(input, timezone);
     validateRange(tableType(input.type), range);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
-      return addMonthName(await createTableRecord(tx, userId, input, range));
+      return addMonthName(await createTableRecord(tx, userId, input, range, undefined, subjectTitles));
     });
   },
 
@@ -414,12 +445,13 @@ export const studyTableService = {
 
   async generate(userId: string, input: GenerateStudyTableInput, preview: boolean) {
     const timezone = await getTimezone(userId);
+    const subjectTitles = await getSubjectTitlesForUser(userId);
     const { schedule, ...tableInput } = input;
     const range = tableRange(tableInput, timezone);
     validateRange(tableType(input.type), range);
 
     const { subjects, completed } = await prisma.$transaction((tx) =>
-      listCatalog(tx, tableInput.subjects, userId),
+      listCatalog(tx, tableInput.subjects, userId, subjectTitles),
     );
     if (tableInput.subjects !== 'ALL' && subjects.length !== tableInput.subjects.length) {
       throw new BadRequestError('تتضمن المواد المحددة مادة غير موجودة');
@@ -545,9 +577,10 @@ export const studyTableService = {
   },
 
   async getById(userId: string, tableId: string) {
-    const [table, timezone] = await Promise.all([
+    const [table, timezone, subjectTitles] = await Promise.all([
       studyTableRepository.findById(tableId, userId),
       getTimezone(userId),
+      getSubjectTitlesForUser(userId),
     ]);
     if (!table) throw new NotFoundError('جدول المذاكرة غير موجود');
     const days = table.days.map((day) => ({
@@ -555,7 +588,9 @@ export const studyTableService = {
       date: dateKey(day.date),
       studyTableId: day.studyTableId,
       createdAt: day.createdAt,
-      sessions: day.sessions.map((session) => sessionResponse(session, dateKey(day.date), timezone)),
+      sessions: day.sessions
+        .filter(({ subject }) => !subjectTitles || subjectTitles.includes(subject.title))
+        .map((session) => sessionResponse(session, dateKey(day.date), timezone)),
     }));
     return {
       ...addMonthName(table),
@@ -572,6 +607,7 @@ export const studyTableService = {
 
   async update(userId: string, tableId: string, input: StudyTableUpdateInput) {
     const timezone = await getTimezone(userId);
+    const subjectTitles = await getSubjectTitlesForUser(userId);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       const table = await tx.studyTable.findFirst({ where: { id: tableId, userId } });
@@ -624,7 +660,7 @@ export const studyTableService = {
       }
       const subjectUpdates = input.subjects === undefined
         ? {}
-        : await writeScope(tx, tableId, input.subjects);
+        : await writeScope(tx, tableId, input.subjects, subjectTitles);
       const updated = await tx.studyTable.update({
         where: { id: tableId },
         data: {
@@ -667,6 +703,7 @@ export const studyTableService = {
 
   async createSession(userId: string, tableId: string, input: SessionInput) {
     const timezone = await getTimezone(userId);
+    const subjectTitles = await getSubjectTitlesForUser(userId);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       const table = await tx.studyTable.findFirst({
@@ -681,7 +718,7 @@ export const studyTableService = {
           where: { studyTableId_date: { studyTableId: tableId, date: dayDate(input.date!) } },
         });
       if (!day) throw new BadRequestError('يوم المذاكرة غير موجود في الجدول');
-      await assertSubjectScope(tx, table.id, table.allSubjects, input.subjectId);
+      await assertSubjectScope(tx, table.id, table.allSubjects, input.subjectId, subjectTitles);
       await assertLessonSubject(tx, input.lessonId, input.subjectId);
       const duplicate = await tx.studySession.findUnique({
         where: { studyTableId_lessonId: { studyTableId: tableId, lessonId: input.lessonId } },
@@ -710,6 +747,7 @@ export const studyTableService = {
 
   async updateSession(userId: string, sessionId: string, input: SessionInput) {
     const timezone = await getTimezone(userId);
+    const subjectTitles = await getSubjectTitlesForUser(userId);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       const current = await tx.studySession.findFirst({
@@ -735,7 +773,13 @@ export const studyTableService = {
       if (!targetDay) throw new BadRequestError('يوم المذاكرة غير موجود في الجدول');
       const subjectId = input.subjectId ?? current.subjectId;
       const lessonId = input.lessonId ?? current.lessonId;
-      await assertSubjectScope(tx, current.studyTableId, current.studyTable.allSubjects, subjectId);
+      await assertSubjectScope(
+        tx,
+        current.studyTableId,
+        current.studyTable.allSubjects,
+        subjectId,
+        subjectTitles,
+      );
       await assertLessonSubject(tx, lessonId, subjectId);
       if (lessonId !== current.lessonId) {
         const duplicate = await tx.studySession.findFirst({
@@ -789,6 +833,7 @@ export const studyTableService = {
 
   async replaceDaySessions(userId: string, dayId: string, inputs: SessionReplaceInput[]) {
     const timezone = await getTimezone(userId);
+    const subjectTitles = await getSubjectTitlesForUser(userId);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       const day = await tx.studyDay.findFirst({
@@ -812,7 +857,13 @@ export const studyTableService = {
         throw new ConflictError('لا يمكن إضافة الدرس نفسه أكثر من مرة إلى الجدول');
       }
       for (const input of inputs) {
-        await assertSubjectScope(tx, day.studyTableId, day.studyTable.allSubjects, input.subjectId);
+        await assertSubjectScope(
+          tx,
+          day.studyTableId,
+          day.studyTable.allSubjects,
+          input.subjectId,
+          subjectTitles,
+        );
         await assertLessonSubject(tx, input.lessonId, input.subjectId);
       }
       const existing = await tx.studySession.findMany({

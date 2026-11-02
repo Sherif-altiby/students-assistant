@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { listNotificationsSchema, notificationIdSchema } from './notification.routes';
+import { listNotificationsSchema, notificationIdSchema } from '../../src/modules/notification/notification.routes';
 
 test('notification list validation accepts Express request fields and paginated query values', () => {
   const parsed = listNotificationsSchema.parse({

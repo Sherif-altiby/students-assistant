@@ -24,9 +24,9 @@ export async function listLessonDates(): Promise<LessonDate[]> {
 
 export async function createLessonDate(
   payload: CreateLessonDatePayload
-): Promise<LessonDate> {
-  const res = await api.post<ItemResponse<LessonDate>>("/lesson-dates", payload);
-  return res.data.data;
+): Promise<LessonDate[]> {
+  const res = await api.post<ItemResponse<LessonDate | LessonDate[]>>("/lesson-dates", payload);
+  return Array.isArray(res.data.data) ? res.data.data : [res.data.data];
 }
 
 export async function updateLessonDate(

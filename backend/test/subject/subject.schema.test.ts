@@ -6,7 +6,7 @@ import {
   reorderLessonsSchema,
   reorderUnitsSchema,
   updateLessonSchema,
-} from './subject.schema';
+} from '../../src/modules/subject/subject.schema';
 
 const subjectId = 'c0a80123-4567-489a-8abc-123456789abc';
 const unitId = 'c0a80123-4567-489a-8abc-123456789abd';

@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
 export const genderEnum = z.enum(['MALE', 'FEMALE']);
-export const educationLevelEnum = z.enum(['GENERAL_SECONDARY', 'AZHARI_SECONDARY']);
+export const educationLevelEnum = z.enum(['SECONDARY_GENERAL', 'SECONDARY_AZHARI']);
 export const trackEnum = z.enum(['SCIENCE_MATH', 'SCIENCE_SCIENCE', 'SCIENCE', 'LITERARY']);
 
 const TRACKS_BY_LEVEL: Record<string, string[]> = {
-  GENERAL_SECONDARY: ['SCIENCE_MATH', 'SCIENCE_SCIENCE', 'LITERARY'],
-  AZHARI_SECONDARY: ['SCIENCE', 'LITERARY'],
+  SECONDARY_GENERAL: ['SCIENCE_MATH', 'SCIENCE_SCIENCE', 'LITERARY'],
+  SECONDARY_AZHARI: ['SCIENCE', 'LITERARY'],
 };
 
 const withLevelTrackRule = <T extends { level: string; track: string }>(schema: z.ZodType<T>) =>

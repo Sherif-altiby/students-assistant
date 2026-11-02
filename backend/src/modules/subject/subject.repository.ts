@@ -59,9 +59,18 @@ async function setLessonOrder(tx: Prisma.TransactionClient, unitId: string, ids:
 }
 
 export const subjectRepository = {
-  async findAllSubjects(page: number, limit: number, userId: string) {
+  async findAllSubjects(
+    page: number,
+    limit: number,
+    userId: string,
+    subjectTitles?: readonly string[],
+  ) {
+    const where: Prisma.StudySubjectWhereInput = subjectTitles
+      ? { title: { in: [...subjectTitles] } }
+      : {};
     const [subjects, totalItems] = await Promise.all([
       prisma.studySubject.findMany({
+        where,
         orderBy: [{ title: 'asc' }, { id: 'asc' }],
         skip: (page - 1) * limit,
         take: limit,
@@ -69,7 +78,7 @@ export const subjectRepository = {
           units: { select: { _count: { select: { lessons: true } } } },
         },
       }),
-      prisma.studySubject.count(),
+      prisma.studySubject.count({ where }),
     ]);
     const subjectIds = subjects.map(({ id }) => id);
     const completionRows = subjectIds.length
@@ -121,9 +130,12 @@ export const subjectRepository = {
     return prisma.studySubject.findUnique({ where: { title } });
   },
 
-  findSubjectGraph(id: string) {
-    return prisma.studySubject.findUnique({
-      where: { id },
+  findSubjectGraph(id: string, subjectTitles?: readonly string[]) {
+    return prisma.studySubject.findFirst({
+      where: {
+        id,
+        ...(subjectTitles ? { title: { in: [...subjectTitles] } } : {}),
+      },
       include: graphInclude,
     });
   },

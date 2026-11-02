@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   BookOpen,
@@ -20,67 +21,71 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/PageHeader";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ARABIC_DAYS_ORDERED } from "@/lib/day-mapping";
 import type { LessonDate } from "@/types/lesson-date";
 import { useLessonDates } from "@/hooks/useLessonDates";
+import { listStudySubjects } from "@/lib/study-table";
 
 const emptyForm = {
   subject: "",
   teacher: "",
-  dayName: "",
+  dayNames: [] as string[],
   startTime: "",
   endTime: "",
 };
 
+const WEEK_TABLE_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+
 const DAY_STYLES: Record<
   string,
-  { dot: string; edge: string; chip: string; chipActive: string; ring: string }
+  { dot: string; chip: string; chipActive: string; ring: string }
 > = {
   الأحد: {
     dot: "bg-sky-500",
-    edge: "border-t-sky-500",
     chip: "bg-sky-50 text-sky-700 hover:bg-sky-100",
     chipActive: "bg-sky-500 text-white hover:bg-sky-500",
     ring: "ring-sky-500/30",
   },
   الإثنين: {
     dot: "bg-violet-500",
-    edge: "border-t-violet-500",
     chip: "bg-violet-50 text-violet-700 hover:bg-violet-100",
     chipActive: "bg-violet-500 text-white hover:bg-violet-500",
     ring: "ring-violet-500/30",
   },
   الثلاثاء: {
     dot: "bg-amber-500",
-    edge: "border-t-amber-500",
     chip: "bg-amber-50 text-amber-700 hover:bg-amber-100",
     chipActive: "bg-amber-500 text-white hover:bg-amber-500",
     ring: "ring-amber-500/30",
   },
   الأربعاء: {
     dot: "bg-emerald-500",
-    edge: "border-t-emerald-500",
     chip: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
     chipActive: "bg-emerald-500 text-white hover:bg-emerald-500",
     ring: "ring-emerald-500/30",
   },
   الخميس: {
     dot: "bg-rose-500",
-    edge: "border-t-rose-500",
     chip: "bg-rose-50 text-rose-700 hover:bg-rose-100",
     chipActive: "bg-rose-500 text-white hover:bg-rose-500",
     ring: "ring-rose-500/30",
   },
   الجمعة: {
     dot: "bg-indigo-500",
-    edge: "border-t-indigo-500",
     chip: "bg-indigo-50 text-indigo-700 hover:bg-indigo-100",
     chipActive: "bg-indigo-500 text-white hover:bg-indigo-500",
     ring: "ring-indigo-500/30",
   },
   السبت: {
     dot: "bg-teal-500",
-    edge: "border-t-teal-500",
     chip: "bg-teal-50 text-teal-700 hover:bg-teal-100",
     chipActive: "bg-teal-500 text-white hover:bg-teal-500",
     ring: "ring-teal-500/30",
@@ -109,15 +114,13 @@ function formatDuration(startTime: string, endTime: string): string | null {
   return parts.length ? parts.join(" و ") : null;
 }
 
-function initials(name: string) {
-  const trimmed = name.trim();
-  if (!trimmed) return "?";
-  const parts = trimmed.split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2);
-  return (parts[0][0] ?? "") + (parts[1][0] ?? "");
-}
-
 export default function LessonDatesPage() {
+  const subjectsQuery = useQuery({
+    queryKey: ["study-subjects"],
+    queryFn: listStudySubjects,
+  });
+  const subjects = subjectsQuery.data ?? [];
+
   const {
     lessonDates,
     isLoading,
@@ -191,10 +194,27 @@ export default function LessonDatesPage() {
     event.preventDefault();
     const subject = form.subject.trim();
     const teacher = form.teacher.trim();
-    const dayName = form.dayName;
+    const dayNames = form.dayNames;
     const { startTime, endTime } = form;
 
-    if (!subject || !teacher || !dayName || !startTime || !endTime) {
+    if (subjectsQuery.isError) {
+      setFormError("تعذر تحميل المواد الدراسية. يرجى المحاولة مرة أخرى.");
+      return;
+    }
+
+    if (!editingId && subjectsQuery.isLoading) {
+      setFormError("جارٍ تحميل المواد الدراسية. يرجى الانتظار.");
+      return;
+    }
+
+    if (
+      !subject ||
+      (!editingId && !subjects.some((item) => item.title === subject)) ||
+      !teacher ||
+      dayNames.length === 0 ||
+      !startTime ||
+      !endTime
+    ) {
       setFormError("الرجاء إدخال جميع الحقول (المادة، المعلم، اليوم، الوقت).");
       return;
     }
@@ -206,13 +226,13 @@ export default function LessonDatesPage() {
 
     const conflict = lessonDates.find(
       (e) =>
-        e.dayName === dayName &&
+        dayNames.includes(e.dayName) &&
         e.id !== editingId &&
         overlaps(startTime, endTime, e.startTime, e.endTime)
     );
     if (conflict) {
       setFormError(
-        `يتعارض هذا الموعد مع "${conflict.subject}" (${conflict.startTime} - ${conflict.endTime}) في نفس اليوم.`
+        `يتعارض هذا الموعد يوم ${conflict.dayName} مع "${conflict.subject}" (${conflict.startTime} - ${conflict.endTime}).`
       );
       return;
     }
@@ -220,7 +240,10 @@ export default function LessonDatesPage() {
     setFormError("");
 
     try {
-      await saveLessonDate({ subject, teacher, dayName, startTime, endTime }, editingId);
+      const payload = editingId
+        ? { subject, teacher, dayName: dayNames[0], startTime, endTime }
+        : { subject, teacher, dayNames, startTime, endTime };
+        await saveLessonDate(payload, editingId);
       resetForm();
     } catch (err) {
       setFormError(extractErrorMessage(err, "حدث خطأ أثناء الحفظ."));
@@ -232,7 +255,7 @@ export default function LessonDatesPage() {
     setForm({
       subject: item.subject,
       teacher: item.teacher,
-      dayName: item.dayName,
+      dayNames: [item.dayName],
       startTime: item.startTime,
       endTime: item.endTime,
     });
@@ -256,8 +279,6 @@ export default function LessonDatesPage() {
     [scheduleByDay]
   );
   const todayCount = (scheduleByDay.get(todayName) ?? []).length;
-
-  const selectedDayStyle = form.dayName ? DAY_STYLES[form.dayName] : null;
 
   return (
     <div className="space-y-6 p-4">
@@ -393,16 +414,44 @@ export default function LessonDatesPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <Label htmlFor="lesson-date-subject" className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                 <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
                 المادة
               </Label>
-              <Input
+              <select
+                id="lesson-date-subject"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={form.subject}
-                onChange={(e) => setForm((c) => ({ ...c, subject: e.target.value }))}
-                placeholder="مثال: رياضيات"
-                maxLength={255}
-              />
+                onChange={(e) => setForm((current) => ({ ...current, subject: e.target.value }))}
+                disabled={subjectsQuery.isLoading || subjectsQuery.isError}
+                required
+              >
+                <option value="">
+                  {subjectsQuery.isLoading
+                    ? "جارٍ تحميل المواد..."
+                    : subjectsQuery.isError
+                      ? "تعذر تحميل المواد"
+                      : subjects.length
+                        ? "اختر المادة"
+                        : "لا توجد مواد متاحة"}
+                </option>
+                {editingId && form.subject && !subjects.some((item) => item.title === form.subject) && (
+                  <option value={form.subject}>{form.subject} (المادة الحالية)</option>
+                )}
+                {subjects.map((item) => (
+                  <option key={item.id} value={item.title}>{item.title}</option>
+                ))}
+              </select>
+              {subjectsQuery.isError && (
+                <p role="alert" className="text-xs text-destructive">
+                  تعذر تحميل موادك الدراسية. أعد المحاولة قبل إضافة موعد.
+                </p>
+              )}
+              {subjectsQuery.data && subjects.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  لا توجد مواد متاحة لحسابك حالياً.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -422,17 +471,30 @@ export default function LessonDatesPage() {
             <div className="space-y-2 md:col-span-2">
               <Label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                 <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                اليوم
+                الأيام
               </Label>
+              {!editingId && (
+                <p className="text-xs text-muted-foreground">
+                  يمكنك اختيار أكثر من يوم لتكرار هذا الموعد أسبوعياً.
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {ARABIC_DAYS_ORDERED.map((day) => {
                   const style = DAY_STYLES[day];
-                  const active = form.dayName === day;
+                  const active = form.dayNames.includes(day);
                   return (
                     <button
                       key={day}
                       type="button"
-                      onClick={() => setForm((c) => ({ ...c, dayName: day }))}
+                      aria-pressed={active}
+                      onClick={() => setForm((current) => ({
+                        ...current,
+                        dayNames: editingId
+                          ? [day]
+                          : active
+                            ? current.dayNames.filter((selected) => selected !== day)
+                            : [...current.dayNames, day],
+                      }))}
                       className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
                         active
                           ? `${style.chipActive} shadow-sm ring-2 ${style.ring}`
@@ -546,124 +608,114 @@ export default function LessonDatesPage() {
           </div>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {ARABIC_DAYS_ORDERED.filter((day) => (scheduleByDay.get(day) ?? []).length > 0).map(
-            (day) => {
-              const items = scheduleByDay.get(day) ?? [];
-              const isToday = day === todayName;
-              const style = DAY_STYLES[day];
-
-              return (
-                <div key={day} className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2.5 w-2.5 rounded-full ${style?.dot}`} />
-                    <h3 className="text-base font-semibold text-foreground">{day}</h3>
-                    {isToday && (
-                      <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                        اليوم
+        <Card className="overflow-hidden p-0">
+          <Table className="min-w-[760px] text-right">
+            <TableHeader>
+              <TableRow className="bg-muted/70 hover:bg-muted/70">
+                <TableHead className="text-right">اليوم</TableHead>
+                <TableHead className="text-right">الوقت</TableHead>
+                <TableHead className="text-right">المادة</TableHead>
+                <TableHead className="text-right">المعلم</TableHead>
+                <TableHead className="text-right">الإجراءات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {WEEK_TABLE_DAYS.map((day) => {
+                const items = scheduleByDay.get(day) ?? [];
+                const isToday = day === todayName;
+                const style = DAY_STYLES[day];
+                return (
+                  <TableRow key={day}>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-2 font-medium">
+                        <span className={`h-2 w-2 rounded-full ${style?.dot}`} />
+                        {day}
+                        {isToday && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                            اليوم
+                          </span>
+                        )}
                       </span>
-                    )}
-                    <span className="text-sm text-muted-foreground">
-                      ({items.length} {items.length === 1 ? "موعد" : "مواعيد"})
-                    </span>
-                  </div>
-
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {items.map((item) => {
-                      const duration = formatDuration(item.startTime, item.endTime);
-                      return (
-                        <Card
-                          key={item.id}
-                          className={`group relative overflow-hidden border border-border border-t-4 bg-card p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${style?.edge}`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex min-w-0 items-start gap-3">
-                              <div
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${style?.chip}`}
-                              >
-                                {initials(item.teacher)}
+                    </TableCell>
+                    {(["time", "subject", "teacher"] as const).map((field) => (
+                      <TableCell key={field} className={field === "subject" ? "font-semibold" : ""}>
+                        {items.length ? (
+                          <div className="space-y-2">
+                            {items.map((item) => (
+                              <div key={item.id} className="min-h-7">
+                                {field === "time" ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-primary">
+                                    <Clock className="h-3 w-3" />
+                                    {item.startTime} - {item.endTime}
+                                  </span>
+                                ) : field === "subject" ? item.subject : (
+                                  <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                                    <User2 className="h-3.5 w-3.5" />
+                                    {item.teacher}
+                                  </span>
+                                )}
                               </div>
-                              <div className="min-w-0">
-                                <p className="truncate text-base font-bold text-foreground">
-                                  {item.subject}
-                                </p>
-                                <p className="mt-0.5 flex items-center gap-1 text-sm text-muted-foreground">
-                                  <User2 className="h-3.5 w-3.5" />
-                                  {item.teacher}
-                                </p>
-                              </div>
-                            </div>
-                            <span className="flex shrink-0 flex-col items-end gap-1">
-                              <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-primary">
-                                <Clock className="h-3 w-3" />
-                                {item.startTime} - {item.endTime}
-                              </span>
-                              {duration && (
-                                <span className="text-[11px] text-muted-foreground">
-                                  {duration}
-                                </span>
+                            ))}
+                          </div>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                    ))}
+                    <TableCell>
+                      {items.length ? (
+                        <div className="space-y-2">
+                          {items.map((item) => (
+                            <div key={item.id} className="flex min-h-7 items-center gap-1">
+                              {pendingDeleteId === item.id ? (
+                                <>
+                                  <span className="text-xs text-muted-foreground">تأكيد الحذف؟</span>
+                                  <Button type="button" variant="outline" size="sm" onClick={() => setPendingDeleteId(null)}>
+                                    إلغاء
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => confirmDelete(item.id)}
+                                    disabled={deletingId === item.id}
+                                  >
+                                    {deletingId === item.id ? "جارِ الحذف..." : "حذف"}
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEdit(item)}
+                                    className="gap-1.5 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <PencilLine className="h-3.5 w-3.5" />
+                                    تعديل
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setPendingDeleteId(item.id)}
+                                    className="gap-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    حذف
+                                  </Button>
+                                </>
                               )}
-                            </span>
-                          </div>
-
-                          <div className="mt-4 flex items-center justify-end gap-2 border-t border-border/60 pt-3">
-                            {pendingDeleteId === item.id ? (
-                              <>
-                                <span className="me-auto text-xs font-medium text-muted-foreground">
-                                  تأكيد الحذف؟
-                                </span>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setPendingDeleteId(null)}
-                                >
-                                  إلغاء
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => confirmDelete(item.id)}
-                                  disabled={deletingId === item.id}
-                                >
-                                  {deletingId === item.id ? "جارِ الحذف..." : "حذف"}
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEdit(item)}
-                                  className="gap-1.5 text-muted-foreground hover:text-foreground"
-                                >
-                                  <PencilLine className="h-3.5 w-3.5" />
-                                  تعديل
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setPendingDeleteId(item.id)}
-                                  className="gap-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                  حذف
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            }
-          )}
-        </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   );

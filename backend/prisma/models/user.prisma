@@ -11,6 +11,7 @@ model User {
   password String? // nullable: doctors have no password until they accept the invite
   role     Role       @default(USER)
   status   UserStatus @default(ACTIVE)
+  gender   Gender?
 
   level       EducationLevel?
   track       Track?

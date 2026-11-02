@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { assignSyllabusOrder, moveIdToOrder, reorderIds } from './subject.order';
+import { assignSyllabusOrder, moveIdToOrder, reorderIds } from '../../src/modules/subject/subject.order';
 
 test('reordering validates a complete set and returns sequential one-based positions', () => {
   const current = [{ id: 'a', order: 1 }, { id: 'b', order: 2 }, { id: 'c', order: 3 }];

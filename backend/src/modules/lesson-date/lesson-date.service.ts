@@ -28,34 +28,32 @@ const toResponse = (lesson: {
 
 export const lessonDateService = {
   async create(userId: string, input: CreateLessonDateInput) {
-    const dayOfWeek = DAY_AR_TO_EN[input.dayName];
-    if (!dayOfWeek) {
-      throw new BadRequestError('اسم اليوم غير صحيح');
-    }
-
-    const conflict = await lessonDateRepository.findConflicting({
-      userId,
-      dayOfWeek,
-      startTime: input.startTime,
-      endTime: input.endTime,
+    const dayNames = input.dayNames ?? (input.dayName ? [input.dayName] : []);
+    if (dayNames.length === 0) throw new BadRequestError('اختر يوماً واحداً على الأقل');
+    const lessons = dayNames.map((dayName) => {
+      const dayOfWeek = DAY_AR_TO_EN[dayName];
+      if (!dayOfWeek) throw new BadRequestError('اسم اليوم غير صحيح');
+      return {
+        subject: input.subject,
+        teacher: input.teacher,
+        dayOfWeek,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        userId,
+      };
     });
+    const result = await lessonDateRepository.createForDays(lessons);
 
-    if (conflict) {
+    if (result.status === 'conflict') {
+      const conflict = result.conflict;
+      const dayName = DAY_EN_TO_AR[conflict.dayOfWeek];
       throw new ConflictError(
-        `يوجد تعارض مع موعد "${conflict.subject}" (${conflict.startTime} - ${conflict.endTime}) في نفس اليوم`
+        `يوجد تعارض يوم ${dayName} مع موعد "${conflict.subject}" (${conflict.startTime} - ${conflict.endTime})`
       );
     }
 
-    const lesson = await lessonDateRepository.create({
-      subject: input.subject,
-      teacher: input.teacher,
-      dayOfWeek,
-      startTime: input.startTime,
-      endTime: input.endTime,
-      userId,
-    });
-
-    return toResponse(lesson);
+    const created = result.lessons.map(toResponse);
+    return input.dayNames ? created : created[0];
   },
 
   async getMyLessonDates(userId: string) {
@@ -90,29 +88,30 @@ export const lessonDateService = {
       throw new BadRequestError('وقت النهاية يجب أن يكون بعد وقت البداية');
     }
 
-    const conflict = await lessonDateRepository.findConflicting({
+    const result = await lessonDateRepository.updateWithConflictCheck({
+      id,
       userId,
       dayOfWeek: nextDayOfWeek,
       startTime: nextStartTime,
       endTime: nextEndTime,
-      excludeId: id,
+      data: {
+        subject: input.subject,
+        teacher: input.teacher,
+        dayOfWeek: input.dayName ? nextDayOfWeek : undefined,
+        startTime: input.startTime,
+        endTime: input.endTime,
+      },
     });
 
-    if (conflict) {
+    if (result.status === 'conflict') {
+      const { conflict } = result;
+      const dayName = DAY_EN_TO_AR[conflict.dayOfWeek];
       throw new ConflictError(
-        `يوجد تعارض مع موعد "${conflict.subject}" (${conflict.startTime} - ${conflict.endTime}) في نفس اليوم`
+        `يوجد تعارض يوم ${dayName} مع موعد "${conflict.subject}" (${conflict.startTime} - ${conflict.endTime})`
       );
     }
 
-    const updated = await lessonDateRepository.update(id, {
-      subject: input.subject,
-      teacher: input.teacher,
-      dayOfWeek: input.dayName ? nextDayOfWeek : undefined,
-      startTime: input.startTime,
-      endTime: input.endTime,
-    });
-
-    return toResponse(updated);
+    return toResponse(result.lesson);
   },
 
   async delete(userId: string, id: string) {

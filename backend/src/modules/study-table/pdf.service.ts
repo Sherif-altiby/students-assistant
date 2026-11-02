@@ -56,16 +56,6 @@ const escapeHtml = (value: unknown) => String(value ?? '')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
 
-function statusLabel(status?: string): string {
-  switch (status) {
-    case 'COMPLETED': return 'مكتملة';
-    case 'UPCOMING': return 'قادمة';
-    case 'IN_PROGRESS': return 'جارية';
-    case 'LATE': return 'متأخرة';
-    default: return 'مجدولة';
-  }
-}
-
 function loadFonts(): { regular: string; bold: string } {
   if (cachedFonts) return cachedFonts;
   const fontDirectory = path.resolve(__dirname, '../assets/fonts');
@@ -89,12 +79,12 @@ function buildStandardRows(days: PdfDay[]): string {
       return `<tr><th>${escapeHtml(dateLabel(day.date))}</th><td colspan="4">لا توجد جلسات</td></tr>`;
     }
     return sessions.map((session, index) => `
-      <tr class="${session.status === 'LATE' ? 'late' : ''}">
+      <tr>
         ${index === 0 ? `<th rowspan="${sessions.length}">${escapeHtml(dateLabel(day.date))}</th>` : ''}
-        <td>${escapeHtml(session.subject.title)}</td>
+        <td><span class="subject">${escapeHtml(session.subject.title)}</span></td>
         <td>${escapeHtml(session.lesson.unit.title)}</td>
         <td>${escapeHtml(session.lesson.title)}</td>
-        <td><span class="status ${escapeHtml(session.status ?? '')}">${statusLabel(session.status)}</span></td>
+        <td class="achievement">&nbsp;</td>
       </tr>`).join('');
   }).join('');
 }
@@ -145,61 +135,58 @@ function buildGlobalSections(days: PdfDay[]): string {
         return `<tr>
           <th>الأسبوع ${index + 1}</th>
           <td>${weekDays.map(({ date }) => escapeHtml(dateLabel(date))).join('<br>')}</td>
-          <td>${subjects.map(escapeHtml).join('<br>') || '—'}</td>
+          <td>${subjects.map((subject) => `<span class="subject">${escapeHtml(subject)}</span>`).join('<br>') || '—'}</td>
           <td>${units.map(escapeHtml).join('<br>') || '—'}</td>
+          <td class="achievement">&nbsp;</td>
         </tr>`;
       }).join('');
     return `<section class="month"><h2>${escapeHtml(monthName)}</h2>
-      <table><thead><tr><th>الأسبوع</th><th>الأيام</th><th>المواد</th><th>الوحدات والدروس</th></tr></thead>
+      <table class="global"><thead><tr><th>الأسبوع</th><th>الأيام</th><th>المواد</th><th>الوحدات والدروس</th><th>الإنجاز</th></tr></thead>
       <tbody>${weekRows}</tbody></table></section>`;
   }).join('');
 }
 
 function buildHtml(data: StudyTablePdfData): string {
   const fonts = loadFonts();
-  const sessions = data.days.flatMap((day) => day.sessions);
-  const completed = sessions.filter((session) => session.status === 'COMPLETED').length;
-  const late = sessions.filter((session) => session.status === 'LATE').length;
-  const progress = sessions.length ? Math.round((completed / sessions.length) * 100) : 0;
   const body = data.type === StudyTableType.GLOBAL
     ? buildGlobalSections(data.days)
-    : `<table><thead><tr><th>اليوم</th><th>المادة</th><th>الوحدة</th><th>الدرس</th><th>الحالة</th></tr></thead>
+    : `<table class="standard"><thead><tr><th>اليوم</th><th>المادة</th><th>الوحدة</th><th>الدرس</th><th>الإنجاز</th></tr></thead>
        <tbody>${buildStandardRows(data.days)}</tbody></table>`;
 
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
     @font-face { font-family:Naskh; src:url(data:font/ttf;base64,${fonts.regular}) format('truetype'); font-weight:400; }
     @font-face { font-family:Naskh; src:url(data:font/ttf;base64,${fonts.bold}) format('truetype'); font-weight:700; }
-    @page { size:A4; margin:12mm; }
+    @page { size:A4; margin:7mm 8mm; }
     * { box-sizing:border-box; }
-    body { font-family:Naskh,sans-serif; color:#1e293b; font-size:11pt; line-height:1.45; }
-    header { background:#1e2a4a; color:white; padding:10px 14px; border-radius:6px; margin-bottom:10px; }
-    h1 { font-size:18pt; margin:0 0 4px; }
-    h2 { font-size:14pt; color:#1e2a4a; margin:12px 0 5px; }
-    .range { color:#dbeafe; }
-    .stats { display:flex; gap:10px; margin-bottom:10px; }
-    .stat { flex:1; background:#f8fafc; border:1px solid #dbe3ee; padding:5px 8px; }
-    table { width:100%; border-collapse:collapse; margin-bottom:10px; }
+    body { margin:0; font-family:Naskh,sans-serif; color:#172554; font-size:10.5pt; line-height:1.45; }
+    header { position:relative; overflow:hidden; background:linear-gradient(115deg,#172554 0%,#3730a3 55%,#7c3aed 100%); color:white; padding:11px 16px; border-radius:10px; margin-bottom:10px; box-shadow:0 3px 10px #312e8130; }
+    header:after { content:""; position:absolute; left:-18px; top:-38px; width:115px; height:115px; border:18px solid #ffffff20; border-radius:50%; }
+    h1 { font-size:18pt; margin:0; letter-spacing:.1px; }
+    h2 { font-size:13pt; color:#3730a3; margin:9px 0 5px; padding:5px 9px; border-right:4px solid #8b5cf6; background:#f5f3ff; border-radius:0 5px 5px 0; }
+    .range { margin-top:3px; color:#e0e7ff; font-size:9.5pt; }
+    table { width:100%; border-collapse:separate; border-spacing:0; margin-bottom:9px; border:1px solid #c7d2fe; border-radius:7px; overflow:hidden; }
     thead { display:table-header-group; }
     tfoot { display:table-footer-group; }
     tr { break-inside:avoid; page-break-inside:avoid; }
-    th,td { border:1px solid #cbd5e1; padding:6px 8px; text-align:right; vertical-align:top; }
-    thead th { background:#1e2a4a; color:white; }
-    tbody tr:nth-child(even) { background:#f8fafc; }
-    tr.late { background:#fff1f2; }
-    .status { white-space:nowrap; }
-    .COMPLETED { color:#15803d; } .UPCOMING { color:#1d4ed8; }
-    .IN_PROGRESS { color:#a16207; } .LATE { color:#b91c1c; font-weight:bold; }
+    th,td { border-left:1px solid #e0e7ff; border-bottom:1px solid #e0e7ff; padding:6px 8px; text-align:right; vertical-align:top; }
+    thead th { background:linear-gradient(110deg,#312e81,#4f46e5); color:white; padding:7px 8px; font-size:10pt; }
+    tbody tr:nth-child(even) { background:#f5f7ff; }
+    tbody tr:nth-child(odd) { background:#fff; }
+    tbody tr:last-child th, tbody tr:last-child td { border-bottom:0; }
+    th:first-child, td:first-child { border-right:0; }
+    .standard th:first-child { width:19%; color:#3730a3; background:#eef2ff; }
+    .standard th:not(:first-child) { font-weight:700; }
+    .standard td:nth-child(2) { color:#4338ca; font-weight:700; }
+    .subject { display:inline-block; padding:1px 7px; border-radius:999px; background:#ede9fe; color:#5b21b6; font-size:9.5pt; }
+    .achievement { width:15%; min-width:90px; background:#fff; }
+    .standard .achievement { height:34px; }
+    .global td:nth-child(2) { color:#4338ca; }
+    .global td:nth-child(4) { line-height:1.65; }
     h2 { break-after:avoid-page; }
   </style></head><body>
     <header><h1>${escapeHtml(data.title)}</h1>
       <div class="range">${escapeHtml(dateLabel(data.startDate))} — ${escapeHtml(dateLabel(data.endDate))}</div>
     </header>
-    <div class="stats">
-      <div class="stat">الجلسات: <strong>${sessions.length}</strong></div>
-      <div class="stat">المكتملة: <strong>${completed}</strong></div>
-      <div class="stat">المتأخرة: <strong>${late}</strong></div>
-      <div class="stat">الإنجاز: <strong>${progress}%</strong></div>
-    </div>
     ${body}
   </body></html>`;
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { flattenLegacyCatalog } from './subject.flatten';
+import { flattenLegacyCatalog } from '../../src/modules/subject/subject.flatten';
 
 test('legacy hierarchy flattening preserves depth-first unit and leaf-lesson order', () => {
   const flattened = flattenLegacyCatalog([

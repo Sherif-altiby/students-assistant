@@ -28,16 +28,39 @@ function withTimeOrderCheck<T extends z.ZodTypeAny>(schema: T) {
   });
 }
 
+const createBodySchema = z.object({
+  subject: z.string().trim().min(1, 'المادة مطلوبة').max(255, 'اسم المادة طويل جداً'),
+  teacher: z.string().trim().min(1, 'اسم المعلم مطلوب').max(255, 'اسم المعلم طويل جداً'),
+  dayName: dayNameField.optional(),
+  dayNames: z.array(dayNameField).min(1, 'اختر يوماً واحداً على الأقل').max(7).optional(),
+  startTime: timeField,
+  endTime: timeField,
+}).superRefine((data, ctx) => {
+  if ((!data.dayName && !data.dayNames) || (data.dayName && data.dayNames)) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'اختر يوماً واحداً أو عدة أيام',
+      path: ['dayNames'],
+    });
+  }
+  if (data.dayNames && new Set(data.dayNames).size !== data.dayNames.length) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'لا يمكن اختيار اليوم نفسه أكثر من مرة',
+      path: ['dayNames'],
+    });
+  }
+  if (data.startTime >= data.endTime) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'وقت النهاية يجب أن يكون بعد وقت البداية',
+      path: ['endTime'],
+    });
+  }
+});
+
 export const createLessonDateSchema = z.object({
-  body: withTimeOrderCheck(
-    z.object({
-      subject: z.string().trim().min(1, 'المادة مطلوبة').max(255, 'اسم المادة طويل جداً'),
-      teacher: z.string().trim().min(1, 'اسم المعلم مطلوب').max(255, 'اسم المعلم طويل جداً'),
-      dayName: dayNameField,
-      startTime: timeField,
-      endTime: timeField,
-    })
-  ),
+  body: createBodySchema,
   params: z.object({}).optional(),
   query: z.object({}).optional(),
 });
