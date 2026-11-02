@@ -83,6 +83,7 @@ export interface PlannedSession {
   lessonId: string;
   date: string;
   order: number;
+  isReview?: boolean;
 }
 
 export interface GeneratorInput {
@@ -92,16 +93,26 @@ export interface GeneratorInput {
   subjects: GeneratorSubject[];
   completedLessonIds: Set<string>;
   schedule: GenerateScheduleInput;
+  fillAllDays?: boolean;
 }
 
 export interface GeneratorSuggestion {
-  code: 'INCREASE_DAILY_CAPACITY' | 'ADD_STUDY_DAYS' | 'EXTEND_DATE_RANGE' | 'NO_LESSONS';
+  code:
+  | 'INCREASE_DAILY_CAPACITY'
+  | 'ADD_STUDY_DAYS'
+  | 'EXTEND_DATE_RANGE'
+  | 'NO_LESSONS'
+  | 'ALL_LESSONS_COMPLETED';
   message: string;
 }
 
 export interface GeneratorResult {
   sessions: PlannedSession[];
   totalLessons: number;
+  scheduledCount: number;
+  reviewCount: number;
+  skippedCompletedCount: number;
+  eligibleDaysCount: number;
   selectedSubjectsCount: number;
   unscheduledLessonsCount: number;
   remainingLessonCount: number;

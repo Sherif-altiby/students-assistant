@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type {
   GenerateStudyTableInput,
+  AvailableStudyMonthsResponse,
   StudyTableGenerationResult,
   ListStudyTablesResponse,
   NotificationListResponse,
@@ -28,6 +29,16 @@ export interface ListStudyTablesParams {
   page?: number;
   limit?: number;
   search?: string;
+}
+
+export async function listAvailableStudyMonths(
+  count = 12,
+): Promise<AvailableStudyMonthsResponse> {
+  const response = await api.get<ApiEnvelope<AvailableStudyMonthsResponse>>(
+    "/study-table/available-months",
+    { params: { count } },
+  );
+  return response.data.data;
 }
 
 export async function listStudyTables(
@@ -148,12 +159,16 @@ export async function downloadStudyTablePdf(id: string): Promise<Blob> {
   return response.data;
 }
 
-export async function listStudySubjects(): Promise<
-  StudySubjectSummary[]
-> {
+export async function listStudySubjects(): Promise<StudySubjectSummary[]> {
+  return listStudySubjectsPage({ page: 1, limit: 100 });
+}
+
+export async function listStudySubjectsPage(
+  params: { page?: number; limit?: number },
+): Promise<StudySubjectSummary[]> {
   const response = await api.get<
     ApiEnvelope<{ data: StudySubjectSummary[] }>
-  >("/subjects");
+  >("/subjects", { params });
   return response.data.data.data;
 }
 

@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Download, Loader2, Pencil, Save, Trash2, X } from "lucide-react";
+import { Download, Loader2, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   Pagination,
@@ -27,25 +25,12 @@ function dateLabel(date: string) {
 
 export default function StudyTablesPage() {
   const router = useRouter();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
   const {
     tables, pagination, isLoading, error, page, setPage,
     createTableAsync, generateTableAsync, isCreating, isGenerating,
-    updateTableAsync, isUpdating, deleteTableAsync, isDeleting,
+    deleteTableAsync, isDeleting,
     downloadPdfAsync, isDownloadingPdf,
   } = useStudyTables();
-
-  async function saveTitle(id: string) {
-    const title = editTitle.trim();
-    if (!title) return;
-    try {
-      await updateTableAsync({ id, payload: { title } });
-      setEditingId(null);
-    } catch {
-      // Mutation error handler displays the API failure.
-    }
-  }
 
   async function download(id: string, title: string) {
     try {
@@ -99,19 +84,7 @@ export default function StudyTablesPage() {
                   }
                 }}
               >
-                <TableCell className="font-medium">
-                  {editingId === table.id ? <div
-                    className="flex min-w-48 items-center gap-2"
-                    onClick={(event) => event.stopPropagation()}
-                    onKeyDown={(event) => event.stopPropagation()}
-                  >
-                    <Input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} maxLength={255} />
-                    <Button size="icon" aria-label="حفظ العنوان" disabled={isUpdating} onClick={() => void saveTitle(table.id)}>
-                      {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    </Button>
-                    <Button size="icon" variant="ghost" aria-label="إلغاء التعديل" onClick={() => setEditingId(null)}><X className="h-4 w-4" /></Button>
-                  </div> : <span className="hover:text-primary">{table.title}</span>}
-                </TableCell>
+                <TableCell className="font-medium"><span className="hover:text-primary">{table.title}</span></TableCell>
                 <TableCell><StudyTableTypeBadge type={table.type} /></TableCell>
                 <TableCell>{dateLabel(table.startDate)} — {dateLabel(table.endDate)}</TableCell>
                 <TableCell>{table.allSubjects ? "جميع المواد" : table.subjects.map(({ subject }) => subject.title).join("، ") || "—"}</TableCell>
@@ -120,10 +93,6 @@ export default function StudyTablesPage() {
                   onClick={(event) => event.stopPropagation()}
                   onKeyDown={(event) => event.stopPropagation()}
                 >
-                  <Button size="icon" variant="ghost" aria-label="تعديل الجدول"
-                    onClick={() => { setEditingId(table.id); setEditTitle(table.title); }}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
                   <Button size="icon" variant="ghost" aria-label="تحميل PDF"
                     disabled={isDownloadingPdf} onClick={() => void download(table.id, table.title)}>
                     {isDownloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}

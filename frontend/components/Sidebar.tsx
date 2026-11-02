@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -15,6 +16,7 @@ import {
   Table,
   MessageCircleCode,
   CalendarDays,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -25,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/tasks", label: "المهام", icon: ListChecks },
   { href: "/dashboard/habits", label: "العادات", icon: Repeat },
   { href: "/dashboard/tables", label: "الجداول", icon: Table },
+  { href: "/dashboard/subjects", label: "المواد الدراسية", icon: BookOpen },
   { href: "/dashboard/lesson-dates", label: "مواعيد الدروس", icon: CalendarDays },
   { href: "/dashboard/support", label: "الدعم النفسي", icon: HeartHandshake },
   { href: "/dashboard/chat", label: "الدردشات", icon: MessageCircleCode },
@@ -93,9 +96,14 @@ export function Sidebar() {
             collapsed && "justify-center",
           )}
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
-            <LayoutGrid className="h-5 w-5 text-primary" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="مُذاكرة"
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0 rounded-xl object-contain"
+            priority
+          />
           {!collapsed && (
             <div className="min-w-0">
               <span className="font-display text-lg font-extrabold text-primary block leading-tight truncate">

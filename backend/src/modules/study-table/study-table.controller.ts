@@ -19,6 +19,14 @@ export const studyTableController = {
       .json({ status: 'success', data: result });
   }),
 
+  availableMonths: asyncHandler(async (req: Request, res: Response) => {
+    const result = await studyTableService.getAvailableMonths(
+      req.user!.id,
+      Number(req.query.count ?? 12),
+    );
+    res.status(StatusCodes.OK).json({ status: 'success', data: result });
+  }),
+
   getAll: asyncHandler(async (req: Request, res: Response) => {
     const tables = await studyTableService.getMyTables(req.user!.id, {
       page: Number(req.query.page ?? 1),

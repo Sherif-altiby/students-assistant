@@ -145,6 +145,14 @@ export const listStudyTablesSchema = z.object({
   params: z.object({}).strict().optional(),
 }).strict();
 
+export const availableMonthsSchema = z.object({
+  query: z.object({
+    count: z.coerce.number().int().positive().max(24).default(12),
+  }).strict(),
+  body: z.object({}).strict().optional(),
+  params: z.object({}).strict().optional(),
+}).strict();
+
 export const tableIdSchema = z.object({
   params: z.object({ id }).strict(),
   body: z.object({}).strict().optional(),

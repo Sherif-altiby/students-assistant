@@ -74,6 +74,9 @@ function DaySessionEditorRow({
     enabled: Boolean(session.subjectId),
   });
   const lessons = subjectQuery.data ? getLessons(subjectQuery.data) : [];
+  const selectableLessons = lessons.filter(
+    (lesson) => lesson.id === session.lessonId || !unavailableLessonIds.has(lesson.id),
+  );
 
   return <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-[1fr_1fr_auto]">
     <label className="space-y-1 text-sm">
@@ -89,11 +92,31 @@ function DaySessionEditorRow({
       <select className={inputClass} value={session.lessonId}
         disabled={!session.subjectId || subjectQuery.isLoading || !lessons.length}
         onChange={(event) => onChange({ ...session, lessonId: event.target.value })}>
-        <option value="">{subjectQuery.isLoading ? "جارٍ تحميل الدروس..." : "اختر الدرس"}</option>
-        {lessons.filter((lesson) => lesson.id === session.lessonId || !unavailableLessonIds.has(lesson.id))
-          .map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
+        <option value="">
+          {subjectQuery.isLoading
+            ? "جارٍ تحميل الدروس..."
+            : subjectQuery.isError
+              ? "تعذر تحميل الدروس"
+              : lessons.length
+                ? "اختر الدرس"
+                : "لا توجد دروس بهذه المادة"}
+        </option>
+        {lessons.map((lesson) => {
+          const alreadyScheduled = unavailableLessonIds.has(lesson.id)
+            && lesson.id !== session.lessonId;
+          return (
+            <option key={lesson.id} value={lesson.id} disabled={alreadyScheduled}>
+              {lesson.title}{alreadyScheduled ? " — مضاف ليوم آخر" : ""}
+            </option>
+          );
+        })}
       </select>
       {subjectQuery.isError && <span role="alert" className="text-xs text-destructive">تعذر تحميل دروس المادة</span>}
+      {lessons.length > 0 && selectableLessons.length === 0 && (
+        <span className="text-xs text-muted-foreground">
+          جميع دروس المادة مضافة إلى أيام أخرى في هذا الجدول
+        </span>
+      )}
     </label>
     <Button type="button" size="icon" variant="ghost" aria-label="حذف الدرس من اليوم"
       className="self-end text-destructive" onClick={onRemove}><Trash2 className="h-4 w-4" /></Button>

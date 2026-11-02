@@ -8,12 +8,12 @@ export const subjectController = {
     const subjects = await subjectService.listSubjects({
       page: Number(req.query.page ?? 1),
       limit: Number(req.query.limit ?? 10),
-    });
+    }, req.user!.id);
     res.status(StatusCodes.OK).json({ status: 'success', data: subjects });
   }),
 
   getById: asyncHandler(async (req: Request, res: Response) => {
-    const subject = await subjectService.getSubject(req.params.id as string);
+    const subject = await subjectService.getSubject(req.params.id as string, req.user!.id);
     res.status(StatusCodes.OK).json({ status: 'success', data: subject });
   }),
 

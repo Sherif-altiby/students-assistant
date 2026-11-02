@@ -21,10 +21,22 @@ function lessonNotFound(): never {
   throw new NotFoundError('الدرس غير موجود');
 }
 
-function mapSubjectGraph(subject: NonNullable<Awaited<ReturnType<typeof subjectRepository.findSubjectGraph>>>) {
+function mapSubjectGraph(
+  subject: NonNullable<Awaited<ReturnType<typeof subjectRepository.findSubjectGraph>>>,
+  completedLessonIds: Set<string>,
+) {
+  const lessonsCount = subject.units.reduce((total, unit) => total + unit.lessons.length, 0);
+  const completedLessonsCount = subject.units.reduce(
+    (total, unit) => total + unit.lessons.filter((lesson) => completedLessonIds.has(lesson.id)).length,
+    0,
+  );
   return {
     id: subject.id,
     title: subject.title,
+    unitsCount: subject.units.length,
+    lessonsCount,
+    completedLessonsCount,
+    progressPercent: lessonsCount ? Math.round((completedLessonsCount / lessonsCount) * 100) : 0,
     units: subject.units.map((unit) => ({
       id: unit.id,
       title: unit.title,
@@ -33,20 +45,25 @@ function mapSubjectGraph(subject: NonNullable<Awaited<ReturnType<typeof subjectR
         id: lesson.id,
         title: lesson.title,
         order: lesson.order,
+        isCompleted: completedLessonIds.has(lesson.id),
       })),
     })),
   };
 }
 
 export const subjectService = {
-  async listSubjects({ page, limit }: ListSubjectsQuery) {
-    return subjectRepository.findAllSubjects(page, limit);
+  async listSubjects({ page, limit }: ListSubjectsQuery, userId: string) {
+    return subjectRepository.findAllSubjects(page, limit, userId);
   },
 
-  async getSubject(id: string) {
+  async getSubject(id: string, userId: string) {
     const subject = await subjectRepository.findSubjectGraph(id);
     if (!subject) subjectNotFound();
-    return mapSubjectGraph(subject);
+    const lessonIds = subject.units.flatMap((unit) => unit.lessons.map((lesson) => lesson.id));
+    const completionRows = lessonIds.length
+      ? await subjectRepository.findCompletedLessonIds(userId, lessonIds)
+      : [];
+    return mapSubjectGraph(subject, new Set(completionRows));
   },
 
   async createSubject(input: CreateSubjectInput) {
@@ -54,7 +71,7 @@ export const subjectService = {
       throw new ConflictError('توجد مادة بهذا الاسم بالفعل');
     }
     const subject = await subjectRepository.createSubject(input.title, input.units ?? []);
-    return mapSubjectGraph(subject);
+    return mapSubjectGraph(subject, new Set());
   },
 
   async updateSubject(id: string, input: UpdateSubjectInput) {

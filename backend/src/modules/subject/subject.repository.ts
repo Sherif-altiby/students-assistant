@@ -59,7 +59,7 @@ async function setLessonOrder(tx: Prisma.TransactionClient, unitId: string, ids:
 }
 
 export const subjectRepository = {
-  async findAllSubjects(page: number, limit: number) {
+  async findAllSubjects(page: number, limit: number, userId: string) {
     const [subjects, totalItems] = await Promise.all([
       prisma.studySubject.findMany({
         orderBy: [{ title: 'asc' }, { id: 'asc' }],
@@ -71,14 +71,37 @@ export const subjectRepository = {
       }),
       prisma.studySubject.count(),
     ]);
+    const subjectIds = subjects.map(({ id }) => id);
+    const completionRows = subjectIds.length
+      ? await prisma.studyLessonCompletion.findMany({
+        where: {
+          userId,
+          lesson: { unit: { subjectId: { in: subjectIds } } },
+        },
+        select: { lesson: { select: { unit: { select: { subjectId: true } } } } },
+      })
+      : [];
+    const completedBySubject = new Map<string, number>();
+    for (const { lesson } of completionRows) {
+      const subjectId = lesson.unit.subjectId;
+      completedBySubject.set(subjectId, (completedBySubject.get(subjectId) ?? 0) + 1);
+    }
     const totalPages = Math.ceil(totalItems / limit);
     return {
-      data: subjects.map(({ id, title, units }) => ({
-        id,
-        title,
-        unitsCount: units.length,
-        lessonsCount: units.reduce((total, unit) => total + unit._count.lessons, 0),
-      })),
+      data: subjects.map(({ id, title, units }) => {
+        const lessonsCount = units.reduce((total, unit) => total + unit._count.lessons, 0);
+        const completedLessonsCount = completedBySubject.get(id) ?? 0;
+        return {
+          id,
+          title,
+          unitsCount: units.length,
+          lessonsCount,
+          completedLessonsCount,
+          progressPercent: lessonsCount
+            ? Math.round((completedLessonsCount / lessonsCount) * 100)
+            : 0,
+        };
+      }),
       pagination: {
         currentPage: page,
         totalPages,
@@ -103,6 +126,14 @@ export const subjectRepository = {
       where: { id },
       include: graphInclude,
     });
+  },
+
+  async findCompletedLessonIds(userId: string, lessonIds: string[]) {
+    const completions = await prisma.studyLessonCompletion.findMany({
+      where: { userId, lessonId: { in: lessonIds } },
+      select: { lessonId: true },
+    });
+    return completions.map(({ lessonId }) => lessonId);
   },
 
   async createSubject(

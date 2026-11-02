@@ -3,6 +3,7 @@ import { authenticate } from '../../middlewares/authenticate';
 import { validate } from '../../middlewares/validate';
 import { studyTableController } from './study-table.controller';
 import {
+  availableMonthsSchema,
   completeSessionSchema,
   createSessionSchema,
   createStudyTableSchema,
@@ -20,6 +21,7 @@ router.use(authenticate);
 
 router.get('/conflicts', studyTableController.conflicts);
 router.post('/generate', validate(generateStudyTableSchema), studyTableController.generate);
+router.get('/available-months', validate(availableMonthsSchema), studyTableController.availableMonths);
 router.get('/', validate(listStudyTablesSchema), studyTableController.getAll);
 router.post('/', validate(createStudyTableSchema), studyTableController.create);
 

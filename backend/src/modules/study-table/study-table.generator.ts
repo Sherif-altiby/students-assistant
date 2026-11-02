@@ -8,6 +8,13 @@ import {
   PlannedWeek,
 } from './study-table.types';
 
+type GeneratorLessonRef = GeneratorSubject['units'][number]['lessons'][number];
+interface QueuedLesson {
+  subjectId: string;
+  lesson: GeneratorLessonRef;
+  isReview: boolean;
+}
+
 function orderedLessons(subject: GeneratorSubject) {
   return subject.units
     .slice()
@@ -19,77 +26,143 @@ function compareOrder<T extends { order: number; id: string }>(a: T, b: T): numb
   return a.order - b.order || a.id.localeCompare(b.id);
 }
 
+/** Round-robin across subjects; each subject keeps its syllabus order. */
+function takeRoundRobin(
+  queues: Array<{ subjectId: string; lessons: GeneratorLessonRef[] }>,
+  count: number,
+): QueuedLesson[] {
+  const result: QueuedLesson[] = [];
+  const pending = queues.map((queue) => ({ ...queue, lessons: queue.lessons.slice() }));
+  let index = 0;
+  while (result.length < count && pending.some((queue) => queue.lessons.length)) {
+    const queue = pending[index % pending.length]!;
+    index += 1;
+    const lesson = queue.lessons.shift();
+    if (lesson) result.push({ subjectId: queue.subjectId, lesson, isReview: false });
+  }
+  return result;
+}
+
+/** Round-robin across subjects, cycling each subject's list so it never runs out. */
+function takeCyclic(
+  queues: Array<{ subjectId: string; lessons: GeneratorLessonRef[] }>,
+  count: number,
+): QueuedLesson[] {
+  const usable = queues.filter((queue) => queue.lessons.length > 0);
+  const result: QueuedLesson[] = [];
+  const cursor = new Map(usable.map((queue) => [queue.subjectId, 0]));
+  let index = 0;
+  while (usable.length && result.length < count) {
+    const queue = usable[index % usable.length]!;
+    index += 1;
+    const position = cursor.get(queue.subjectId)!;
+    cursor.set(queue.subjectId, position + 1);
+    result.push({
+      subjectId: queue.subjectId,
+      lesson: queue.lessons[position % queue.lessons.length]!,
+      isReview: true,
+    });
+  }
+  return result;
+}
+
+/** How many sessions each eligible day receives (sums to `total`, never above `max`). */
+function dayCountsFor(total: number, days: number, max: number): number[] {
+  const counts = Array<number>(days).fill(0);
+  if (!days || !total) return counts;
+  if (total < days) {
+    for (let index = 0; index < total; index += 1) {
+      counts[Math.floor(((index + 0.5) * days) / total)]! += 1;
+    }
+    return counts;
+  }
+  const base = Math.floor(total / days);
+  const extra = total % days;
+  for (let day = 0; day < days; day += 1) {
+    const getsExtra = Math.floor(((day + 1) * extra) / days) > Math.floor((day * extra) / days);
+    counts[day] = Math.min(max, base + Number(getsExtra));
+  }
+  return counts;
+}
+
 export function generateStudySessions(input: GeneratorInput): GeneratorResult {
-  const subjectQueues = input.subjects
-    .map((subject) => ({
-      subjectId: subject.id,
-      lessons: orderedLessons(subject).filter(
-        (lesson) => !input.completedLessonIds.has(lesson.id),
-      ),
+  const allQueues = input.subjects.map((subject) => ({
+    subjectId: subject.id,
+    lessons: orderedLessons(subject),
+  }));
+  const pendingQueues = allQueues
+    .map((queue) => ({
+      subjectId: queue.subjectId,
+      lessons: queue.lessons.filter((lesson) => !input.completedLessonIds.has(lesson.id)),
     }))
     .filter((queue) => queue.lessons.length > 0);
 
-  const lessonCount = subjectQueues.reduce((total, queue) => total + queue.lessons.length, 0);
-  const totalLessons = input.subjects.reduce(
-    (total, subject) => total + subject.units.reduce((unitTotal, unit) => unitTotal + unit.lessons.length, 0),
-    0,
-  );
+  const totalLessons = allQueues.reduce((total, queue) => total + queue.lessons.length, 0);
+  const pendingCount = pendingQueues.reduce((total, queue) => total + queue.lessons.length, 0);
+  const skippedCompletedCount = totalLessons - pendingCount;
+
   const eligibleDates: string[] = [];
   for (let date = input.startDate; date <= input.endDate; date = addCalendarDays(date, 1)) {
     if (input.schedule.studyWeekdays.includes(localWeekday(date))) eligibleDates.push(date);
   }
+  const dayTotal = eligibleDates.length;
+  const capacity = dayTotal * input.schedule.maxSessionsPerDay;
 
-  const capacity = eligibleDates.length * input.schedule.maxSessionsPerDay;
-  const assignCount = Math.min(capacity, lessonCount);
-  const sessions: GeneratorResult['sessions'] = [];
-  const perDayCount = new Map<string, number>();
-  let queueIndex = 0;
+  // 1) Pending (not yet completed) lessons come first.
+  const pendingScheduled = takeRoundRobin(pendingQueues, Math.min(capacity, pendingCount));
 
-  for (let index = 0; index < assignCount; index += 1) {
-    while (!subjectQueues[queueIndex]!.lessons.length) {
-      queueIndex = (queueIndex + 1) % subjectQueues.length;
-    }
-    const queue = subjectQueues[queueIndex]!;
-    const lesson = queue.lessons.shift()!;
-    queueIndex = (queueIndex + 1) % subjectQueues.length;
-
-    const dateIndex = Math.min(
-      eligibleDates.length - 1,
-      Math.floor(((index + 0.5) * eligibleDates.length) / assignCount),
-    );
-    const date = eligibleDates[dateIndex]!;
-    const order = perDayCount.get(date) ?? 0;
-    perDayCount.set(date, order + 1);
-    sessions.push({ subjectId: queue.subjectId, lessonId: lesson.id, date, order });
+  // 2) fillAllDays: top up with review sessions until every eligible day has one.
+  let queued: QueuedLesson[] = pendingScheduled;
+  if (input.fillAllDays && totalLessons > 0 && queued.length < dayTotal) {
+    const scheduledIds = new Set(pendingScheduled.map(({ lesson }) => lesson.id));
+    const reviewQueues = allQueues.map((queue) => ({
+      subjectId: queue.subjectId,
+      lessons: queue.lessons.filter((lesson) => !scheduledIds.has(lesson.id)),
+    }));
+    const hasReviewPool = reviewQueues.some((queue) => queue.lessons.length > 0);
+    const reviews = takeCyclic(hasReviewPool ? reviewQueues : allQueues, dayTotal - queued.length);
+    queued = [...pendingScheduled, ...reviews];
   }
 
-  const unscheduledLessonsCount = lessonCount - sessions.length;
+  const dayCounts = dayCountsFor(queued.length, dayTotal, input.schedule.maxSessionsPerDay);
+  const sessions: GeneratorResult['sessions'] = [];
+  let lessonIndex = 0;
+  for (let dayIndex = 0; dayIndex < dayTotal; dayIndex += 1) {
+    for (let order = 0; order < dayCounts[dayIndex]!; order += 1) {
+      const item = queued[lessonIndex++]!;
+      sessions.push({
+        subjectId: item.subjectId,
+        lessonId: item.lesson.id,
+        date: eligibleDates[dayIndex]!,
+        order,
+        ...(item.isReview ? { isReview: true } : {}),
+      });
+    }
+  }
+
+  const reviewCount = sessions.filter((session) => session.isReview).length;
+  const scheduledCount = sessions.length;
+  const unscheduledLessonsCount = pendingCount - pendingScheduled.length;
   return {
     sessions,
     totalLessons,
+    scheduledCount,
+    reviewCount,
+    eligibleDaysCount: dayTotal,
+    skippedCompletedCount,
     selectedSubjectsCount: input.subjects.length,
     capacity,
     unscheduledLessonsCount,
     remainingLessonCount: unscheduledLessonsCount,
     suggestions: totalLessons === 0
-      ? [{
-        code: 'NO_LESSONS',
-        message: 'لا توجد دروس متاحة للجدولة',
-      }]
+      ? [{ code: 'NO_LESSONS', message: 'لا توجد دروس متاحة للجدولة' }]
+      : pendingCount === 0 && scheduledCount === 0
+      ? [{ code: 'ALL_LESSONS_COMPLETED', message: 'كل دروس المواد المختارة مكتملة' }]
       : unscheduledLessonsCount > 0
       ? [
-        {
-          code: 'INCREASE_DAILY_CAPACITY',
-          message: 'زد الحد الأقصى للجلسات اليومية',
-        },
-        {
-          code: 'ADD_STUDY_DAYS',
-          message: 'أضف أياماً أخرى للمذاكرة',
-        },
-        {
-          code: 'EXTEND_DATE_RANGE',
-          message: 'مدد نطاق تاريخ الجدول',
-        },
+        { code: 'INCREASE_DAILY_CAPACITY', message: 'زد الحد الأقصى للجلسات اليومية' },
+        { code: 'ADD_STUDY_DAYS', message: 'أضف أياماً أخرى للمذاكرة' },
+        { code: 'EXTEND_DATE_RANGE', message: 'مدد نطاق تاريخ الجدول' },
       ]
       : [],
   };

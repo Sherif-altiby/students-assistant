@@ -9,7 +9,14 @@ import { prisma } from '../../config/prisma';
 import { logger } from '../../utils/logger';
 import { pdfService } from './pdf.service';
 import { studyTableRepository } from './study-table.repository';
-import { addCalendarDays, calendarDays, dateKey, localDateKey, validateTimezone } from './date-time';
+import {
+  addCalendarDays,
+  calendarDays,
+  dateKey,
+  localDateKey,
+  monthlyRange,
+  validateTimezone,
+} from './date-time';
 import { generateStudySessions, groupGlobalPlan } from './study-table.generator';
 import { getSubjectScopeWhere } from './study-table.scope';
 import { getStudySessionStatus } from './study-table.status';
@@ -23,7 +30,14 @@ import {
 import { GeneratorSubject, StudyTableInput, StudyTableProgress } from './study-table.types';
 
 type Transaction = Prisma.TransactionClient;
-export type Range = { startDate: string; endDate: string; month?: number; year?: number };
+export type Range = {
+  startDate: string;
+  endDate: string;
+  month?: number;
+  year?: number;
+  monthStartDate?: string;
+  startsFromToday?: boolean;
+};
 type SessionRecord = Prisma.StudySessionGetPayload<{
   include: { subject: true; lesson: { include: { unit: true } } };
 }>;
@@ -66,17 +80,7 @@ async function getTimezone(userId: string): Promise<string> {
 
 function tableRange(input: StudyTableInput, timezone: string, now = new Date()): Range {
   if (input.type === 'MONTHLY') {
-    const year = input.year ?? Number(localDateKey(now, timezone).slice(0, 4));
-    const startDate = `${year}-${String(input.month).padStart(2, '0')}-01`;
-    const nextMonth = input.month === 12
-      ? `${year + 1}-01-01`
-      : `${year}-${String(input.month + 1).padStart(2, '0')}-01`;
-    return {
-      startDate,
-      endDate: addCalendarDays(nextMonth, -1),
-      month: input.month,
-      year,
-    };
+    return monthlyRange({ month: input.month, year: input.year, timezone, now });
   }
   if (input.type === 'WEEKLY') {
     return { startDate: input.startDate, endDate: addCalendarDays(input.startDate, 6) };
@@ -105,6 +109,7 @@ export function getUpdatedRange(
   currentRange: Range,
   input: StudyTableUpdateInput,
   timezone: string,
+  now = new Date(),
 ): Range {
   let range: Range = currentRange;
   if (type === StudyTableType.WEEKLY) {
@@ -125,14 +130,8 @@ export function getUpdatedRange(
     if (input.month !== undefined || input.year !== undefined) {
       const month = input.month ?? currentRange.month;
       const year = input.year ?? currentRange.year;
-      if (!month || !year) throw new BadRequestError('بيانات الشهر والسنة في الجدول غير مكتملة');
-      range = tableRange({
-        title: input.title ?? '',
-        type: 'MONTHLY',
-        subjects: 'ALL',
-        month,
-        year,
-      }, timezone);
+      if (!month) throw new BadRequestError('بيانات الشهر والسنة في الجدول غير مكتملة');
+      range = monthlyRange({ month, year, timezone, now });
     }
   } else {
     if (input.month !== undefined || input.year !== undefined) {
@@ -214,6 +213,35 @@ async function createDays(tx: Transaction, tableId: string, range: Range) {
     })),
     skipDuplicates: true,
   });
+}
+
+export function getAvailableMonthRanges(timezone: string, count: number, now: Date) {
+  const today = localDateKey(now, timezone);
+  const currentYear = Number(today.slice(0, 4));
+  const currentMonth = Number(today.slice(5, 7));
+
+  const months = Array.from({ length: count }, (_, index) => {
+    const absoluteMonth = currentYear * 12 + currentMonth - 1 + index;
+    const year = Math.floor(absoluteMonth / 12);
+    const month = (absoluteMonth % 12) + 1;
+    const range = monthlyRange({ month, year, timezone, now });
+    const monthName = new Intl.DateTimeFormat('ar-EG', {
+      month: 'long',
+      timeZone: 'UTC',
+    }).format(new Date(Date.UTC(year, month - 1, 1)));
+
+    return {
+      month,
+      year,
+      label: `${monthName} ${year}`,
+      isCurrent: index === 0,
+      startDate: range.startDate,
+      endDate: range.endDate,
+      remainingDays: dayCount(range.startDate, range.endDate),
+    };
+  });
+
+  return { today, months };
 }
 
 async function listCatalog(
@@ -379,6 +407,11 @@ export const studyTableService = {
     });
   },
 
+  async getAvailableMonths(userId: string, count: number, now = new Date()) {
+    const timezone = await getTimezone(userId);
+    return getAvailableMonthRanges(timezone, count, now);
+  },
+
   async generate(userId: string, input: GenerateStudyTableInput, preview: boolean) {
     const timezone = await getTimezone(userId);
     const { schedule, ...tableInput } = input;
@@ -448,6 +481,8 @@ export const studyTableService = {
       ...(months ? { months } : {}),
       capacity: generated.capacity,
       totalLessons: generated.totalLessons,
+      scheduledCount: generated.scheduledCount,
+      skippedCompletedCount: generated.skippedCompletedCount,
       selectedSubjectsCount: generated.selectedSubjectsCount,
       unscheduledLessonsCount: generated.unscheduledLessonsCount,
       suggestions: generated.suggestions,
@@ -486,8 +521,11 @@ export const studyTableService = {
       );
       return {
         tableId: table.id,
+        range,
         capacity: generated.capacity,
         totalLessons: generated.totalLessons,
+        scheduledCount: generated.scheduledCount,
+        skippedCompletedCount: generated.skippedCompletedCount,
         selectedSubjectsCount: generated.selectedSubjectsCount,
         unscheduledLessonsCount: generated.unscheduledLessonsCount,
         suggestions: generated.suggestions,
@@ -545,6 +583,8 @@ export const studyTableService = {
         year: table.year ?? undefined,
       };
       const range = getUpdatedRange(table.type, currentRange, input, timezone);
+      const dateRangeChanged = range.startDate !== currentRange.startDate
+        || range.endDate !== currentRange.endDate;
 
       const existingSessions = await tx.studySession.findMany({
         where: { studyTableId: tableId },
@@ -556,7 +596,7 @@ export const studyTableService = {
           throw new BadRequestError('لا يمكن إزالة مادة مرتبطة بجلسات موجودة');
         }
       }
-      const daysToRemove = await tx.studyDay.findMany({
+      const daysToRemove = dateRangeChanged ? await tx.studyDay.findMany({
         where: {
           studyTableId: tableId,
           OR: [
@@ -565,7 +605,7 @@ export const studyTableService = {
           ],
         },
         select: { id: true },
-      });
+      }) : [];
       if (daysToRemove.length) {
         const removedDayIds = daysToRemove.map(({ id }) => id);
         const removedSessions = await tx.studySession.findMany({

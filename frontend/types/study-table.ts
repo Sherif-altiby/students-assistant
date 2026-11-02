@@ -39,6 +39,21 @@ export interface ListStudyTablesResponse {
   pagination: PaginationMeta;
 }
 
+export interface AvailableStudyMonth {
+  month: number;
+  year: number;
+  label: string;
+  isCurrent: boolean;
+  startDate: string;
+  endDate: string;
+  remainingDays: number;
+}
+
+export interface AvailableStudyMonthsResponse {
+  today: string;
+  months: AvailableStudyMonth[];
+}
+
 export interface StudySession {
   id: string;
   order: number;
@@ -172,18 +187,32 @@ export interface PlannedSession {
 }
 
 export interface GeneratorSuggestion {
-  code: "INCREASE_DAILY_CAPACITY" | "ADD_STUDY_DAYS" | "EXTEND_DATE_RANGE";
+  code:
+    | "INCREASE_DAILY_CAPACITY"
+    | "ADD_STUDY_DAYS"
+    | "EXTEND_DATE_RANGE"
+    | "NO_LESSONS"
+    | "ALL_LESSONS_COMPLETED";
   message: string;
 }
 
 export interface StudyTableGenerationResult {
   preview?: boolean;
   tableId?: string;
-  range?: { startDate: string; endDate: string; month?: number; year?: number };
+  range?: {
+    startDate: string;
+    endDate: string;
+    month?: number;
+    year?: number;
+    monthStartDate?: string;
+    startsFromToday?: boolean;
+  };
   sessions: Array<PlannedSession | StudySession>;
   months?: PlannedMonth<PlannedSession | StudySession>[];
   unscheduledLessonsCount: number;
   totalLessons: number;
+  scheduledCount: number;
+  skippedCompletedCount: number;
   selectedSubjectsCount: number;
   remainingLessonCount?: number;
   capacity: number;
@@ -220,11 +249,20 @@ export interface StudyTableUpdateInput {
 export interface StudySubjectDetails {
   id: string;
   title: string;
+  unitsCount: number;
+  lessonsCount: number;
+  completedLessonsCount: number;
+  progressPercent: number;
   units: Array<{
     id: string;
     title: string;
     order: number;
-    lessons: Array<{ id: string; title: string; order: number }>;
+    lessons: Array<{
+      id: string;
+      title: string;
+      order: number;
+      isCompleted: boolean;
+    }>;
   }>;
 }
 
@@ -233,6 +271,8 @@ export interface StudySubjectSummary {
   title: string;
   unitsCount: number;
   lessonsCount: number;
+  completedLessonsCount: number;
+  progressPercent: number;
 }
 
 export interface ListStudySubjectsResponse {

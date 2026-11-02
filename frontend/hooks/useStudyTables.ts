@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AxiosError } from "axios";
 import {
   keepPreviousData,
   useMutation,
@@ -24,6 +25,17 @@ import type {
 
 const PAGE_SIZE = 10;
 
+function mutationErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof AxiosError) {
+    const data: unknown = error.response?.data;
+    if (typeof data === "object" && data !== null && "code" in data && "message" in data) {
+      const { code, message } = data;
+      if (code === "PAST_MONTH" && typeof message === "string") return message;
+    }
+  }
+  return fallback;
+}
+
 export function useStudyTables() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -37,7 +49,7 @@ export function useStudyTables() {
   const createMutation = useMutation({
     mutationFn: (payload: StudyTableInput) => createStudyTable(payload),
     onSuccess: invalidateTables,
-    onError: () => toast.error("تعذر إنشاء جدول المذاكرة"),
+    onError: (error) => toast.error(mutationErrorMessage(error, "تعذر إنشاء جدول المذاكرة")),
   });
   const generateMutation = useMutation({
     mutationFn: ({ payload, preview }: { payload: GenerateStudyTableInput; preview: boolean }) =>
@@ -46,7 +58,9 @@ export function useStudyTables() {
       if (!variables.preview) invalidateTables();
       return result;
     },
-    onError: () => toast.error("تعذر إنشاء الجدول تلقائياً، تحقق من البيانات"),
+    onError: (error) => toast.error(
+      mutationErrorMessage(error, "تعذر إنشاء الجدول تلقائياً، تحقق من البيانات"),
+    ),
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: StudyTableUpdateInput }) =>

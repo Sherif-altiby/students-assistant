@@ -14,7 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { listStudySubjects } from "@/lib/study-table";
+import { listAvailableStudyMonths, listStudySubjects } from "@/lib/study-table";
 import type {
   GenerateStudyTableInput,
   StudyTableGenerationResult,
@@ -51,18 +51,43 @@ function formatDate(value: string) {
   }).format(new Date(`${value}T00:00:00Z`));
 }
 
-function sessionRows(sessions: StudyTableGenerationResult["sessions"]) {
+function sessionRows(
+  sessions: StudyTableGenerationResult["sessions"],
+  startDate?: string,
+  endDate?: string,
+  studyWeekdays: number[] = [],
+) {
   const grouped = new Map<string, typeof sessions>();
   for (const session of sessions) grouped.set(session.date, [...(grouped.get(session.date) ?? []), session]);
-  return [...grouped.entries()].flatMap(([date, items]) =>
-    items.map((session, index) => (
+  const dates = new Set(grouped.keys());
+  if (startDate && endDate) {
+    const cursor = new Date(`${startDate}T00:00:00Z`);
+    const lastDate = new Date(`${endDate}T00:00:00Z`);
+    while (cursor <= lastDate) {
+      if (studyWeekdays.includes(cursor.getUTCDay())) {
+        dates.add(cursor.toISOString().slice(0, 10));
+      }
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+  }
+  return [...dates].sort().flatMap((date) => {
+    const items = grouped.get(date) ?? [];
+    if (items.length === 0) {
+      return (
+        <tr key={date}>
+          <th className="border p-2 text-right">{formatDate(date)}</th>
+          <td colSpan={2} className="border p-2 text-muted-foreground">لا توجد جلسات</td>
+        </tr>
+      );
+    }
+    return items.map((session, index) => (
       <tr key={`${date}-${session.lessonId}`}>
         {index === 0 && <th rowSpan={items.length} className="border p-2 text-right">{formatDate(date)}</th>}
         <td className="border p-2">{session.subject?.title ?? "—"}</td>
         <td className="border p-2">{session.lesson?.title ?? "—"}</td>
       </tr>
-    )),
-  );
+    ));
+  });
 }
 
 export function CreateStudyTableDialog({
@@ -80,8 +105,7 @@ export function CreateStudyTableDialog({
     date.setDate(date.getDate() + 13);
     return localDateString(date);
   });
-  const [month, setMonth] = useState(String(new Date().getMonth() + 1));
-  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [selectedMonthKey, setSelectedMonthKey] = useState("");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [allSubjects, setAllSubjects] = useState(true);
   const [studyWeekdays, setStudyWeekdays] = useState([0, 1, 2, 3, 4, 5, 6]);
@@ -94,6 +118,15 @@ export function CreateStudyTableDialog({
     enabled: open,
     staleTime: 5 * 60 * 1000,
   });
+  const availableMonthsQuery = useQuery({
+    queryKey: ["study-table-available-months"],
+    queryFn: () => listAvailableStudyMonths(),
+    enabled: open && type === "MONTHLY",
+  });
+  const availableMonths = availableMonthsQuery.data?.months ?? [];
+  const selectedMonth = availableMonths.find(
+    (option) => `${option.year}-${option.month}` === selectedMonthKey,
+  ) ?? availableMonths[0];
 
   function invalidatePreview() {
     setPreview(null);
@@ -102,7 +135,14 @@ export function CreateStudyTableDialog({
   function getTableInput(): StudyTableInput {
     const subjects = type === "GLOBAL" ? selectedSubjects : allSubjects ? "ALL" : selectedSubjects;
     if (type === "MONTHLY") {
-      return { title: title.trim(), type, month: Number(month), year: Number(year), subjects };
+      if (!selectedMonth) throw new Error("لا توجد أشهر متاحة لإنشاء الجدول");
+      return {
+        title: title.trim(),
+        type,
+        month: selectedMonth.month,
+        year: selectedMonth.year,
+        subjects,
+      };
     }
     if (type === "WEEKLY") {
       return { title: title.trim(), type, startDate, subjects };
@@ -114,7 +154,15 @@ export function CreateStudyTableDialog({
     const subjects = type === "GLOBAL" ? selectedSubjects : allSubjects ? "ALL" : selectedSubjects;
     const schedule = { studyWeekdays, maxSessionsPerDay };
     if (type === "MONTHLY") {
-      return { title: title.trim(), type, month: Number(month), year: Number(year), subjects, schedule };
+      if (!selectedMonth) throw new Error("لا توجد أشهر متاحة لإنشاء الجدول");
+      return {
+        title: title.trim(),
+        type,
+        month: selectedMonth.month,
+        year: selectedMonth.year,
+        subjects,
+        schedule,
+      };
     }
     if (type === "WEEKLY") {
       return { title: title.trim(), type, startDate, subjects, schedule };
@@ -129,6 +177,12 @@ export function CreateStudyTableDialog({
     }
     if ((type === "GLOBAL" || !allSubjects) && selectedSubjects.length === 0) {
       toast.error("اختر مادة واحدة على الأقل");
+      return false;
+    }
+    if (type === "MONTHLY" && !selectedMonth) {
+      toast.error(availableMonthsQuery.isError
+        ? "تعذر تحميل الأشهر المتاحة"
+        : "لا توجد أشهر متاحة لإنشاء الجدول");
       return false;
     }
     if (studyWeekdays.length === 0 && mode === "generate") {
@@ -209,15 +263,26 @@ export function CreateStudyTableDialog({
           {type === "MONTHLY" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-2 text-sm font-medium">الشهر
-                <select className={inputClass} value={month} onChange={(event) => { setMonth(event.target.value); invalidatePreview(); }}>
-                  {Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>
-                    {new Intl.DateTimeFormat("ar-EG", { month: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2026, index, 1)))}
+                <select className={inputClass}
+                  value={selectedMonth ? `${selectedMonth.year}-${selectedMonth.month}` : ""}
+                  disabled={availableMonthsQuery.isLoading || availableMonthsQuery.isError}
+                  onChange={(event) => { setSelectedMonthKey(event.target.value); invalidatePreview(); }}>
+                  {availableMonths.map((option) => <option
+                    key={`${option.year}-${option.month}`}
+                    value={`${option.year}-${option.month}`}>
+                    {option.label}
                   </option>)}
                 </select>
               </label>
-              <label className="space-y-2 text-sm font-medium">السنة
-                <Input type="number" min={1900} max={2200} value={year} onChange={(event) => { setYear(event.target.value); invalidatePreview(); }} />
-              </label>
+              {availableMonthsQuery.isLoading && <p className="self-center text-sm text-muted-foreground">
+                جارٍ تحميل الأشهر المتاحة...
+              </p>}
+              {availableMonthsQuery.isError && <p role="alert" className="self-center text-sm text-destructive">
+                تعذر تحميل الأشهر المتاحة
+              </p>}
+              {selectedMonth?.isCurrent && availableMonthsQuery.data && <p className="self-center text-sm text-muted-foreground">
+                سيبدأ الجدول من اليوم {availableMonthsQuery.data.today}
+              </p>}
             </div>
           ) : (
             <div className={`grid gap-3 ${type === "WEEKLY" ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
@@ -268,11 +333,26 @@ export function CreateStudyTableDialog({
           </>}
 
           {preview && <section className="space-y-3 rounded-md border p-3">
+            {(() => {
+              const eligibleDays = maxSessionsPerDay > 0
+                ? preview.capacity / maxSessionsPerDay
+                : 0;
+              const averagePerDay = eligibleDays > 0
+                ? (preview.scheduledCount / eligibleDays).toFixed(1)
+                : "0.0";
+              return <p className="text-sm font-semibold">
+                الدروس: {preview.scheduledCount} مجدول من {preview.totalLessons}
+                {preview.skippedCompletedCount > 0
+                  && ` — ${preview.skippedCompletedCount} مكتمل`}
+                {" — "}أيام المذاكرة: {eligibleDays}
+                {" — "}المتوسط: {averagePerDay} درس يومياً
+              </p>;
+            })()}
             <p className="text-sm font-semibold">
               المعاينة: {preview.sessions.length} جلسة — السعة {preview.capacity}
               {preview.unscheduledLessonsCount > 0 && ` — ${preview.unscheduledLessonsCount} درس غير مجدول`}
             </p>
-            {preview.unscheduledLessonsCount > 0 && <ul className="list-inside list-disc text-sm text-amber-700">
+            {preview.suggestions.length > 0 && <ul className="list-inside list-disc text-sm text-amber-700">
               {preview.suggestions.map((suggestion) => <li key={suggestion.code}>{suggestion.message}</li>)}
             </ul>}
             {preview.months?.map((plannedMonth) => <details key={`${plannedMonth.year}-${plannedMonth.month}`} open className="space-y-2">
@@ -292,7 +372,12 @@ export function CreateStudyTableDialog({
             {!preview.months && <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] border-collapse text-sm">
                 <thead><tr className="bg-muted"><th className="border p-2">اليوم</th><th className="border p-2">المادة</th><th className="border p-2">الدرس</th></tr></thead>
-                <tbody>{sessionRows(preview.sessions)}</tbody>
+                <tbody>{sessionRows(
+                  preview.sessions,
+                  preview.range?.startDate,
+                  preview.range?.endDate,
+                  studyWeekdays,
+                )}</tbody>
               </table>
             </div>}
           </section>}
@@ -301,7 +386,9 @@ export function CreateStudyTableDialog({
             <Button
               type="submit"
               className="flex-1"
-              disabled={loading || subjectsQuery.isError || (mode === "generate" && studyWeekdays.length === 0)}
+              disabled={loading || subjectsQuery.isError
+                || (type === "MONTHLY" && (availableMonthsQuery.isLoading || availableMonthsQuery.isError))
+                || (mode === "generate" && studyWeekdays.length === 0)}
             >
               {loading
                 ? <Loader2 className="h-4 w-4 animate-spin" />
