@@ -3,10 +3,12 @@ import * as path from 'path';
 import { PDFDocument } from 'pdf-lib';
 import puppeteer, { Browser } from 'puppeteer';
 import { StudyTableType } from '@prisma/client';
+import type { PlannedMonth } from './study-table.types';
 
 type PdfDate = Date | string;
 
 interface PdfSession {
+  date: string;
   order: number;
   status?: string;
   subject: { title: string };
@@ -18,12 +20,13 @@ interface PdfDay {
   sessions: PdfSession[];
 }
 
-interface StudyTablePdfData {
+export interface StudyTablePdfData {
   title: string;
   type: StudyTableType;
   startDate: PdfDate;
   endDate: PdfDate;
   days: PdfDay[];
+  months: PlannedMonth<PdfSession>[];
 }
 
 const maxConcurrentPdfs = 3;
@@ -74,12 +77,13 @@ function dayParts(value: PdfDate) {
 
 const formatNumber = (value: number) => new Intl.NumberFormat('ar-EG').format(value);
 
-const escapeHtml = (value: unknown) => String(value ?? '')
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#39;');
+const escapeHtml = (value: unknown) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 /** Stable color per subject so the same subject is recognisable across the whole document. */
 function subjectPill(title: string): string {
@@ -98,9 +102,7 @@ function loadFonts(): { regular: string; bold: string } {
     throw new Error(`Arabic PDF font is missing: ${regularPath}`);
   }
   const regular = fs.readFileSync(regularPath).toString('base64');
-  const bold = fs.existsSync(boldPath)
-    ? fs.readFileSync(boldPath).toString('base64')
-    : regular;
+  const bold = fs.existsSync(boldPath) ? fs.readFileSync(boldPath).toString('base64') : regular;
   cachedFonts = { regular, bold };
   return cachedFonts;
 }
@@ -119,89 +121,74 @@ const tickBox = '<td class="achievement"><span class="box"></span></td>';
 
 /** One <tbody> per day so a day is never split across two pages. */
 function buildStandardRows(days: PdfDay[]): string {
-  return days.map((day, dayIndex) => {
-    const sessions = [...day.sessions].sort((a, b) => a.order - b.order);
-    const tone = dayIndex % 2 === 1 ? 'alt' : '';
+  return days
+    .map((day, dayIndex) => {
+      const sessions = [...day.sessions].sort((a, b) => a.order - b.order);
+      const tone = dayIndex % 2 === 1 ? 'alt' : '';
 
-    if (sessions.length === 0) {
-      return `<tbody class="${tone}"><tr>${dayCell(day.date, 1)}<td colspan="4" class="empty">لا توجد جلسات في هذا اليوم</td></tr></tbody>`;
-    }
+      if (sessions.length === 0) {
+        return `<tbody class="${tone}"><tr>${dayCell(day.date, 1)}<td colspan="4" class="empty">لا توجد جلسات في هذا اليوم</td></tr></tbody>`;
+      }
 
-    const rows = sessions.map((session, index) => `
+      const rows = sessions
+        .map(
+          (session, index) => `
       <tr>
         ${index === 0 ? dayCell(day.date, sessions.length) : ''}
         <td>${subjectPill(session.subject.title)}</td>
         <td class="unit">${escapeHtml(session.lesson.unit.title)}</td>
         <td class="lesson">${escapeHtml(session.lesson.title)}</td>
         ${tickBox}
-      </tr>`).join('');
-    return `<tbody class="${tone}">${rows}</tbody>`;
-  }).join('');
+      </tr>`
+        )
+        .join('');
+      return `<tbody class="${tone}">${rows}</tbody>`;
+    })
+    .join('');
 }
 
-function monthWeekKey(dateString: string): { month: string; weekStart: string } {
-  const date = new Date(`${dateString}T00:00:00.000Z`);
-  const weekStart = new Date(date);
-  weekStart.setUTCDate(date.getUTCDate() - date.getUTCDay());
-  return {
-    month: dateString.slice(0, 7),
-    weekStart: weekStart.toISOString().slice(0, 10),
-  };
-}
+function buildGlobalSections(months: PlannedMonth<PdfSession>[]): string {
+  return months
+    .map((month) => {
+      const weekRows = month.weeks
+        .map((week, index) => {
+          const weekDays = week.days;
+          const sessions = weekDays.flatMap((day) => day.sessions);
+          const subjects = [...new Set(sessions.map(({ subject }) => subject.title))];
+          const unitLessons = new Map<string, { title: string; lessons: string[] }>();
+          for (const session of sessions) {
+            const unit = session.lesson.unit;
+            const current = unitLessons.get(unit.id) ?? { title: unit.title, lessons: [] };
+            current.lessons.push(session.lesson.title);
+            unitLessons.set(unit.id, current);
+          }
+          const units = [...unitLessons.values()].map(({ title: unitTitle, lessons }) => {
+            const lessonRange =
+              lessons.length > 1 ? `${lessons[0]} — ${lessons[lessons.length - 1]}` : lessons[0];
+            return `<div class="unitline"><b>${escapeHtml(unitTitle)}</b><span>${escapeHtml(lessonRange)}</span></div>`;
+          });
+          const first = weekDays[0]?.date ?? week.startDate;
+          const last = weekDays.at(-1)?.date ?? week.endDate;
+          const rangeLabel =
+            weekDays.length > 1
+              ? `${shortDateLabel(first)} — ${shortDateLabel(last)}`
+              : shortDateLabel(first);
 
-function buildGlobalSections(days: PdfDay[]): string {
-  const monthGroups = new Map<string, Map<string, PdfDay[]>>();
-  for (const day of days) {
-    const key = monthWeekKey(dateKey(day.date));
-    const weeks = monthGroups.get(key.month) ?? new Map<string, PdfDay[]>();
-    weeks.set(key.weekStart, [...(weeks.get(key.weekStart) ?? []), day]);
-    monthGroups.set(key.month, weeks);
-  }
-
-  return [...monthGroups.entries()].map(([month, weeks]) => {
-    const [year, monthNumber] = month.split('-').map(Number);
-    const monthName = new Intl.DateTimeFormat('ar-EG', {
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(Date.UTC(year!, monthNumber! - 1, 1)));
-
-    const weekRows = [...weeks.entries()].sort(([a], [b]) => a.localeCompare(b))
-      .map(([, weekDays], index) => {
-        const sessions = weekDays.flatMap((day) => day.sessions);
-        const subjects = [...new Set(sessions.map(({ subject }) => subject.title))];
-        const unitLessons = new Map<string, { title: string; lessons: string[] }>();
-        for (const session of sessions) {
-          const unit = session.lesson.unit;
-          const current = unitLessons.get(unit.id) ?? { title: unit.title, lessons: [] };
-          current.lessons.push(session.lesson.title);
-          unitLessons.set(unit.id, current);
-        }
-        const units = [...unitLessons.values()].map(({ title: unitTitle, lessons }) => {
-          const lessonRange = lessons.length > 1
-            ? `${lessons[0]} — ${lessons[lessons.length - 1]}`
-            : lessons[0];
-          return `<div class="unitline"><b>${escapeHtml(unitTitle)}</b><span>${escapeHtml(lessonRange)}</span></div>`;
-        });
-        const first = weekDays[0]!.date;
-        const last = weekDays[weekDays.length - 1]!.date;
-        const rangeLabel = weekDays.length > 1
-          ? `${shortDateLabel(first)} — ${shortDateLabel(last)}`
-          : shortDateLabel(first);
-
-        return `<tr>
+          return `<tr>
           <th class="week"><span class="weeknum">${escapeHtml(formatNumber(index + 1))}</span><small>الأسبوع</small></th>
           <td class="range-cell">${escapeHtml(rangeLabel)}<div class="daycount">${escapeHtml(formatNumber(weekDays.length))} أيام</div></td>
           <td>${subjects.map(subjectPill).join('') || '—'}</td>
           <td>${units.join('') || '—'}</td>
           ${tickBox}
         </tr>`;
-      }).join('');
+        })
+        .join('');
 
-    return `<section class="month"><h2>${escapeHtml(monthName)}</h2>
+      return `<section class="month"><h2>${escapeHtml(`${month.monthName} ${month.year}`)}</h2>
       <table class="global"><thead><tr><th>الأسبوع</th><th>الفترة</th><th>المواد</th><th>الوحدات والدروس</th><th>الإنجاز</th></tr></thead>
       <tbody>${weekRows}</tbody></table></section>`;
-  }).join('');
+    })
+    .join('');
 }
 
 function buildStats(data: StudyTablePdfData): string {
@@ -214,15 +201,19 @@ function buildStats(data: StudyTablePdfData): string {
     { value: subjects, label: 'مادة' },
   ];
   return items
-    .map(({ value, label }) => `<div class="stat"><b>${escapeHtml(formatNumber(value))}</b><span>${label}</span></div>`)
+    .map(
+      ({ value, label }) =>
+        `<div class="stat"><b>${escapeHtml(formatNumber(value))}</b><span>${label}</span></div>`
+    )
     .join('');
 }
 
 function buildHtml(data: StudyTablePdfData): string {
   const fonts = loadFonts();
-  const body = data.type === StudyTableType.GLOBAL
-    ? buildGlobalSections(data.days)
-    : `<table class="standard"><thead><tr><th>اليوم</th><th>المادة</th><th>الوحدة</th><th>الدرس</th><th>الإنجاز</th></tr></thead>
+  const body =
+    data.type === StudyTableType.GLOBAL
+      ? buildGlobalSections(data.months)
+      : `<table class="standard"><thead><tr><th>اليوم</th><th>المادة</th><th>الوحدة</th><th>الدرس</th><th>الإنجاز</th></tr></thead>
        ${buildStandardRows(data.days)}</table>`;
 
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
@@ -311,16 +302,26 @@ function releasePdfSlot(): void {
 
 function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
-    browserPromise = puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
-    }).then((browser) => {
-      browser.once('disconnected', () => { browserPromise = undefined; });
-      return browser;
-    }).catch((error: unknown) => {
-      browserPromise = undefined;
-      throw error;
-    });
+    browserPromise = puppeteer
+      .launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-gpu',
+          '--disable-dev-shm-usage',
+        ],
+      })
+      .then((browser) => {
+        browser.once('disconnected', () => {
+          browserPromise = undefined;
+        });
+        return browser;
+      })
+      .catch((error: unknown) => {
+        browserPromise = undefined;
+        throw error;
+      });
   }
   return browserPromise;
 }
@@ -345,15 +346,17 @@ export const pdfService = {
         };
         await browserGlobal.document.fonts.ready;
       });
-      const output = Buffer.from(await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        displayHeaderFooter: true,
-        headerTemplate: '<span></span>',
-        footerTemplate,
-        margin: { top: '10mm', right: '10mm', bottom: '14mm', left: '10mm' },
-        timeout: pageTimeoutMs,
-      }));
+      const output = Buffer.from(
+        await page.pdf({
+          format: 'A4',
+          printBackground: true,
+          displayHeaderFooter: true,
+          headerTemplate: '<span></span>',
+          footerTemplate,
+          margin: { top: '10mm', right: '10mm', bottom: '14mm', left: '10mm' },
+          timeout: pageTimeoutMs,
+        })
+      );
       const pdf = await PDFDocument.load(output);
       if (pdf.getPageCount() < 1) throw new Error('Generated PDF contains no pages');
       return output;

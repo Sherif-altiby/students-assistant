@@ -12,15 +12,24 @@ export {
 export type { Range, StudySessionResponse } from './study-table.helpers';
 
 export const studyTableService = {
-  ...studyTableGenerationService,
-  ...studyTableCrudService,
-  ...studyTableSessionsService,
-  ...studyTableProgressService,
+  create: studyTableGenerationService.create,
+  getAvailableMonths: studyTableGenerationService.getAvailableMonths,
+  generate: studyTableGenerationService.generate,
+  getMyTables: studyTableCrudService.getMyTables,
+  getById: studyTableCrudService.getById,
+  update: studyTableCrudService.update,
+  delete: studyTableCrudService.delete,
+  createSession: studyTableSessionsService.createSession,
+  updateSession: studyTableSessionsService.updateSession,
+  deleteSession: studyTableSessionsService.deleteSession,
+  replaceDaySessions: studyTableSessionsService.replaceDaySessions,
+  completeSession: studyTableSessionsService.completeSession,
+  getProgress: studyTableProgressService.getProgress,
   async getConflicts(_userId: string) {
     return [];
   },
   async generatePDF(userId: string, tableId: string): Promise<Buffer> {
-    const table = await studyTableCrudService.getById(userId, tableId);
+    const table = await studyTableCrudService.getPdfData(userId, tableId);
     return pdfService.generateStudyTablePDF(table);
   },
 };

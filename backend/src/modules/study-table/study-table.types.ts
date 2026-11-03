@@ -1,63 +1,4 @@
-import { StudyTableType } from '@prisma/client';
-
-export type Scope = 'ALL' | string[];
-
-export interface StudyTableRangeInput {
-  title: string;
-  type: 'WEEKLY' | 'CUSTOM' | 'GLOBAL';
-  subjects: Scope;
-  startDate: string;
-  endDate?: string;
-}
-
-export interface MonthlyStudyTableInput {
-  title: string;
-  type: 'MONTHLY';
-  subjects: Scope;
-  month: number;
-  year?: number;
-}
-
-export type StudyTableInput = StudyTableRangeInput | MonthlyStudyTableInput;
-
-export interface GenerateScheduleInput {
-  studyWeekdays: number[];
-  maxSessionsPerDay: number;
-}
-
-export type GenerateStudyTableInput = StudyTableInput & {
-  schedule: GenerateScheduleInput;
-};
-
-export interface SessionInput {
-  subjectId: string;
-  lessonId: string;
-  dayId?: string;
-  date?: string;
-  order?: number;
-}
-
-export interface SessionReplaceInput {
-  subjectId: string;
-  lessonId: string;
-  order?: number;
-}
-
-export interface StudyTableUpdateInput {
-  title?: string;
-  startDate?: string;
-  endDate?: string;
-  month?: number;
-  year?: number;
-  subjects?: Scope;
-}
-
-export interface DateRange {
-  startDate: string;
-  endDate: string;
-  month?: number;
-  year?: number;
-}
+import type { GenerateScheduleInput } from './study-table.schema';
 
 export interface GeneratorLesson {
   id: string;
@@ -87,7 +28,6 @@ export interface PlannedSession {
 }
 
 export interface GeneratorInput {
-  type: StudyTableType;
   startDate: string;
   endDate: string;
   subjects: GeneratorSubject[];
@@ -98,11 +38,11 @@ export interface GeneratorInput {
 
 export interface GeneratorSuggestion {
   code:
-  | 'INCREASE_DAILY_CAPACITY'
-  | 'ADD_STUDY_DAYS'
-  | 'EXTEND_DATE_RANGE'
-  | 'NO_LESSONS'
-  | 'ALL_LESSONS_COMPLETED';
+    | 'INCREASE_DAILY_CAPACITY'
+    | 'ADD_STUDY_DAYS'
+    | 'EXTEND_DATE_RANGE'
+    | 'NO_LESSONS'
+    | 'ALL_LESSONS_COMPLETED';
   message: string;
 }
 
@@ -115,7 +55,6 @@ export interface GeneratorResult {
   eligibleDaysCount: number;
   selectedSubjectsCount: number;
   unscheduledLessonsCount: number;
-  remainingLessonCount: number;
   capacity: number;
   suggestions: GeneratorSuggestion[];
 }

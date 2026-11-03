@@ -1,16 +1,13 @@
 import { Prisma } from '@prisma/client';
-import { Scope } from './study-table.types';
+import type { Scope } from './study-table.schema';
 
 export function getSubjectScopeWhere(
   scope: Scope,
-  subjectTitles?: readonly string[],
+  subjectTitles?: readonly string[]
 ): Prisma.StudySubjectWhereInput {
   const scopeWhere = scope === 'ALL' ? {} : { id: { in: scope } };
   if (subjectTitles === undefined) return scopeWhere;
   return {
-    AND: [
-      scopeWhere,
-      { title: { in: [...subjectTitles] } },
-    ],
+    AND: [scopeWhere, { title: { in: [...subjectTitles] } }],
   };
 }

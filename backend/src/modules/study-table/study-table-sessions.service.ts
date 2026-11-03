@@ -1,25 +1,25 @@
 import { ConflictError, BadRequestError, NotFoundError } from '../../utils/AppError';
 import { prisma } from '../../config/prisma';
-import { dateKey } from './date-time';
+import { dateKey, localDateKey } from './date-time';
 import {
   acquireUserStudyLock,
-  assertLessonSubject,
-  assertSubjectScope,
+  assertSessionReferences,
   dayDate,
+  forgetLessonCompletions,
   getSessionCompletionUpdate,
-  getSubjectTitlesForUser,
-  getTimezone,
+  getUserContext,
   reindexDay,
   reorderDay,
   sessionInclude,
   sessionResponse,
+  updateSessionAssignments,
 } from './study-table.helpers';
 import { SessionInput, SessionReplaceInput } from './study-table.schema';
 
 export const studyTableSessionsService = {
   async createSession(userId: string, tableId: string, input: SessionInput) {
-    const timezone = await getTimezone(userId);
-    const subjectTitles = await getSubjectTitlesForUser(userId);
+    const { timezone, subjectTitles } = await getUserContext(userId);
+    const todayKey = localDateKey(new Date(), timezone);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       const table = await tx.studyTable.findFirst({
@@ -30,12 +30,15 @@ export const studyTableSessionsService = {
       if (input.date && input.dayId) throw new BadRequestError('حدد اليوم أو التاريخ وليس كليهما');
       const day = input.dayId
         ? await tx.studyDay.findFirst({ where: { id: input.dayId, studyTableId: tableId } })
-        : await tx.studyDay.findUnique({
-            where: { studyTableId_date: { studyTableId: tableId, date: dayDate(input.date!) } },
-          });
+        : input.date
+          ? await tx.studyDay.findUnique({
+              where: {
+                studyTableId_date: { studyTableId: tableId, date: dayDate(input.date) },
+              },
+            })
+          : null;
       if (!day) throw new BadRequestError('يوم المذاكرة غير موجود في الجدول');
-      await assertSubjectScope(tx, table.id, table.allSubjects, input.subjectId, subjectTitles);
-      await assertLessonSubject(tx, input.lessonId, input.subjectId);
+      await assertSessionReferences(tx, table.id, table.allSubjects, [input], subjectTitles);
       const duplicate = await tx.studySession.findUnique({
         where: { studyTableId_lessonId: { studyTableId: tableId, lessonId: input.lessonId } },
       });
@@ -52,18 +55,15 @@ export const studyTableSessionsService = {
         },
         include: sessionInclude,
       });
-      if (input.order !== undefined) await reorderDay(tx, day.id, session.id, input.order);
-      const reordered = await tx.studySession.findUniqueOrThrow({
-        where: { id: session.id },
-        include: sessionInclude,
-      });
-      return sessionResponse(reordered, dateKey(day.date), timezone);
+      const finalOrder =
+        input.order === undefined ? count : await reorderDay(tx, day.id, session.id, input.order);
+      return sessionResponse({ ...session, order: finalOrder }, dateKey(day.date), todayKey);
     });
   },
 
-  async updateSession(userId: string, sessionId: string, input: SessionInput) {
-    const timezone = await getTimezone(userId);
-    const subjectTitles = await getSubjectTitlesForUser(userId);
+  async updateSession(userId: string, sessionId: string, input: Partial<SessionInput>) {
+    const { timezone, subjectTitles } = await getUserContext(userId);
+    const todayKey = localDateKey(new Date(), timezone);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       const current = await tx.studySession.findFirst({
@@ -89,23 +89,19 @@ export const studyTableSessionsService = {
       if (!targetDay) throw new BadRequestError('يوم المذاكرة غير موجود في الجدول');
       const subjectId = input.subjectId ?? current.subjectId;
       const lessonId = input.lessonId ?? current.lessonId;
-      await assertSubjectScope(
+      await assertSessionReferences(
         tx,
         current.studyTableId,
         current.studyTable.allSubjects,
-        subjectId,
+        [{ subjectId, lessonId }],
         subjectTitles
       );
-      await assertLessonSubject(tx, lessonId, subjectId);
       if (lessonId !== current.lessonId) {
         const duplicate = await tx.studySession.findFirst({
           where: { studyTableId: current.studyTableId, lessonId, id: { not: current.id } },
           select: { id: true },
         });
         if (duplicate) throw new ConflictError('لا يمكن إضافة الدرس نفسه أكثر من مرة إلى الجدول');
-        await tx.studyLessonCompletion.deleteMany({
-          where: { userId, lessonId: current.lessonId },
-        });
       }
       const order =
         input.order ??
@@ -123,13 +119,16 @@ export const studyTableSessionsService = {
         },
         include: sessionInclude,
       });
-      await reorderDay(tx, targetDay.id, session.id, order);
+      if (lessonId !== current.lessonId) {
+        await forgetLessonCompletions(tx, userId, [current.lessonId]);
+      }
+      const normalizedOrder = await reorderDay(tx, targetDay.id, session.id, order);
       if (targetDay.id !== current.dayId) await reindexDay(tx, current.dayId);
-      const reordered = await tx.studySession.findUniqueOrThrow({
-        where: { id: session.id },
-        include: sessionInclude,
-      });
-      return sessionResponse(reordered, dateKey(targetDay.date), timezone);
+      return sessionResponse(
+        { ...session, order: normalizedOrder },
+        dateKey(targetDay.date),
+        todayKey
+      );
     });
   },
 
@@ -141,17 +140,15 @@ export const studyTableSessionsService = {
         select: { id: true, lessonId: true, dayId: true },
       });
       if (!session) throw new NotFoundError('جلسة المذاكرة غير موجودة');
-      await tx.studyLessonCompletion.deleteMany({
-        where: { userId, lessonId: session.lessonId },
-      });
       await tx.studySession.delete({ where: { id: session.id } });
+      await forgetLessonCompletions(tx, userId, [session.lessonId]);
       await reindexDay(tx, session.dayId);
     });
   },
 
   async replaceDaySessions(userId: string, dayId: string, inputs: SessionReplaceInput[]) {
-    const timezone = await getTimezone(userId);
-    const subjectTitles = await getSubjectTitlesForUser(userId);
+    const { timezone, subjectTitles } = await getUserContext(userId);
+    const todayKey = localDateKey(new Date(), timezone);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       const day = await tx.studyDay.findFirst({
@@ -174,60 +171,79 @@ export const studyTableSessionsService = {
       if (otherOccurrences.length) {
         throw new ConflictError('لا يمكن إضافة الدرس نفسه أكثر من مرة إلى الجدول');
       }
-      for (const input of inputs) {
-        await assertSubjectScope(
-          tx,
-          day.studyTableId,
-          day.studyTable.allSubjects,
-          input.subjectId,
-          subjectTitles
-        );
-        await assertLessonSubject(tx, input.lessonId, input.subjectId);
-      }
+      await assertSessionReferences(
+        tx,
+        day.studyTableId,
+        day.studyTable.allSubjects,
+        inputs,
+        subjectTitles
+      );
       const existing = await tx.studySession.findMany({
         where: { dayId },
-        select: { lessonId: true, completedAt: true },
+        select: {
+          id: true,
+          order: true,
+          lessonId: true,
+          subjectId: true,
+          completedAt: true,
+          lateNotifiedAt: true,
+        },
       });
-      const oldLessonIds = existing.map(({ lessonId }) => lessonId);
-      const lessonsToForget = oldLessonIds.filter((lessonId) => !lessonIds.includes(lessonId));
-      if (lessonsToForget.length) {
-        await tx.studyLessonCompletion.deleteMany({
-          where: { userId, lessonId: { in: lessonsToForget } },
-        });
-      }
-      const completionByLesson = new Map(
-        existing.map(({ lessonId, completedAt }) => [lessonId, completedAt])
-      );
+      const existingByLesson = new Map(existing.map((session) => [session.lessonId, session]));
       const orderedInputs = inputs
         .map((input, index) => ({ input, index }))
         .sort(
           (a, b) => (a.input.order ?? a.index) - (b.input.order ?? b.index) || a.index - b.index
         );
-      await tx.studySession.deleteMany({ where: { dayId } });
-      if (inputs.length) {
-        await tx.studySession.createMany({
-          data: orderedInputs.map(({ input }, index) => ({
+      const retainedLessonIds = new Set(lessonIds);
+      const removedSessions = existing.filter(({ lessonId }) => !retainedLessonIds.has(lessonId));
+      if (removedSessions.length) {
+        await tx.studySession.deleteMany({
+          where: { id: { in: removedSessions.map(({ id }) => id) } },
+        });
+      }
+      const newSessions = [];
+      const retainedUpdates = [];
+      for (const [order, { input }] of orderedInputs.entries()) {
+        const current = existingByLesson.get(input.lessonId);
+        if (current) {
+          retainedUpdates.push({
+            id: current.id,
+            subjectId: input.subjectId,
+            order,
+            currentSubjectId: current.subjectId,
+            currentOrder: current.order,
+          });
+        } else {
+          newSessions.push({
             userId,
             studyTableId: day.studyTableId,
             dayId,
             subjectId: input.subjectId,
             lessonId: input.lessonId,
-            order: input.order ?? index,
-            completedAt: completionByLesson.get(input.lessonId) ?? null,
-          })),
-        });
+            order,
+          });
+        }
       }
+      await updateSessionAssignments(tx, retainedUpdates);
+      if (newSessions.length) await tx.studySession.createMany({ data: newSessions });
+      await forgetLessonCompletions(
+        tx,
+        userId,
+        removedSessions.map(({ lessonId }) => lessonId)
+      );
       const rows = await tx.studySession.findMany({
         where: { dayId },
         orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
         include: sessionInclude,
       });
-      return rows.map((session) => sessionResponse(session, dateKey(day.date), timezone));
+      return rows.map((session) => sessionResponse(session, dateKey(day.date), todayKey));
     });
   },
 
   async completeSession(userId: string, sessionId: string, completed: boolean) {
-    const timezone = await getTimezone(userId);
+    const { timezone } = await getUserContext(userId);
+    const todayKey = localDateKey(new Date(), timezone);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       const current = await tx.studySession.findFirst({
@@ -243,22 +259,20 @@ export const studyTableSessionsService = {
         },
         include: sessionInclude,
       });
-      if (completed) {
+      if (completionUpdate.completedAt !== null) {
         await tx.studyLessonCompletion.upsert({
           where: { userId_lessonId: { userId, lessonId: current.lessonId } },
           create: {
             userId,
             lessonId: current.lessonId,
-            completedAt: completionUpdate.completedAt!,
+            completedAt: completionUpdate.completedAt,
           },
-          update: { completedAt: completionUpdate.completedAt! },
+          update: { completedAt: completionUpdate.completedAt },
         });
       } else {
-        await tx.studyLessonCompletion.deleteMany({
-          where: { userId, lessonId: current.lessonId },
-        });
+        await forgetLessonCompletions(tx, userId, [current.lessonId]);
       }
-      return sessionResponse(updated, dateKey(current.day.date), timezone);
+      return sessionResponse(updated, dateKey(current.day.date), todayKey);
     });
   },
 };

@@ -1,16 +1,16 @@
-import { StudyTableType } from '@prisma/client';
+import { Prisma, StudyTableType } from '@prisma/client';
 import { BadRequestError, NotFoundError } from '../../utils/AppError';
 import { prisma } from '../../config/prisma';
-import { studyTableRepository } from './study-table.repository';
-import { dateKey } from './date-time';
+import { dateKey, localDateKey } from './date-time';
 import { groupGlobalPlan } from './study-table.generator';
+import type { StudyTablePdfData } from './pdf.service';
 import {
   acquireUserStudyLock,
   addMonthName,
   createDays,
   dayDate,
-  getSubjectTitlesForUser,
-  getTimezone,
+  forgetLessonCompletions,
+  getUserContext,
   sessionResponse,
   writeScope,
   getUpdatedRange,
@@ -18,20 +18,101 @@ import {
 import { StudyTableUpdateInput } from './study-table.schema';
 
 export const studyTableCrudService = {
-  getMyTables(userId: string, options: { page: number; limit: number; search?: string }) {
-    return studyTableRepository.findByUserId(userId, options).then((result) => ({
-      ...result,
-      data: result.data.map(addMonthName),
-    }));
+  async getMyTables(userId: string, options: { page: number; limit: number; search?: string }) {
+    const where: Prisma.StudyTableWhereInput = {
+      userId,
+      ...(options.search?.trim()
+        ? { title: { contains: options.search.trim(), mode: 'insensitive' } }
+        : {}),
+    };
+    const [data, totalItems] = await Promise.all([
+      prisma.studyTable.findMany({
+        where,
+        include: { subjects: { include: { subject: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip: (options.page - 1) * options.limit,
+        take: options.limit,
+      }),
+      prisma.studyTable.count({ where }),
+    ]);
+    const totalPages = Math.ceil(totalItems / options.limit);
+    return {
+      data: data.map(addMonthName),
+      pagination: {
+        currentPage: options.page,
+        totalPages,
+        totalItems,
+        itemsPerPage: options.limit,
+        hasNextPage: options.page < totalPages,
+        hasPrevPage: options.page > 1,
+      },
+    };
   },
 
   async getById(userId: string, tableId: string) {
-    const [table, timezone, subjectTitles] = await Promise.all([
-      studyTableRepository.findById(tableId, userId),
-      getTimezone(userId),
-      getSubjectTitlesForUser(userId),
+    const [table, userContext] = await Promise.all([
+      prisma.studyTable.findFirst({
+        where: { id: tableId, userId },
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          startDate: true,
+          endDate: true,
+          month: true,
+          year: true,
+          allSubjects: true,
+          studyWeekdays: true,
+          maxSessionsPerDay: true,
+          userId: true,
+          createdAt: true,
+          updatedAt: true,
+          subjects: {
+            select: {
+              id: true,
+              studyTableId: true,
+              subjectId: true,
+              createdAt: true,
+              subject: { select: { id: true, title: true, createdAt: true } },
+            },
+          },
+          days: {
+            orderBy: { date: 'asc' },
+            select: {
+              id: true,
+              date: true,
+              studyTableId: true,
+              createdAt: true,
+              sessions: {
+                orderBy: [{ order: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+                select: {
+                  id: true,
+                  order: true,
+                  dayId: true,
+                  studyTableId: true,
+                  subjectId: true,
+                  lessonId: true,
+                  completedAt: true,
+                  lateNotifiedAt: true,
+                  subject: { select: { id: true, title: true } },
+                  lesson: {
+                    select: {
+                      id: true,
+                      title: true,
+                      unit: { select: { id: true, title: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      getUserContext(userId),
     ]);
     if (!table) throw new NotFoundError('جدول المذاكرة غير موجود');
+    const { timezone, subjectTitles } = userContext;
+    const todayKey = localDateKey(new Date(), timezone);
     const days = table.days.map((day) => ({
       id: day.id,
       date: dateKey(day.date),
@@ -39,7 +120,7 @@ export const studyTableCrudService = {
       createdAt: day.createdAt,
       sessions: day.sessions
         .filter(({ subject }) => !subjectTitles || subjectTitles.includes(subject.title))
-        .map((session) => sessionResponse(session, dateKey(day.date), timezone)),
+        .map((session) => sessionResponse(session, dateKey(day.date), todayKey)),
     }));
     return {
       ...addMonthName(table),
@@ -56,9 +137,58 @@ export const studyTableCrudService = {
     };
   },
 
+  async getPdfData(userId: string, tableId: string): Promise<StudyTablePdfData> {
+    const { subjectTitles } = await getUserContext(userId);
+    const table = await prisma.studyTable.findFirst({
+      where: { id: tableId, userId },
+      select: {
+        title: true,
+        type: true,
+        startDate: true,
+        endDate: true,
+        days: {
+          orderBy: { date: 'asc' },
+          select: {
+            date: true,
+            sessions: {
+              where: subjectTitles ? { subject: { title: { in: [...subjectTitles] } } } : {},
+              orderBy: [{ order: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+              select: {
+                order: true,
+                subject: { select: { title: true } },
+                lesson: {
+                  select: {
+                    title: true,
+                    unit: { select: { id: true, title: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!table) throw new NotFoundError('جدول المذاكرة غير موجود');
+    const days = table.days.map((day) => ({
+      date: dateKey(day.date),
+      sessions: day.sessions.map((session) => ({
+        ...session,
+        date: dateKey(day.date),
+      })),
+    }));
+    const sessions = days.flatMap(({ sessions: daySessions }) => daySessions);
+    return {
+      ...table,
+      days,
+      months:
+        table.type === StudyTableType.GLOBAL
+          ? groupGlobalPlan(dateKey(table.startDate), dateKey(table.endDate), sessions)
+          : [],
+    };
+  },
+
   async update(userId: string, tableId: string, input: StudyTableUpdateInput) {
-    const timezone = await getTimezone(userId);
-    const subjectTitles = await getSubjectTitlesForUser(userId);
+    const { timezone, subjectTitles } = await getUserContext(userId);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       const table = await tx.studyTable.findFirst({ where: { id: tableId, userId } });
@@ -73,15 +203,14 @@ export const studyTableCrudService = {
       const dateRangeChanged =
         range.startDate !== currentRange.startDate || range.endDate !== currentRange.endDate;
 
-      const existingSessions = await tx.studySession.findMany({
-        where: { studyTableId: tableId },
-        select: { lessonId: true, subjectId: true, dayId: true },
-      });
       if (input.subjects !== undefined && input.subjects !== 'ALL') {
-        const outOfScope = existingSessions.filter(
-          ({ subjectId }) => !input.subjects!.includes(subjectId)
-        );
-        if (outOfScope.length) {
+        const outOfScopeCount = await tx.studySession.count({
+          where: {
+            studyTableId: tableId,
+            subjectId: { notIn: input.subjects },
+          },
+        });
+        if (outOfScopeCount > 0) {
           throw new BadRequestError('لا يمكن إزالة مادة مرتبطة بجلسات موجودة');
         }
       }
@@ -103,15 +232,12 @@ export const studyTableCrudService = {
           where: { dayId: { in: removedDayIds } },
           select: { lessonId: true },
         });
-        if (removedSessions.length) {
-          await tx.studyLessonCompletion.deleteMany({
-            where: {
-              userId,
-              lessonId: { in: removedSessions.map(({ lessonId }) => lessonId) },
-            },
-          });
-        }
         await tx.studyDay.deleteMany({ where: { id: { in: removedDayIds } } });
+        await forgetLessonCompletions(
+          tx,
+          userId,
+          removedSessions.map(({ lessonId }) => lessonId)
+        );
       }
       const subjectUpdates =
         input.subjects === undefined
@@ -145,15 +271,12 @@ export const studyTableCrudService = {
         where: { studyTableId: tableId },
         select: { lessonId: true },
       });
-      if (sessions.length) {
-        await tx.studyLessonCompletion.deleteMany({
-          where: {
-            userId,
-            lessonId: { in: sessions.map(({ lessonId }) => lessonId) },
-          },
-        });
-      }
       await tx.studyTable.delete({ where: { id: tableId } });
+      await forgetLessonCompletions(
+        tx,
+        userId,
+        sessions.map(({ lessonId }) => lessonId)
+      );
     });
   },
 };

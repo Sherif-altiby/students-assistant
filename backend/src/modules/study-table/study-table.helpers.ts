@@ -5,20 +5,22 @@ import {
   addCalendarDays,
   calendarDays,
   dateKey,
+  dayCount,
   localDateKey,
   monthlyRange,
   validateTimezone,
 } from './date-time';
-import { generateStudySessions } from './study-table.generator';
 import { getSubjectScopeWhere } from './study-table.scope';
 import { getSubjectTitlesForTrack } from '../subject/subject-tracks';
 import { getStudySessionStatus } from './study-table.status';
+export { forgetLessonCompletions } from './study-table.completion';
+export { reorderDay, reindexDay, updateSessionAssignments } from './study-table.ordering';
 import {
-  CreateStudyTableInput,
   GenerateStudyTableInput,
+  StudyTableInput,
   StudyTableUpdateInput,
 } from './study-table.schema';
-import { GeneratorSubject, StudyTableInput } from './study-table.types';
+import { GeneratorResult, GeneratorSubject } from './study-table.types';
 
 export type Transaction = Prisma.TransactionClient;
 export type Range = {
@@ -29,23 +31,33 @@ export type Range = {
   monthStartDate?: string;
   startsFromToday?: boolean;
 };
-export type SessionRecord = Prisma.StudySessionGetPayload<{
-  include: { subject: true; lesson: { include: { unit: true } } };
-}>;
-
 export const sessionInclude = {
   subject: true,
   lesson: { include: { unit: true } },
 } satisfies Prisma.StudySessionInclude;
+export type SessionRecord = Prisma.StudySessionGetPayload<{
+  select: {
+    id: true;
+    order: true;
+    dayId: true;
+    studyTableId: true;
+    subjectId: true;
+    lessonId: true;
+    completedAt: true;
+    lateNotifiedAt: true;
+    subject: { select: { id: true; title: true } };
+    lesson: {
+      select: {
+        id: true;
+        title: true;
+        unit: { select: { id: true; title: true } };
+      };
+    };
+  };
+}>;
 
 export function dayDate(date: string): Date {
   return new Date(`${date}T00:00:00.000Z`);
-}
-
-export function dayCount(start: string, end: string): number {
-  return (
-    Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000) + 1
-  );
 }
 
 export function addMonthName<T extends { month: number | null; year: number | null }>(table: T) {
@@ -59,27 +71,28 @@ export function addMonthName<T extends { month: number | null; year: number | nu
   };
 }
 
-export async function getTimezone(userId: string): Promise<string> {
+export interface StudyTableUserContext {
+  timezone: string;
+  role: 'USER' | 'ADMIN' | string;
+  track: string | null;
+  subjectTitles: readonly string[] | undefined;
+}
+
+export async function getUserContext(userId: string): Promise<StudyTableUserContext> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { timezone: true },
+    select: { timezone: true, role: true, track: true },
   });
   if (!user) throw new NotFoundError('المستخدم غير موجود');
   if (!validateTimezone(user.timezone)) {
     throw new BadRequestError('المنطقة الزمنية للمستخدم غير صالحة');
   }
-  return user.timezone;
-}
-
-export async function getSubjectTitlesForUser(
-  userId: string
-): Promise<readonly string[] | undefined> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true, track: true },
-  });
-  if (!user) throw new NotFoundError('المستخدم غير موجود');
-  return user.role === 'USER' ? getSubjectTitlesForTrack(user.track) : undefined;
+  return {
+    timezone: user.timezone,
+    role: user.role,
+    track: user.track,
+    subjectTitles: user.role === 'USER' ? getSubjectTitlesForTrack(user.track) : undefined,
+  };
 }
 
 export function tableRange(input: StudyTableInput, timezone: string, now = new Date()): Range {
@@ -89,7 +102,7 @@ export function tableRange(input: StudyTableInput, timezone: string, now = new D
   if (input.type === 'WEEKLY') {
     return { startDate: input.startDate, endDate: addCalendarDays(input.startDate, 6) };
   }
-  return { startDate: input.startDate, endDate: input.endDate! };
+  return { startDate: input.startDate, endDate: input.endDate };
 }
 
 export function validateRange(type: StudyTableType, range: Range) {
@@ -161,19 +174,6 @@ export function getSessionCompletionUpdate(
     : { completedAt: null, lateNotifiedAt: null };
 }
 
-export function tableType(type: CreateStudyTableInput['type']): StudyTableType {
-  switch (type) {
-    case 'WEEKLY':
-      return StudyTableType.WEEKLY;
-    case 'MONTHLY':
-      return StudyTableType.MONTHLY;
-    case 'CUSTOM':
-      return StudyTableType.CUSTOM;
-    case 'GLOBAL':
-      return StudyTableType.GLOBAL;
-  }
-}
-
 export async function acquireUserStudyLock(tx: Transaction, userId: string) {
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))::text`;
 }
@@ -208,11 +208,82 @@ export async function assertLessonSubject(tx: Transaction, lessonId: string, sub
   if (!lesson) throw new BadRequestError('الدرس لا يتبع المادة المحددة');
 }
 
+export async function assertSessionReferences(
+  tx: Transaction,
+  tableId: string,
+  allSubjects: boolean,
+  sessions: readonly { subjectId: string; lessonId: string }[],
+  subjectTitles?: readonly string[]
+): Promise<void> {
+  const subjectIds = [...new Set(sessions.map(({ subjectId }) => subjectId))];
+  const lessonIds = [...new Set(sessions.map(({ lessonId }) => lessonId))];
+  const scopedSubjects = allSubjects
+    ? await tx.studySubject.findMany({
+        where: {
+          id: { in: subjectIds },
+          ...(subjectTitles ? { title: { in: [...subjectTitles] } } : {}),
+        },
+        select: { id: true, title: true },
+      })
+    : await tx.studyTableSubject.findMany({
+        where: { studyTableId: tableId, subjectId: { in: subjectIds } },
+        select: { subjectId: true, subject: { select: { title: true } } },
+      });
+  const subjectById = new Map(
+    scopedSubjects.map((subject) => [
+      'id' in subject ? subject.id : subject.subjectId,
+      'id' in subject ? subject.title : subject.subject.title,
+    ])
+  );
+  const missingSubjectIds = subjectIds.filter((subjectId) => !subjectById.has(subjectId));
+  const trackSubjectIds =
+    subjectTitles !== undefined && !allSubjects && missingSubjectIds.length
+      ? new Set(
+          (
+            await tx.studySubject.findMany({
+              where: {
+                id: { in: missingSubjectIds },
+                title: { in: [...subjectTitles] },
+              },
+              select: { id: true },
+            })
+          ).map(({ id }) => id)
+        )
+      : new Set<string>();
+
+  for (const subjectId of subjectIds) {
+    const subjectTitle = subjectById.get(subjectId);
+    if (
+      subjectTitles !== undefined &&
+      (subjectTitle !== undefined
+        ? !subjectTitles.includes(subjectTitle)
+        : !trackSubjectIds.has(subjectId))
+    ) {
+      throw new BadRequestError('المادة غير متاحة للمسار الدراسي');
+    }
+    if (!allSubjects && !subjectById.has(subjectId)) {
+      throw new BadRequestError('المادة خارج نطاق هذا الجدول');
+    }
+  }
+
+  const lessons = await tx.studyLesson.findMany({
+    where: { id: { in: lessonIds } },
+    select: { id: true, unit: { select: { subjectId: true } } },
+  });
+  const lessonSubjectById = new Map(lessons.map(({ id, unit }) => [id, unit.subjectId]));
+  for (const { subjectId, lessonId } of sessions) {
+    if (lessonSubjectById.get(lessonId) !== subjectId) {
+      throw new BadRequestError('الدرس لا يتبع المادة المحددة');
+    }
+  }
+}
+
 export async function writeScope(
   tx: Transaction,
   tableId: string,
   scope: StudyTableInput['subjects'],
-  subjectTitles?: readonly string[]
+  subjectTitles?: readonly string[],
+  isNewTable = false
 ) {
   if (scope !== 'ALL') {
     const count = await tx.studySubject.count({
@@ -223,12 +294,34 @@ export async function writeScope(
     });
     if (count !== scope.length) throw new BadRequestError('تتضمن المواد المحددة مادة غير موجودة');
   }
-  await tx.studyTableSubject.deleteMany({ where: { studyTableId: tableId } });
-  if (scope === 'ALL') return { allSubjects: true };
-  await tx.studyTableSubject.createMany({
-    data: scope.map((subjectId) => ({ studyTableId: tableId, subjectId })),
+  if (isNewTable) {
+    if (scope !== 'ALL') {
+      await tx.studyTableSubject.createMany({
+        data: scope.map((subjectId) => ({ studyTableId: tableId, subjectId })),
+      });
+    }
+    return { allSubjects: scope === 'ALL' };
+  }
+
+  const existing = await tx.studyTableSubject.findMany({
+    where: { studyTableId: tableId },
+    select: { subjectId: true },
   });
-  return { allSubjects: false };
+  const desired = new Set(scope === 'ALL' ? [] : scope);
+  const current = new Set(existing.map(({ subjectId }) => subjectId));
+  const removeIds = [...current].filter((subjectId) => !desired.has(subjectId));
+  const addIds = [...desired].filter((subjectId) => !current.has(subjectId));
+  if (removeIds.length) {
+    await tx.studyTableSubject.deleteMany({
+      where: { studyTableId: tableId, subjectId: { in: removeIds } },
+    });
+  }
+  if (addIds.length) {
+    await tx.studyTableSubject.createMany({
+      data: addIds.map((subjectId) => ({ studyTableId: tableId, subjectId })),
+    });
+  }
+  return { allSubjects: scope === 'ALL' };
 }
 
 export async function createDays(tx: Transaction, tableId: string, range: Range) {
@@ -323,7 +416,7 @@ export async function createTableRecord(
   const table = await tx.studyTable.create({
     data: {
       title: input.title,
-      type: tableType(input.type),
+      type: input.type,
       startDate: dayDate(range.startDate),
       endDate: dayDate(range.endDate),
       month: range.month,
@@ -338,12 +431,12 @@ export async function createTableRecord(
         : {}),
     },
   });
-  if (!allSubjects) await writeScope(tx, table.id, input.subjects, subjectTitles);
+  if (!allSubjects) await writeScope(tx, table.id, input.subjects, subjectTitles, true);
   await createDays(tx, table.id, range);
   return table;
 }
 
-export function sessionResponse(session: SessionRecord, date: string, timezone: string) {
+export function sessionResponse(session: SessionRecord, date: string, todayKey: string) {
   return {
     id: session.id,
     order: session.order,
@@ -363,7 +456,7 @@ export function sessionResponse(session: SessionRecord, date: string, timezone: 
     },
     completedAt: session.completedAt,
     lateNotifiedAt: session.lateNotifiedAt,
-    status: getStudySessionStatus(session, date, timezone),
+    status: getStudySessionStatus(session.completedAt, date, todayKey),
   };
 }
 
@@ -373,14 +466,14 @@ export async function savePlannedSessions(
   tableId: string,
   plan: GenerateStudyTableResult['sessions']
 ) {
-  if (!plan.length) return;
+  if (!plan.length) return [];
   const dates = [...new Set(plan.map(({ date }) => date))];
   const days = await tx.studyDay.findMany({
     where: { studyTableId: tableId, date: { in: dates.map(dayDate) } },
     select: { id: true, date: true },
   });
   const dayMap = new Map(days.map((day) => [dateKey(day.date), day.id]));
-  await tx.studySession.createMany({
+  const created = await tx.studySession.createManyAndReturn({
     data: plan.map((session) => {
       const dayId = dayMap.get(session.date);
       if (!dayId) throw new BadRequestError('تعذر إنشاء يوم الجلسة');
@@ -393,36 +486,17 @@ export async function savePlannedSessions(
         order: session.order,
       };
     }),
+    select: { id: true, dayId: true, subjectId: true, lessonId: true, order: true },
+  });
+  const dateByDayId = new Map(days.map((day) => [day.id, dateKey(day.date)]));
+  return created.map((session) => {
+    const date = dateByDayId.get(session.dayId);
+    if (!date) throw new BadRequestError('تعذر إنشاء يوم الجلسة');
+    return { ...session, date };
   });
 }
 
-export type GenerateStudyTableResult = ReturnType<typeof generateStudySessions>;
-
-export async function reorderDay(tx: Transaction, dayId: string, sessionId: string, order: number) {
-  const sessions = await tx.studySession.findMany({
-    where: { dayId },
-    orderBy: [{ order: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
-    select: { id: true },
-  });
-  const reordered = sessions.filter((session) => session.id !== sessionId);
-  reordered.splice(Math.min(order, reordered.length), 0, { id: sessionId });
-  await Promise.all(
-    reordered.map((session, index) =>
-      tx.studySession.update({ where: { id: session.id }, data: { order: index } })
-    )
-  );
-}
-
-export async function reindexDay(tx: Transaction, dayId: string) {
-  const sessions = await tx.studySession.findMany({
-    where: { dayId },
-    orderBy: [{ order: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
-    select: { id: true },
-  });
-  await Promise.all(
-    sessions.map(({ id }, order) => tx.studySession.update({ where: { id }, data: { order } }))
-  );
-}
+export type GenerateStudyTableResult = GeneratorResult;
 
 export function percentage(value: number, total: number) {
   return total ? Math.round((value / total) * 100) : 0;

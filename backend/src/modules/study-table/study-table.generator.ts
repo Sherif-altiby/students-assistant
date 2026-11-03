@@ -29,16 +29,22 @@ function compareOrder<T extends { order: number; id: string }>(a: T, b: T): numb
 /** Round-robin across subjects; each subject keeps its syllabus order. */
 function takeRoundRobin(
   queues: Array<{ subjectId: string; lessons: GeneratorLessonRef[] }>,
-  count: number,
+  count: number
 ): QueuedLesson[] {
   const result: QueuedLesson[] = [];
-  const pending = queues.map((queue) => ({ ...queue, lessons: queue.lessons.slice() }));
+  const positions = queues.map(() => 0);
+  let remaining = queues.reduce((total, queue) => total + queue.lessons.length, 0);
   let index = 0;
-  while (result.length < count && pending.some((queue) => queue.lessons.length)) {
-    const queue = pending[index % pending.length]!;
+  while (result.length < count && remaining > 0) {
+    const queueIndex = index % queues.length;
     index += 1;
-    const lesson = queue.lessons.shift();
-    if (lesson) result.push({ subjectId: queue.subjectId, lesson, isReview: false });
+    const queue = queues[queueIndex];
+    if (!queue) continue;
+    const lesson = queue.lessons[positions[queueIndex] ?? 0];
+    if (!lesson) continue;
+    positions[queueIndex] = (positions[queueIndex] ?? 0) + 1;
+    remaining -= 1;
+    result.push({ subjectId: queue.subjectId, lesson, isReview: false });
   }
   return result;
 }
@@ -46,20 +52,24 @@ function takeRoundRobin(
 /** Round-robin across subjects, cycling each subject's list so it never runs out. */
 function takeCyclic(
   queues: Array<{ subjectId: string; lessons: GeneratorLessonRef[] }>,
-  count: number,
+  count: number
 ): QueuedLesson[] {
   const usable = queues.filter((queue) => queue.lessons.length > 0);
   const result: QueuedLesson[] = [];
   const cursor = new Map(usable.map((queue) => [queue.subjectId, 0]));
   let index = 0;
   while (usable.length && result.length < count) {
-    const queue = usable[index % usable.length]!;
+    const queue = usable[index % usable.length];
     index += 1;
-    const position = cursor.get(queue.subjectId)!;
+    if (!queue) break;
+    const position = cursor.get(queue.subjectId);
+    if (position === undefined) throw new Error('Review queue cursor is missing');
     cursor.set(queue.subjectId, position + 1);
+    const lesson = queue.lessons[position % queue.lessons.length];
+    if (!lesson) throw new Error('Review queue lesson is missing');
     result.push({
       subjectId: queue.subjectId,
-      lesson: queue.lessons[position % queue.lessons.length]!,
+      lesson,
       isReview: true,
     });
   }
@@ -128,12 +138,14 @@ export function generateStudySessions(input: GeneratorInput): GeneratorResult {
   const sessions: GeneratorResult['sessions'] = [];
   let lessonIndex = 0;
   for (let dayIndex = 0; dayIndex < dayTotal; dayIndex += 1) {
-    for (let order = 0; order < dayCounts[dayIndex]!; order += 1) {
-      const item = queued[lessonIndex++]!;
+    for (let order = 0; order < (dayCounts[dayIndex] ?? 0); order += 1) {
+      const item = queued[lessonIndex++];
+      const date = eligibleDates[dayIndex];
+      if (!item || !date) throw new Error('Generated session plan is incomplete');
       sessions.push({
         subjectId: item.subjectId,
         lessonId: item.lesson.id,
-        date: eligibleDates[dayIndex]!,
+        date,
         order,
         ...(item.isReview ? { isReview: true } : {}),
       });
@@ -153,25 +165,25 @@ export function generateStudySessions(input: GeneratorInput): GeneratorResult {
     selectedSubjectsCount: input.subjects.length,
     capacity,
     unscheduledLessonsCount,
-    remainingLessonCount: unscheduledLessonsCount,
-    suggestions: totalLessons === 0
-      ? [{ code: 'NO_LESSONS', message: 'لا توجد دروس متاحة للجدولة' }]
-      : pendingCount === 0 && scheduledCount === 0
-      ? [{ code: 'ALL_LESSONS_COMPLETED', message: 'كل دروس المواد المختارة مكتملة' }]
-      : unscheduledLessonsCount > 0
-      ? [
-        { code: 'INCREASE_DAILY_CAPACITY', message: 'زد الحد الأقصى للجلسات اليومية' },
-        { code: 'ADD_STUDY_DAYS', message: 'أضف أياماً أخرى للمذاكرة' },
-        { code: 'EXTEND_DATE_RANGE', message: 'مدد نطاق تاريخ الجدول' },
-      ]
-      : [],
+    suggestions:
+      totalLessons === 0
+        ? [{ code: 'NO_LESSONS', message: 'لا توجد دروس متاحة للجدولة' }]
+        : pendingCount === 0 && scheduledCount === 0
+          ? [{ code: 'ALL_LESSONS_COMPLETED', message: 'كل دروس المواد المختارة مكتملة' }]
+          : unscheduledLessonsCount > 0
+            ? [
+                { code: 'INCREASE_DAILY_CAPACITY', message: 'زد الحد الأقصى للجلسات اليومية' },
+                { code: 'ADD_STUDY_DAYS', message: 'أضف أياماً أخرى للمذاكرة' },
+                { code: 'EXTEND_DATE_RANGE', message: 'مدد نطاق تاريخ الجدول' },
+              ]
+            : [],
   };
 }
 
 export function groupGlobalPlan<TSession extends { date: string; order: number }>(
   startDate: string,
   endDate: string,
-  sessions: TSession[],
+  sessions: TSession[]
 ): PlannedMonth<TSession>[] {
   const sessionByDate = new Map<string, TSession[]>();
   for (const session of sessions) {
@@ -207,8 +219,8 @@ export function groupGlobalPlan<TSession extends { date: string; order: number }
     }
     const plannedWeeks: PlannedWeek<TSession>[] = [...weeks.entries()].map(([week, weekDays]) => ({
       week,
-      startDate: weekDays[0]!.date,
-      endDate: weekDays[weekDays.length - 1]!.date,
+      startDate: weekDays[0]?.date ?? throwEmptyWeek(),
+      endDate: weekDays.at(-1)?.date ?? throwEmptyWeek(),
       days: weekDays,
     }));
     return {
@@ -221,4 +233,8 @@ export function groupGlobalPlan<TSession extends { date: string; order: number }
       weeks: plannedWeeks,
     };
   });
+}
+
+function throwEmptyWeek(): never {
+  throw new Error('Cannot group an empty global-plan week');
 }

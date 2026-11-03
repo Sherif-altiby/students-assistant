@@ -1,110 +1,142 @@
 import { Request, Response } from 'express';
-import { StatusCodes } from 'http-status-codes'; 
+import { StatusCodes } from 'http-status-codes';
+import { getValidatedRequest } from '../../middlewares/validate';
+import { UnauthorizedError } from '../../utils/AppError';
 import { asyncHandler } from '../../utils/asyncHandler';
+import {
+  availableMonthsSchema,
+  completeSessionSchema,
+  createSessionSchema,
+  createStudyTableSchema,
+  daySessionsSchema,
+  generateStudyTableSchema,
+  listStudyTablesSchema,
+  sessionIdSchema,
+  tableIdSchema,
+  updateSessionSchema,
+  updateStudyTableSchema,
+} from './study-table.schema';
 import { studyTableService } from './study-table.service';
+
+function authenticatedUserId(req: Request): string {
+  if (!req.user) throw new UnauthorizedError();
+  return req.user.id;
+}
 
 export const studyTableController = {
   create: asyncHandler(async (req: Request, res: Response) => {
-    const table = await studyTableService.create(req.user!.id, req.body);
+    const { body } = getValidatedRequest(req, createStudyTableSchema);
+    const table = await studyTableService.create(authenticatedUserId(req), body);
     res.status(StatusCodes.CREATED).json({ status: 'success', data: table });
   }),
 
   generate: asyncHandler(async (req: Request, res: Response) => {
+    const { body, query } = getValidatedRequest(req, generateStudyTableSchema);
     const result = await studyTableService.generate(
-      req.user!.id,
-      req.body,
-      req.query.preview === 'true'
+      authenticatedUserId(req),
+      body,
+      query.preview === 'true'
     );
-    res.status(req.query.preview === 'true' ? StatusCodes.OK : StatusCodes.CREATED)
+    res
+      .status(query.preview === 'true' ? StatusCodes.OK : StatusCodes.CREATED)
       .json({ status: 'success', data: result });
   }),
 
   availableMonths: asyncHandler(async (req: Request, res: Response) => {
+    const { query } = getValidatedRequest(req, availableMonthsSchema);
     const result = await studyTableService.getAvailableMonths(
-      req.user!.id,
-      Number(req.query.count ?? 12),
+      authenticatedUserId(req),
+      query.count
     );
     res.status(StatusCodes.OK).json({ status: 'success', data: result });
   }),
 
   getAll: asyncHandler(async (req: Request, res: Response) => {
-    const tables = await studyTableService.getMyTables(req.user!.id, {
-      page: Number(req.query.page ?? 1),
-      limit: Number(req.query.limit ?? 10),
-      search: typeof req.query.search === 'string' ? req.query.search : undefined,
-    });
+    const { query } = getValidatedRequest(req, listStudyTablesSchema);
+    const tables = await studyTableService.getMyTables(authenticatedUserId(req), query);
     res.status(StatusCodes.OK).json({ status: 'success', data: tables });
   }),
 
   getOne: asyncHandler(async (req: Request, res: Response) => {
-    const table = await studyTableService.getById(req.user!.id, req.params.id as string);
+    const { params } = getValidatedRequest(req, tableIdSchema);
+    const table = await studyTableService.getById(authenticatedUserId(req), params.id);
     res.status(StatusCodes.OK).json({ status: 'success', data: table });
   }),
 
   update: asyncHandler(async (req: Request, res: Response) => {
-    const table = await studyTableService.update(req.user!.id, req.params.id as string, req.body);
+    const { params, body } = getValidatedRequest(req, updateStudyTableSchema);
+    const table = await studyTableService.update(authenticatedUserId(req), params.id, body);
     res.status(StatusCodes.OK).json({ status: 'success', data: table });
   }),
 
   delete: asyncHandler(async (req: Request, res: Response) => {
-    await studyTableService.delete(req.user!.id, req.params.id as string);
+    const { params } = getValidatedRequest(req, tableIdSchema);
+    await studyTableService.delete(authenticatedUserId(req), params.id);
     res.status(StatusCodes.NO_CONTENT).send();
   }),
 
   conflicts: asyncHandler(async (req: Request, res: Response) => {
-    const conflicts = await studyTableService.getConflicts(req.user!.id);
+    const conflicts = await studyTableService.getConflicts(authenticatedUserId(req));
     res.status(StatusCodes.OK).json({ status: 'success', data: conflicts });
   }),
 
   createSession: asyncHandler(async (req: Request, res: Response) => {
+    const { params, body } = getValidatedRequest(req, createSessionSchema);
     const session = await studyTableService.createSession(
-      req.user!.id,
-      req.params.id as string,
-      req.body
+      authenticatedUserId(req),
+      params.id,
+      body
     );
     res.status(StatusCodes.CREATED).json({ status: 'success', data: session });
   }),
 
   updateSession: asyncHandler(async (req: Request, res: Response) => {
+    const { params, body } = getValidatedRequest(req, updateSessionSchema);
     const session = await studyTableService.updateSession(
-      req.user!.id,
-      req.params.id as string,
-      req.body
+      authenticatedUserId(req),
+      params.id,
+      body
     );
     res.status(StatusCodes.OK).json({ status: 'success', data: session });
   }),
 
   deleteSession: asyncHandler(async (req: Request, res: Response) => {
-    await studyTableService.deleteSession(req.user!.id, req.params.id as string);
+    const { params } = getValidatedRequest(req, sessionIdSchema);
+    await studyTableService.deleteSession(authenticatedUserId(req), params.id);
     res.status(StatusCodes.NO_CONTENT).send();
   }),
 
   replaceDaySessions: asyncHandler(async (req: Request, res: Response) => {
+    const { params, body } = getValidatedRequest(req, daySessionsSchema);
     const sessions = await studyTableService.replaceDaySessions(
-      req.user!.id,
-      req.params.dayId as string,
-      req.body.sessions
+      authenticatedUserId(req),
+      params.dayId,
+      body.sessions
     );
     res.status(StatusCodes.OK).json({ status: 'success', data: sessions });
   }),
 
-  completeSession: (completed: boolean) => asyncHandler(async (req: Request, res: Response) => {
-    const result = await studyTableService.completeSession(
-      req.user!.id,
-      req.params.id as string,
-      completed
-    );
-    res.status(StatusCodes.OK).json({ status: 'success', data: result });
-  }),
+  completeSession: (completed: boolean) =>
+    asyncHandler(async (req: Request, res: Response) => {
+      const { params } = getValidatedRequest(req, completeSessionSchema);
+      const result = await studyTableService.completeSession(
+        authenticatedUserId(req),
+        params.id,
+        completed
+      );
+      res.status(StatusCodes.OK).json({ status: 'success', data: result });
+    }),
 
   progress: asyncHandler(async (req: Request, res: Response) => {
-    const progress = await studyTableService.getProgress(req.user!.id, req.params.id as string);
+    const { params } = getValidatedRequest(req, tableIdSchema);
+    const progress = await studyTableService.getProgress(authenticatedUserId(req), params.id);
     res.status(StatusCodes.OK).json({ status: 'success', data: progress });
   }),
 
   generatePDF: asyncHandler(async (req: Request, res: Response) => {
-    const pdfBuffer = await studyTableService.generatePDF(req.user!.id, req.params.id as string);
-    const filename = `study-table-${req.params.id}.pdf`;
+    const { params } = getValidatedRequest(req, tableIdSchema);
+    const pdfBuffer = await studyTableService.generatePDF(authenticatedUserId(req), params.id);
+    const filename = `study-table-${params.id}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',

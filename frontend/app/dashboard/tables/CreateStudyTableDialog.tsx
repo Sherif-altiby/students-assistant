@@ -6,7 +6,9 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CustomSelect } from "@/components/ui/CustomSelect";
+import { FormInput } from "@/components/FormInput";
+import { FormCustomSelect } from "@/components/FormCustomSelect";
+import { FormDatePicker } from "@/components/FormDatePicker";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +17,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  STUDY_TABLE_CREATION_MODE_OPTIONS,
+  STUDY_TABLE_TYPE_OPTIONS,
+} from "@/constants/study-table";
 import { listAvailableStudyMonths, listStudySubjects } from "@/lib/study-table";
 import type {
   GenerateStudyTableInput,
@@ -186,6 +192,13 @@ export function CreateStudyTableDialog({
         : "لا توجد أشهر متاحة لإنشاء الجدول");
       return false;
     }
+    if (
+      type !== "MONTHLY" &&
+      (!startDate || (type !== "WEEKLY" && (!endDate || endDate < startDate)))
+    ) {
+      toast.error("تحقق من تاريخ بداية ونهاية الجدول");
+      return false;
+    }
     if (studyWeekdays.length === 0 && mode === "generate") {
       toast.error("اختر يوماً واحداً على الأقل للمذاكرة");
       return false;
@@ -242,40 +255,34 @@ export function CreateStudyTableDialog({
         <DialogHeader><DialogTitle className="text-center text-xl font-bold">إنشاء جدول مذاكرة</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-3">
-            <label className="space-y-2 text-sm font-medium">
-              عنوان الجدول
-              <Input value={title} maxLength={255} required onChange={(event) => { setTitle(event.target.value); invalidatePreview(); }} />
-            </label>
-            <label className="space-y-2 text-sm font-medium">
-              نوع الجدول
-              <CustomSelect
-                value={type}
-                onChange={(value) => {
-                  setType(value as StudyTableType);
-                  invalidatePreview();
-                }}
-                options={[
-                  { value: "WEEKLY", label: "أسبوعي" },
-                  { value: "MONTHLY", label: "شهري" },
-                  { value: "CUSTOM", label: "فترة مخصصة" },
-                  { value: "GLOBAL", label: "خطة شاملة" },
-                ]}
-              />
-            </label>
-            <label className="space-y-2 text-sm font-medium">
-              طريقة الإنشاء
-              <CustomSelect
-                value={mode}
-                onChange={(value) => {
-                  setMode(value as typeof mode);
-                  invalidatePreview();
-                }}
-                options={[
-                  { value: "generate", label: "توليد الجلسات تلقائياً" },
-                  { value: "empty", label: "إنشاء جدول فارغ" },
-                ]}
-              />
-            </label>
+            <FormInput
+              label="عنوان الجدول"
+              value={title}
+              maxLength={255}
+              required
+              onChange={(event) => {
+                setTitle(event.target.value);
+                invalidatePreview();
+              }}
+            />
+            <FormCustomSelect
+              label="نوع الجدول"
+              value={type}
+              onChange={(value) => {
+                setType(value);
+                invalidatePreview();
+              }}
+              options={STUDY_TABLE_TYPE_OPTIONS}
+            />
+            <FormCustomSelect
+              label="طريقة الإنشاء"
+              value={mode}
+              onChange={(value) => {
+                setMode(value);
+                invalidatePreview();
+              }}
+              options={STUDY_TABLE_CREATION_MODE_OPTIONS}
+            />
           </div>
 
           {type === "MONTHLY" ? (
@@ -304,12 +311,29 @@ export function CreateStudyTableDialog({
             </div>
           ) : (
             <div className={`grid gap-3 ${type === "WEEKLY" ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
-              <label className="space-y-2 text-sm font-medium">تاريخ البداية
-                <Input type="date" required value={startDate} onChange={(event) => { setStartDate(event.target.value); invalidatePreview(); }} />
-              </label>
-              {type !== "WEEKLY" && <label className="space-y-2 text-sm font-medium">تاريخ النهاية
-                <Input type="date" required min={startDate} value={endDate} onChange={(event) => { setEndDate(event.target.value); invalidatePreview(); }} />
-              </label>}
+            
+              <FormDatePicker
+                label="تاريخ البداية"
+                value={startDate}
+                required
+                onChange={(value) => {
+                  setStartDate(value);
+                  if (endDate < value) setEndDate(value);
+                  invalidatePreview();
+                }}
+              />
+              {type !== "WEEKLY" && (
+                <FormDatePicker
+                  label="تاريخ النهاية"
+                  value={endDate}
+                  minDate={startDate}
+                  required
+                  onChange={(value) => {
+                    setEndDate(value);
+                    invalidatePreview();
+                  }}
+                />
+              )}
             </div>
           )}
 
