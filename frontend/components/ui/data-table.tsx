@@ -20,11 +20,11 @@ import {
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  getPaginationPages,
 } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 
@@ -48,18 +48,6 @@ interface DataTableProps<T> {
   noResultsMessage?: string;
   title?: React.ReactNode;
   className?: string;
-}
-
-function getPageList(current: number, total: number): (number | "ellipsis")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const pages: (number | "ellipsis")[] = [1];
-  if (current > 3) pages.push("ellipsis");
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-  for (let p = start; p <= end; p++) pages.push(p);
-  if (current < total - 2) pages.push("ellipsis");
-  pages.push(total);
-  return pages;
 }
 
 interface DataTableProps<T> {
@@ -219,32 +207,26 @@ export function DataTable<T>({
                 />
               </PaginationItem>
 
-              {getPageList(page, totalPages).map((p, i) =>
-                p === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${i}`}>
-                    <PaginationEllipsis className="text-[#71767b]" />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={p}>
-                    <PaginationLink
-                      href="#"
-                      isActive={p === page}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        goToPage(p);
-                      }}
-                      className={cn(
-                        "rounded-full text-sm font-medium transition-all",
-                        p === page
-                          ? "bg-[#1d9bf0] text-white hover:bg-[#1a8cd8]"
-                          : "text-[#0f1419] hover:bg-[#eff3f4]",
-                      )}
-                    >
-                      {p}
-                    </PaginationLink>
-                  </PaginationItem>
-                ),
-              )}
+              {getPaginationPages(page, totalPages).map((p) => (
+                <PaginationItem key={p}>
+                  <PaginationLink
+                    href="#"
+                    isActive={p === page}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      goToPage(p);
+                    }}
+                    className={cn(
+                      "rounded-full text-sm font-medium transition-all",
+                      p === page
+                        ? "bg-[#1d9bf0] text-white hover:bg-[#1a8cd8]"
+                        : "text-[#0f1419] hover:bg-[#eff3f4]",
+                    )}
+                  >
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
 
               <PaginationItem>
                 <PaginationNext

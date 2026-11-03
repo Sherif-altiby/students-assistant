@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { CalendarDays, History, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  getPaginationPages,
 } from "@/components/ui/pagination";
 import type { Habit, HabitHistoryDay } from "@/types/habit"; // adjust path
 
@@ -60,6 +62,21 @@ export function HabitHistory({
   isFetching = false,
   isError = false,
 }: HabitHistoryProps) {
+  const [expandedDates, setExpandedDates] = useState<string[]>([]);
+
+  useEffect(() => {
+    setExpandedDates((current) => {
+      const availableDates = history.map((day) => day.date);
+      const retainedDates = current.filter((date) =>
+        availableDates.includes(date),
+      );
+
+      return retainedDates.length > 0
+        ? retainedDates
+        : availableDates.slice(0, 1);
+    });
+  }, [history]);
+
   return (
     <Card className="rounded-2xl">
       <CardHeader className="flex-row items-center gap-2 space-y-0">
@@ -91,7 +108,8 @@ export function HabitHistory({
         ) : (
           <Accordion
             dir="rtl"
-            defaultValue={[history[0]?.date]}
+            value={expandedDates}
+            onValueChange={(value) => setExpandedDates(value)}
             className="space-y-3"
           >
             {history.map((day) => {
@@ -167,7 +185,7 @@ export function HabitHistory({
         )}
 
         {totalPages > 1 && (
-          <Pagination className="justify-between">
+          <Pagination>
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
@@ -180,20 +198,17 @@ export function HabitHistory({
                 />
               </PaginationItem>
 
-              {Array.from({ length: totalPages }).map((_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      isActive={pageNum === page}
-                      onClick={() => onPageChange(pageNum)}
-                      className="cursor-pointer"
-                    >
-                      {pageNum}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
+              {getPaginationPages(page, totalPages).map((pageNum) => (
+                <PaginationItem key={pageNum}>
+                  <PaginationLink
+                    isActive={pageNum === page}
+                    onClick={() => onPageChange(pageNum)}
+                    className="cursor-pointer"
+                  >
+                    {pageNum}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
 
               <PaginationItem>
                 <PaginationNext

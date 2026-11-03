@@ -38,16 +38,41 @@ function dateKey(value: PdfDate): string {
   return value.toISOString().slice(0, 10);
 }
 
+function utcDate(value: PdfDate): Date {
+  return new Date(`${dateKey(value)}T00:00:00.000Z`);
+}
+
 function dateLabel(value: PdfDate): string {
-  const date = new Date(`${dateKey(value)}T00:00:00.000Z`);
   return new Intl.DateTimeFormat('ar-EG', {
     timeZone: 'UTC',
     weekday: 'long',
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  }).format(date);
+  }).format(utcDate(value));
 }
+
+function shortDateLabel(value: PdfDate): string {
+  return new Intl.DateTimeFormat('ar-EG', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(utcDate(value));
+}
+
+function dayParts(value: PdfDate) {
+  const date = utcDate(value);
+  const format = (options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat('ar-EG', { ...options, timeZone: 'UTC' }).format(date);
+  return {
+    weekday: format({ weekday: 'long' }),
+    day: format({ day: 'numeric' }),
+    month: format({ month: 'long' }),
+  };
+}
+
+const formatNumber = (value: number) => new Intl.NumberFormat('ar-EG').format(value);
 
 const escapeHtml = (value: unknown) => String(value ?? '')
   .replace(/&/g, '&amp;')
@@ -55,6 +80,14 @@ const escapeHtml = (value: unknown) => String(value ?? '')
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
+
+/** Stable color per subject so the same subject is recognisable across the whole document. */
+function subjectPill(title: string): string {
+  let hash = 0;
+  for (const char of title) hash = (hash * 31 + char.charCodeAt(0)) % 360;
+  const style = `background:hsl(${hash} 70% 94%);color:hsl(${hash} 55% 26%);border-color:hsl(${hash} 55% 82%)`;
+  return `<span class="subject" style="${style}">${escapeHtml(title)}</span>`;
+}
 
 function loadFonts(): { regular: string; bold: string } {
   if (cachedFonts) return cachedFonts;
@@ -72,20 +105,37 @@ function loadFonts(): { regular: string; bold: string } {
   return cachedFonts;
 }
 
+function dayCell(date: PdfDate, rowSpan: number): string {
+  const parts = dayParts(date);
+  return `<th class="day" rowspan="${rowSpan}" scope="rowgroup">
+    <div class="daybox">
+      <span class="num">${escapeHtml(parts.day)}</span>
+      <span class="daymeta"><b>${escapeHtml(parts.weekday)}</b><small>${escapeHtml(parts.month)}</small></span>
+    </div>
+  </th>`;
+}
+
+const tickBox = '<td class="achievement"><span class="box"></span></td>';
+
+/** One <tbody> per day so a day is never split across two pages. */
 function buildStandardRows(days: PdfDay[]): string {
-  return days.map((day) => {
+  return days.map((day, dayIndex) => {
     const sessions = [...day.sessions].sort((a, b) => a.order - b.order);
+    const tone = dayIndex % 2 === 1 ? 'alt' : '';
+
     if (sessions.length === 0) {
-      return `<tr><th>${escapeHtml(dateLabel(day.date))}</th><td colspan="4">لا توجد جلسات</td></tr>`;
+      return `<tbody class="${tone}"><tr>${dayCell(day.date, 1)}<td colspan="4" class="empty">لا توجد جلسات في هذا اليوم</td></tr></tbody>`;
     }
-    return sessions.map((session, index) => `
+
+    const rows = sessions.map((session, index) => `
       <tr>
-        ${index === 0 ? `<th rowspan="${sessions.length}">${escapeHtml(dateLabel(day.date))}</th>` : ''}
-        <td><span class="subject">${escapeHtml(session.subject.title)}</span></td>
-        <td>${escapeHtml(session.lesson.unit.title)}</td>
-        <td>${escapeHtml(session.lesson.title)}</td>
-        <td class="achievement">&nbsp;</td>
+        ${index === 0 ? dayCell(day.date, sessions.length) : ''}
+        <td>${subjectPill(session.subject.title)}</td>
+        <td class="unit">${escapeHtml(session.lesson.unit.title)}</td>
+        <td class="lesson">${escapeHtml(session.lesson.title)}</td>
+        ${tickBox}
       </tr>`).join('');
+    return `<tbody class="${tone}">${rows}</tbody>`;
   }).join('');
 }
 
@@ -115,6 +165,7 @@ function buildGlobalSections(days: PdfDay[]): string {
       year: 'numeric',
       timeZone: 'UTC',
     }).format(new Date(Date.UTC(year!, monthNumber! - 1, 1)));
+
     const weekRows = [...weeks.entries()].sort(([a], [b]) => a.localeCompare(b))
       .map(([, weekDays], index) => {
         const sessions = weekDays.flatMap((day) => day.sessions);
@@ -130,20 +181,41 @@ function buildGlobalSections(days: PdfDay[]): string {
           const lessonRange = lessons.length > 1
             ? `${lessons[0]} — ${lessons[lessons.length - 1]}`
             : lessons[0];
-          return `${unitTitle}: ${lessonRange}`;
+          return `<div class="unitline"><b>${escapeHtml(unitTitle)}</b><span>${escapeHtml(lessonRange)}</span></div>`;
         });
+        const first = weekDays[0]!.date;
+        const last = weekDays[weekDays.length - 1]!.date;
+        const rangeLabel = weekDays.length > 1
+          ? `${shortDateLabel(first)} — ${shortDateLabel(last)}`
+          : shortDateLabel(first);
+
         return `<tr>
-          <th>الأسبوع ${index + 1}</th>
-          <td>${weekDays.map(({ date }) => escapeHtml(dateLabel(date))).join('<br>')}</td>
-          <td>${subjects.map((subject) => `<span class="subject">${escapeHtml(subject)}</span>`).join('<br>') || '—'}</td>
-          <td>${units.map(escapeHtml).join('<br>') || '—'}</td>
-          <td class="achievement">&nbsp;</td>
+          <th class="week"><span class="weeknum">${escapeHtml(formatNumber(index + 1))}</span><small>الأسبوع</small></th>
+          <td class="range-cell">${escapeHtml(rangeLabel)}<div class="daycount">${escapeHtml(formatNumber(weekDays.length))} أيام</div></td>
+          <td>${subjects.map(subjectPill).join('') || '—'}</td>
+          <td>${units.join('') || '—'}</td>
+          ${tickBox}
         </tr>`;
       }).join('');
+
     return `<section class="month"><h2>${escapeHtml(monthName)}</h2>
-      <table class="global"><thead><tr><th>الأسبوع</th><th>الأيام</th><th>المواد</th><th>الوحدات والدروس</th><th>الإنجاز</th></tr></thead>
+      <table class="global"><thead><tr><th>الأسبوع</th><th>الفترة</th><th>المواد</th><th>الوحدات والدروس</th><th>الإنجاز</th></tr></thead>
       <tbody>${weekRows}</tbody></table></section>`;
   }).join('');
+}
+
+function buildStats(data: StudyTablePdfData): string {
+  const studyDays = data.days.filter((day) => day.sessions.length > 0).length;
+  const sessions = data.days.flatMap((day) => day.sessions);
+  const subjects = new Set(sessions.map(({ subject }) => subject.title)).size;
+  const items = [
+    { value: studyDays, label: 'يوم دراسة' },
+    { value: sessions.length, label: 'جلسة' },
+    { value: subjects, label: 'مادة' },
+  ];
+  return items
+    .map(({ value, label }) => `<div class="stat"><b>${escapeHtml(formatNumber(value))}</b><span>${label}</span></div>`)
+    .join('');
 }
 
 function buildHtml(data: StudyTablePdfData): string {
@@ -151,41 +223,73 @@ function buildHtml(data: StudyTablePdfData): string {
   const body = data.type === StudyTableType.GLOBAL
     ? buildGlobalSections(data.days)
     : `<table class="standard"><thead><tr><th>اليوم</th><th>المادة</th><th>الوحدة</th><th>الدرس</th><th>الإنجاز</th></tr></thead>
-       <tbody>${buildStandardRows(data.days)}</tbody></table>`;
+       ${buildStandardRows(data.days)}</table>`;
 
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
     @font-face { font-family:Naskh; src:url(data:font/ttf;base64,${fonts.regular}) format('truetype'); font-weight:400; }
     @font-face { font-family:Naskh; src:url(data:font/ttf;base64,${fonts.bold}) format('truetype'); font-weight:700; }
-    @page { size:A4; margin:7mm 8mm; }
+    @page { size:A4; }
+    :root { --ink:#0f172a; --muted:#64748b; --accent:#3730a3; --accent-soft:#eef2ff; --line:#dfe4f3; --line-strong:#b9c3ec; }
     * { box-sizing:border-box; }
-    body { margin:0; font-family:Naskh,sans-serif; color:#172554; font-size:10.5pt; line-height:1.45; }
-    header { position:relative; overflow:hidden; background:linear-gradient(115deg,#172554 0%,#3730a3 55%,#7c3aed 100%); color:white; padding:11px 16px; border-radius:10px; margin-bottom:10px; box-shadow:0 3px 10px #312e8130; }
-    header:after { content:""; position:absolute; left:-18px; top:-38px; width:115px; height:115px; border:18px solid #ffffff20; border-radius:50%; }
-    h1 { font-size:18pt; margin:0; letter-spacing:.1px; }
-    h2 { font-size:13pt; color:#3730a3; margin:9px 0 5px; padding:5px 9px; border-right:4px solid #8b5cf6; background:#f5f3ff; border-radius:0 5px 5px 0; }
-    .range { margin-top:3px; color:#e0e7ff; font-size:9.5pt; }
-    table { width:100%; border-collapse:separate; border-spacing:0; margin-bottom:9px; border:1px solid #c7d2fe; border-radius:7px; overflow:hidden; }
+    body { margin:0; font-family:Naskh,sans-serif; color:var(--ink); font-size:10.5pt; line-height:1.5; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+    /* Header */
+    header { display:flex; align-items:stretch; justify-content:space-between; gap:18px; padding:12px 16px; margin-bottom:14px; background:var(--accent-soft); border-right:6px solid var(--accent); border-radius:6px; }
+    .titles { min-width:0; align-self:center; }
+    h1 { margin:0; font-size:20pt; line-height:1.3; color:var(--accent); overflow-wrap:anywhere; }
+    .range { margin-top:2px; color:var(--muted); font-size:10pt; }
+    .stats { display:flex; align-items:center; gap:0; flex-shrink:0; }
+    .stat { display:flex; flex-direction:column; align-items:center; min-width:62px; padding:0 14px; border-right:1px solid var(--line-strong); }
+    .stat:first-child { border-right:0; }
+    .stat b { font-size:16pt; line-height:1.2; color:var(--ink); }
+    .stat span { font-size:9pt; color:var(--muted); }
+
+    /* Tables */
+    table { width:100%; border-collapse:collapse; margin-bottom:10px; }
     thead { display:table-header-group; }
-    tfoot { display:table-footer-group; }
+    thead th { padding:7px 10px; text-align:right; font-size:9.5pt; font-weight:700; color:var(--accent); background:#fff; border-bottom:2px solid var(--accent); }
     tr { break-inside:avoid; page-break-inside:avoid; }
-    th,td { border-left:1px solid #e0e7ff; border-bottom:1px solid #e0e7ff; padding:6px 8px; text-align:right; vertical-align:top; }
-    thead th { background:linear-gradient(110deg,#312e81,#4f46e5); color:white; padding:7px 8px; font-size:10pt; }
-    tbody tr:nth-child(even) { background:#f5f7ff; }
-    tbody tr:nth-child(odd) { background:#fff; }
-    tbody tr:last-child th, tbody tr:last-child td { border-bottom:0; }
-    th:first-child, td:first-child { border-right:0; }
-    .standard th:first-child { width:19%; color:#3730a3; background:#eef2ff; }
-    .standard th:not(:first-child) { font-weight:700; }
-    .standard td:nth-child(2) { color:#4338ca; font-weight:700; }
-    .subject { display:inline-block; padding:1px 7px; border-radius:999px; background:#ede9fe; color:#5b21b6; font-size:9.5pt; }
-    .achievement { width:15%; min-width:90px; background:#fff; }
-    .standard .achievement { height:34px; }
-    .global td:nth-child(2) { color:#4338ca; }
-    .global td:nth-child(4) { line-height:1.65; }
-    h2 { break-after:avoid-page; }
+    tbody { break-inside:avoid; page-break-inside:avoid; }
+    th, td { padding:7px 10px; text-align:right; vertical-align:middle; border-bottom:1px solid var(--line); }
+    tbody tr:first-child > * { border-top:1.5px solid var(--line-strong); }
+    tbody.alt td, tbody.alt th.day { background:#f8f9fe; }
+    tbody:last-of-type tr:last-child > * { border-bottom:1.5px solid var(--line-strong); }
+
+    /* Day cell */
+    th.day { width:21%; vertical-align:top; padding-top:9px; border-left:1px solid var(--line); background:#fff; }
+    .daybox { display:flex; align-items:center; gap:10px; }
+    .num { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px; background:var(--accent); color:#fff; font-size:13pt; font-weight:700; line-height:1; flex-shrink:0; }
+    .daymeta { display:flex; flex-direction:column; line-height:1.35; }
+    .daymeta b { font-size:10.5pt; color:var(--ink); }
+    .daymeta small { font-size:9pt; color:var(--muted); }
+
+    /* Cells */
+    .subject { display:inline-block; margin:1px 0 1px 4px; padding:1px 9px; border:1px solid; border-radius:999px; font-size:9.5pt; font-weight:700; white-space:nowrap; }
+    .unit { color:var(--muted); font-size:10pt; }
+    .lesson { font-weight:700; }
+    .empty { color:var(--muted); font-size:10pt; }
+    .achievement { width:11%; text-align:center; }
+    .box { display:inline-block; width:17px; height:17px; border:1.6px solid #94a3b8; border-radius:4px; background:#fff; vertical-align:middle; }
+
+    /* Global plan */
+    .month { margin-bottom:6px; }
+    h2 { margin:14px 0 6px; padding:0 10px 0 0; font-size:14pt; color:var(--accent); border-right:4px solid var(--accent); line-height:1.3; break-after:avoid-page; page-break-after:avoid; }
+    th.week { width:11%; text-align:center; background:#fff; border-left:1px solid var(--line); }
+    .weeknum { display:block; font-size:15pt; font-weight:700; line-height:1.2; color:var(--accent); }
+    th.week small { font-size:8.5pt; color:var(--muted); font-weight:400; }
+    .global tbody tr:nth-child(even) td, .global tbody tr:nth-child(even) th.week { background:#f8f9fe; }
+    .range-cell { width:20%; font-size:10pt; }
+    .daycount { color:var(--muted); font-size:9pt; }
+    .unitline { display:flex; flex-direction:column; margin-bottom:3px; line-height:1.55; }
+    .unitline b { font-size:10pt; }
+    .unitline span { color:var(--muted); font-size:9.5pt; }
   </style></head><body>
-    <header><h1>${escapeHtml(data.title)}</h1>
-      <div class="range">${escapeHtml(dateLabel(data.startDate))} — ${escapeHtml(dateLabel(data.endDate))}</div>
+    <header>
+      <div class="titles">
+        <h1>${escapeHtml(data.title)}</h1>
+        <div class="range">${escapeHtml(dateLabel(data.startDate))} — ${escapeHtml(dateLabel(data.endDate))}</div>
+      </div>
+      <div class="stats">${buildStats(data)}</div>
     </header>
     ${body}
   </body></html>`;
@@ -221,6 +325,11 @@ function getBrowser(): Promise<Browser> {
   return browserPromise;
 }
 
+// Numbers only, so the footer doesn't depend on the embedded Arabic font.
+const footerTemplate = `<div style="width:100%;direction:ltr;text-align:center;font-size:8px;color:#94a3b8;">
+  <span class="pageNumber"></span> / <span class="totalPages"></span>
+</div>`;
+
 export const pdfService = {
   async generateStudyTablePDF(data: StudyTablePdfData): Promise<Buffer> {
     await acquirePdfSlot();
@@ -230,10 +339,19 @@ export const pdfService = {
       page = await browser.newPage();
       page.setDefaultTimeout(pageTimeoutMs);
       await page.setContent(buildHtml(data), { waitUntil: 'load', timeout: pageTimeoutMs });
-      await page.evaluate(async () => { await document.fonts.ready; });
+      await page.evaluate(async () => {
+        const browserGlobal = globalThis as typeof globalThis & {
+          document: { fonts: { ready: Promise<unknown> } };
+        };
+        await browserGlobal.document.fonts.ready;
+      });
       const output = Buffer.from(await page.pdf({
         format: 'A4',
         printBackground: true,
+        displayHeaderFooter: true,
+        headerTemplate: '<span></span>',
+        footerTemplate,
+        margin: { top: '10mm', right: '10mm', bottom: '14mm', left: '10mm' },
         timeout: pageTimeoutMs,
       }));
       const pdf = await PDFDocument.load(output);

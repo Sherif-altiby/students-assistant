@@ -14,7 +14,7 @@ import {
   updateStudySession,
   updateStudyTable,
 } from "@/lib/study-table";
-import type {
+import type { 
   StudySession,
   StudySessionInput,
   StudySessionReplacement,

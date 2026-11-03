@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { StatusCodes } from 'http-status-codes';
+import { StatusCodes } from 'http-status-codes'; 
 import { asyncHandler } from '../../utils/asyncHandler';
 import { studyTableService } from './study-table.service';
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarDays, CheckCircle2, History, Loader2 } from "lucide-react";
 import {
   Card,
@@ -30,6 +30,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  getPaginationPages,
 } from "@/components/ui/pagination";
 import { useTaskHistory } from "@/hooks/Usetasks";
 import type { TaskFrequency } from "@/types/task";
@@ -57,7 +58,21 @@ function formatTime(iso: string) {
 
 export function TaskHistory() {
   const [page, setPage] = useState(1);
+  const [expandedDates, setExpandedDates] = useState<string[]>([]);
   const { days, pagination, isLoading, isFetching, isError } = useTaskHistory(page, 10);
+
+  useEffect(() => {
+    setExpandedDates((current) => {
+      const availableDates = days.map((day) => day.date);
+      const retainedDates = current.filter((date) =>
+        availableDates.includes(date),
+      );
+
+      return retainedDates.length > 0
+        ? retainedDates
+        : availableDates.slice(0, 1);
+    });
+  }, [days]);
 
   return (
     <Card className="rounded-2xl border-border/60 shadow-sm">
@@ -115,7 +130,8 @@ export function TaskHistory() {
           </div>
         ) : (
           <Accordion
-             defaultValue={[days[0]?.date]}
+            value={expandedDates}
+            onValueChange={(value) => setExpandedDates(value)}
             className="space-y-3"
           >
             {days.map((day, index) => (
@@ -213,9 +229,8 @@ export function TaskHistory() {
                   />
                 </PaginationItem>
 
-                {Array.from({ length: pagination.totalPages }).map((_, i) => {
-                  const pageNum = i + 1;
-                  return (
+                {getPaginationPages(pagination.page, pagination.totalPages).map(
+                  (pageNum) => (
                     <PaginationItem key={pageNum}>
                       <PaginationLink
                         isActive={pageNum === pagination.page}
@@ -225,8 +240,8 @@ export function TaskHistory() {
                         {pageNum}
                       </PaginationLink>
                     </PaginationItem>
-                  );
-                })}
+                  ),
+                )}
 
                 <PaginationItem>
                   <PaginationNext
