@@ -173,7 +173,7 @@ export default function HabitProgressChart() {
   const noun = PERIOD_NOUN[filter];
 
   return (
-    <Card className="gap-0 border border-border bg-card p-5 shadow-sm sm:p-6">
+    <Card className="gap-0 border border-border bg-card p-5 shadow-none ring-0 sm:p-6">
       <ScrollbarStyles />
 
       {/* Header */}
