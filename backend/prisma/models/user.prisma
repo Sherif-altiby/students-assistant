@@ -15,7 +15,7 @@ model User {
 
   level       EducationLevel?
   track       Track?
-  parentPhone String?         @unique @map("parent_phone")
+  parentPhone String?         @map("parent_phone")
   country     String?
   timezone    String          @default("Africa/Cairo")
 
@@ -36,6 +36,9 @@ model User {
 
   lessonDates LessonDate[]
 
+  parentLinks  ParentStudentLink[] @relation("ParentLinks")
+  studentLinks ParentStudentLink[] @relation("StudentLinks")
+
   messages  Message[]
   reactions Reaction[]
 
@@ -48,4 +51,21 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("users")
+}
+
+model ParentStudentLink {
+  id        String                  @id @default(uuid())
+  parentId  String                  @map("parent_id")
+  studentId String                  @map("student_id")
+  status    ParentStudentLinkStatus @default(PENDING)
+  createdAt DateTime                @default(now()) @map("created_at")
+  updatedAt DateTime                @updatedAt @map("updated_at")
+
+  parent  User @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
+  student User @relation("StudentLinks", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@index([parentId, status])
+  @@index([studentId, status])
+  @@map("parent_student_links")
 }

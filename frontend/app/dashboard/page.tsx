@@ -31,13 +31,14 @@ import {
   FeaturedStats,
 } from "@/components/dashboard/home/home-page-components";
 import { useHabitStats } from "@/hooks/useHabits";
+import { ParentLinkRequests } from "@/components/dashboard/ParentLinkRequests";
 
 // One short, personal line under the greeting, based on the student's own streak.
 function getMotivation(longestStreak: number, hasData: boolean) {
   if (!hasData) return "ابدأ اليوم بإضافة أول مهمة، الخطوة الأولى هي الأصعب.";
-  if (longestStreak >= 14) return `سلسلة ${longestStreak} يومًا! انضباطك هو سر التفوق 🔥`;
-  if (longestStreak >= 7) return `أسبوع كامل من الالتزام. حافظ على السلسلة 🔥`;
-  if (longestStreak >= 3) return `${longestStreak} أيام متتالية، أنت تبني عادة قوية 💪`;
+  if (longestStreak >= 14) return `سلسلة ${longestStreak} يومًا! انضباطك هو سر التفوق `;
+  if (longestStreak >= 7) return `أسبوع كامل من الالتزام. حافظ على السلسلة `;
+  if (longestStreak >= 3) return `${longestStreak} أيام متتالية، أنت تبني عادة قوية `;
   return "مذاكرة اليوم أسهل من تراكم الغد. ابدأ بمهمة صغيرة.";
 }
 
@@ -114,6 +115,8 @@ export default function DashboardOverviewPage() {
         </div>
       </header> */}
 
+      <ParentLinkRequests />
+
       {/* ------------------------------ Quick numbers ------------------------------ */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FeaturedStats
@@ -147,7 +150,7 @@ export default function DashboardOverviewPage() {
           <ChartSkeleton />
         ) : habits.length === 0 ? (
           <EmptyChart
-            emoji="🔥"
+            emoji=""
             message="لا توجد عادات بعد. أضف أول عادة من صفحة العادات وابنِ سلسلتك."
           />
         ) : (

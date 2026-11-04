@@ -9,6 +9,7 @@ import { supportRouter } from '../modules/support/support.routes';
 import { lessonDateRouter } from '../modules/lesson-date/lesson-date.routes';
 import { subjectRouter } from '../modules/subject/subject.routes';
 import { notificationRouter } from '../modules/notification/notification.routes';
+import { parentRouter, studentParentLinkRouter } from '../modules/parent/parent.routes';
  
 const router = Router(); 
 
@@ -23,5 +24,7 @@ router.use('/support', supportRouter);
 router.use('/lesson-dates', lessonDateRouter);
 router.use('/subjects', subjectRouter)
 router.use('/notifications', notificationRouter);
+router.use('/parent', parentRouter);
+router.use('/parent-links', studentParentLinkRouter);
 
 export { router as apiRouter };

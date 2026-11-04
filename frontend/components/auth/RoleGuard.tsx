@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 
-type UserRole = "USER" | "ADMIN" | "DOCTOR";
+type UserRole = "USER" | "ADMIN" | "DOCTOR" | "PARENT";
 
 interface RoleGuardProps {
   children: React.ReactNode;
@@ -38,6 +38,7 @@ export function RoleGuard({
         USER: "/dashboard",
         ADMIN: "/admin",
         DOCTOR: "/doctor",
+        PARENT: "/parent",
       };
       router.replace(roleRoutes[userRole] || "/dashboard");
     }

@@ -23,6 +23,7 @@ export function UserMenu() {
   if (!user) return null;
 
   const initial = user.name?.charAt(0)?.toUpperCase() ?? "?";
+  const homePath = user.role === "PARENT" ? "/parent" : "/dashboard";
 
   async function handleLogout() {
     try {
@@ -61,14 +62,23 @@ export function UserMenu() {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
-          <User className="h-4 w-4" />
-          الملف الشخصي
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>
-          <Settings className="h-4 w-4" />
-          الإعدادات
-        </DropdownMenuItem>
+        {user.role === "PARENT" ? (
+          <DropdownMenuItem onClick={() => router.push(homePath)}>
+            <User className="h-4 w-4" />
+            الأبناء
+          </DropdownMenuItem>
+        ) : (
+          <>
+            <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
+              <User className="h-4 w-4" />
+              الملف الشخصي
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>
+              <Settings className="h-4 w-4" />
+              الإعدادات
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleLogout}

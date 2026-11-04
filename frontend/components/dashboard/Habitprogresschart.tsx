@@ -44,10 +44,10 @@ const PERIOD_NOUN: Record<HabitProgressPeriod, string> = {
 // Each tier is a share of the student's own best period, so the chart
 // motivates by comparing you with your best self, not with other people.
 const TIERS = [
-  { min: 0.8, color: "var(--chart-2)", legend: "ممتاز", message: "أداء ممتاز، استمر! 🔥" },
-  { min: 0.5, color: "var(--chart-1)", legend: "جيد", message: "أداء جيد، أنت على الطريق 👏" },
-  { min: 0.3, color: "var(--chart-4)", legend: "يتحسن", message: "بداية طيبة، زد خطوة 💪" },
-  { min: 0, color: "var(--chart-5)", legend: "ابدأ من جديد", message: "كل يوم فرصة جديدة 🌱" },
+  { min: 0.8, color: "var(--chart-2)", legend: "ممتاز", message: "أداء ممتاز، استمر! " },
+  { min: 0.5, color: "var(--chart-1)", legend: "جيد", message: "أداء جيد، أنت على الطريق " },
+  { min: 0.3, color: "var(--chart-4)", legend: "يتحسن", message: "بداية طيبة، زد خطوة " },
+  { min: 0, color: "var(--chart-5)", legend: "ابدأ من جديد", message: "كل يوم فرصة جديدة " },
 ] as const;
 
 function getTier(ratio: number) {
@@ -120,7 +120,7 @@ const CustomTooltip = ({ active, payload, label, maxValue, noun }: any) => {
         </div>
 
         <p className="pt-0.5 text-xs font-semibold" style={{ color: tier.color }}>
-          {isBest ? `أفضل ${noun} لك 🏆` : tier.message}
+          {isBest ? `أفضل ${noun} لك ` : tier.message}
         </p>
       </div>
     </div>
@@ -262,7 +262,7 @@ export default function HabitProgressChart() {
               لم تنجز أي عادة بعد
             </p>
             <p className="text-sm text-muted-foreground">
-              أنجز عادة اليوم وستبدأ سلسلتك هنا 🔥
+              أنجز عادة اليوم وستبدأ سلسلتك هنا   
             </p>
           </div>
         </div>

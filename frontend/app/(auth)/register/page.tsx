@@ -318,6 +318,12 @@ export default function RegisterPage() {
               سجّل الدخول
             </Link>
           </p>
+          <p className="mt-3 text-center text-sm text-muted-foreground">
+            ولي أمر؟{" "}
+            <Link href="/register/parent" className="font-medium text-primary hover:underline">
+              إنشاء حساب ولي أمر
+            </Link>
+          </p>
         </div>
       </div>
     </div>

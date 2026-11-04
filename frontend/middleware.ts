@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtDecode } from "jwt-decode";
 
-type UserRole = "USER" | "ADMIN" | "DOCTOR";
+type UserRole = "USER" | "ADMIN" | "DOCTOR" | "PARENT";
 
 interface RefreshTokenPayload {
   sub: string;
@@ -17,12 +17,14 @@ const ROLE_HOME: Record<UserRole, string> = {
   USER: "/dashboard",
   ADMIN: "/admin",
   DOCTOR: "/doctor",
+  PARENT: "/parent",
 };
 
 const PATH_ROLE: Record<string, UserRole> = {
   "/dashboard": "USER",
   "/admin": "ADMIN",
   "/doctor": "DOCTOR",
+  "/parent": "PARENT",
 };
 
 const PUBLIC_ROUTES = ["/login", "/register", "/accept-invitation"];
@@ -100,6 +102,8 @@ export const config = {
     "/dashboard/:path*",
     "/admin/:path*",
     "/doctor/:path*",
+    "/parent/:path*",
+    "/register/:path*",
     "/login",
     "/register",
     "/accept-invitation",

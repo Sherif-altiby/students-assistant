@@ -22,7 +22,14 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logout } from "@/lib/auth";
 
-const NAV_ITEMS = [
+export interface SidebarItem {
+  href: string;
+  label: string;
+  icon: typeof LayoutGrid;
+  children?: SidebarItem[];
+}
+
+const STUDENT_NAV_ITEMS: SidebarItem[] = [
   { href: "/dashboard", label: "نظرة عامة", icon: LayoutGrid },
   { href: "/dashboard/tasks", label: "المهام", icon: ListChecks },
   { href: "/dashboard/habits", label: "العادات", icon: Repeat },
@@ -34,7 +41,15 @@ const NAV_ITEMS = [
   // { href: "/dashboard/consultations", label: "الاستشارات", icon: MessageCircleQuestion,},
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  items?: SidebarItem[];
+  title?: string;
+}
+
+export function Sidebar({
+  items = STUDENT_NAV_ITEMS,
+  title = "لوحة التحكم",
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -107,7 +122,7 @@ export function Sidebar() {
           {!collapsed && (
             <div className="min-w-0">
               <span className="font-display text-lg font-extrabold text-primary block leading-tight truncate">
-                لوحة التحكم
+                {title}
               </span>
             </div>
           )}
@@ -116,28 +131,65 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-1">
-        {NAV_ITEMS.map((item) => {
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === item.href
-              : pathname.startsWith(item.href);
+        {items.map((item) => {
           const Icon = item.icon;
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const hasActiveChild = item.children?.some(
+            (child) =>
+              pathname === child.href ||
+              pathname.startsWith(`${child.href}/`),
+          );
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={collapsed ? item.label : undefined}
-              className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                collapsed && "justify-center px-0",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                title={collapsed ? item.label : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                  collapsed && "justify-center px-0",
+                  isActive || hasActiveChild
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+              {item.children && (!collapsed || hasActiveChild) && (
+                <div
+                  className={cn(
+                    "mt-1 flex flex-col gap-1 border-s border-border",
+                    collapsed ? "items-center ps-1" : "ms-5 ps-2",
+                  )}
+                >
+                  {item.children.map((child) => {
+                    const ChildIcon = child.icon;
+                    const childActive =
+                      pathname === child.href ||
+                      pathname.startsWith(`${child.href}/`);
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        aria-current={childActive ? "page" : undefined}
+                        title={collapsed ? child.label : undefined}
+                        className={cn(
+                          "flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium transition-colors",
+                          collapsed && "w-9 justify-center px-0",
+                          childActive
+                            ? "bg-accent text-accent-foreground"
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                        )}
+                      >
+                        <ChildIcon className="h-3.5 w-3.5 shrink-0" />
+                        {!collapsed && <span className="truncate">{child.label}</span>}
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </Link>
+            </div>
           );
         })}
       </nav>

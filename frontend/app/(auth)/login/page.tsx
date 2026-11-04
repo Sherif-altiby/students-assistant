@@ -2,18 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
+import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { z } from "zod";
 import { login } from "@/lib/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 import { loginSchema } from "@/validations/auth";
-import { Input } from "@/components/ui/input";
+import { FormInput } from "@/components/FormInput";
+import MainButton from "@/components/ui/MainButton";
+import { Button } from "@/components/ui/button";
 
 const roleRoutes = {
   USER: "/dashboard",
   ADMIN: "/admin",
   DOCTOR: "/doctor",
+  PARENT: "/parent",
 };
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -58,7 +63,8 @@ export default function LoginPage() {
     try {
       const { user, accessToken } = await login(result.data);
       setSession(user, accessToken);
-      const redirectPath = roleRoutes[user.role as keyof typeof roleRoutes] || "/dashboard";
+      const redirectPath =
+        roleRoutes[user.role as keyof typeof roleRoutes] || "/dashboard";
       router.push(redirectPath);
     } catch (err) {
       const message =
@@ -72,183 +78,136 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <div className="flex w-full flex-1 items-center justify-center px-6 py-12">
-        <div className="w-full max-w-lg rounded-lg border border-border p-4">
-          {/* logo */}
-          <div className="mb-8 flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground   text-lg font-semibold">
-              م
-            </div>
-            <span className="text-lg font-semibold text-foreground">
-              مُذاكرة
-            </span>
-          </div>
+    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <section className="w-full max-w-md rounded-2xl border border-border bg-card p-6 sm:p-8">
+        <Link
+          href="/"
+          className="mb-8 flex w-fit items-center gap-3"
+          aria-label="مُذاكرة - الصفحة الرئيسية"
+        >
+          <Image
+            src="/logo.png"
+            alt=""
+            width={44}
+            height={44}
+            priority
+            className="h-11 w-11 rounded-xl object-contain"
+          />
+          <span className="text-lg font-bold text-foreground">مُذاكرة</span>
+        </Link>
 
-          <h2 className=" text-2xl font-medium text-foreground text-center">
-            سجّل الدخول لمتابعة تقدمك
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground text-center border-b pb-3">
-            سعداء بعودتك. أدخل بياناتك للمتابعة من حيث توقفت.
-          </p>
+        <h1 className="text-center text-2xl font-bold text-foreground">
+          سجّل الدخول لمتابعة تقدمك
+        </h1>
+        <p className="mt-2 border-b border-border pb-4 text-center text-sm leading-6 text-muted-foreground">
+          سعداء بعودتك. أدخل بياناتك للمتابعة من حيث توقفت.
+        </p>
 
-          <form
-            onSubmit={handleSubmit}
-            noValidate
-            className="mt-8 flex flex-col gap-5"
-          >
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-foreground"
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="mt-6 flex flex-col gap-4"
+        >
+          <FormInput
+            id="email"
+            label="البريد الإلكتروني"
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              clearFieldError("email");
+            }}
+            placeholder="name@example.com"
+            autoComplete="email"
+            startIcon={<Mail />}
+            dir="ltr"
+            required
+            error={fieldErrors.email}
+          />
+
+          <div className="space-y-2">
+            <div className="flex justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-primary hover:underline"
               >
-                البريد الإلكتروني
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  clearFieldError("email");
-                }}
-                placeholder="name@example.com"
-                aria-invalid={!!fieldErrors.email}
-                className={`h-11 w-full rounded-(--radius-md) border bg-input/30 px-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:ring-2 ${
-                  fieldErrors.email
-                    ? "border-destructive focus:ring-destructive/30"
-                    : "border-border focus:border-ring focus:ring-ring/30"
-                }`}
-              />
-              {fieldErrors.email && (
-                <p className="text-xs text-destructive">{fieldErrors.email}</p>
-              )}
+                نسيت كلمة المرور؟
+              </Link>
             </div>
-
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="text-sm font-medium text-foreground"
-                >
-                  كلمة المرور
-                </label>
-                <Link
-                  href="/forgot-password"
-                  className="text-xs font-medium text-primary hover:underline"
-                >
-                  نسيت كلمة المرور؟
-                </Link>
-              </div>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    clearFieldError("password");
-                  }}
-                  placeholder="••••••••"
-                  aria-invalid={!!fieldErrors.password}
-                  className={`h-11 w-full rounded-[var(--radius-md)] border bg-input/30 px-3.5 pl-11 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:ring-2 ${
-                    fieldErrors.password
-                      ? "border-destructive focus:ring-destructive/30"
-                      : "border-input focus:border-ring focus:ring-ring/30"
-                  }`}
-                />
-                <button
+            <FormInput
+              id="password"
+              label="كلمة المرور"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clearFieldError("password");
+              }}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              startIcon={<LockKeyhole />}
+              dir="ltr"
+              required
+              error={fieldErrors.password}
+              endAdornment={
+                <Button
                   type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute left-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground"
+                  onClick={() => setShowPassword((visible) => !visible)}
                   aria-label={
                     showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"
                   }
                 >
                   {showPassword ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.5 5.3A10.7 10.7 0 0112 5c5.5 0 9.3 4 10.5 7-.4 1-1 2-1.8 2.9M6.6 6.6C4.5 8 3 10 2 12c1.2 3 5 7 10 7 1.4 0 2.7-.3 3.9-.8"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                    <EyeOff aria-hidden="true" />
                   ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M2 12c1.2-3.5 5-7 10-7s8.8 3.5 10 7c-1.2 3.5-5 7-10 7s-8.8-3.5-10-7z"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinejoin="round"
-                      />
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="3"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                      />
-                    </svg>
+                    <Eye aria-hidden="true" />
                   )}
-                </button>
-              </div>
-              {fieldErrors.password && (
-                <p className="text-xs text-destructive">
-                  {fieldErrors.password}
-                </p>
-              )}
-            </div>
+                </Button>
+              }
+            />
+          </div>
 
-            {formError && (
-              <p className="rounded-[var(--radius-md)] border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
-                {formError}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-primary text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60"
+          {formError && (
+            <p
+              role="alert"
+              className="rounded-xl border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
             >
-              {isLoading && (
-                <svg
-                  className="h-4 w-4 animate-spin"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    opacity="0.25"
-                  />
-                  <path
-                    d="M21 12a9 9 0 00-9-9"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              )}
-              دخول
-            </button>
-          </form>
+              {formError}
+            </p>
+          )}
 
-          <p className="mt-8 text-center text-sm text-muted-foreground">
-            ليس لديك حساب؟{" "}
-            <Link
-              href="/register"
-              className="font-medium text-primary hover:underline"
-            >
-              إنشاء حساب جديد
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+          <MainButton
+            type="submit"
+            title="دخول"
+            loading={isLoading}
+            loadingTitle="جارٍ تسجيل الدخول..."
+            fullWidth
+            className="mt-2"
+          />
+        </form>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          ليس لديك حساب؟{" "}
+          <Link
+            href="/register"
+            className="font-medium text-primary hover:underline"
+          >
+            إنشاء حساب جديد
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-sm text-muted-foreground">
+          ولي أمر؟{" "}
+          <Link
+            href="/register/parent"
+            className="font-medium text-primary hover:underline"
+          >
+            إنشاء حساب ولي أمر
+          </Link>
+        </p>
+      </section>
+    </main>
   );
 }

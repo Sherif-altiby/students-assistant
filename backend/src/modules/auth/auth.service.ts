@@ -48,6 +48,31 @@ export const authService = {
     return { user: toSafeUser(user), ...issueTokens(user) };
   },
 
+  async registerParent(input: {
+    name: string;
+    email: string;
+    password: string;
+    phone: string;
+  }): Promise<AuthResult> {
+    if (await userRepository.findByEmail(input.email)) {
+      throw new ConflictError('A user with this email already exists');
+    }
+    if (await userRepository.findByPhone(input.phone)) {
+      throw new ConflictError('A user with this phone number already exists');
+    }
+
+    const password = await bcrypt.hash(input.password, SALT_ROUNDS);
+    const user = await userRepository.create({
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      password,
+      role: 'PARENT',
+    });
+
+    return { user: toSafeUser(user), ...issueTokens(user) };
+  },
+
   async login(input: LoginInput): Promise<AuthResult> {
     const user = await userRepository.findByEmail(input.email);
 

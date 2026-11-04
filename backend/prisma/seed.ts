@@ -25,6 +25,12 @@ const DOCTOR_LOGIN = {
   password: 'Doctor123!',
 };
 
+const PARENT_LOGIN = {
+  email: 'parent@studentsassistant.com',
+  password: 'Parent123!',
+  phone: '01098765432',
+};
+
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -180,6 +186,7 @@ async function main() {
   console.log('👤 Creating seed login accounts...');
   const studentPassword = await hashPassword(STUDENT_LOGIN.password);
   const doctorPassword = await hashPassword(DOCTOR_LOGIN.password);
+  const parentPassword = await hashPassword(PARENT_LOGIN.password);
 
   const student = await prisma.user.create({
     data: {
@@ -204,6 +211,25 @@ async function main() {
       password: doctorPassword,
       role: Role.DOCTOR,
       status: UserStatus.ACTIVE,
+    },
+  });
+
+  const parent = await prisma.user.create({
+    data: {
+      name: 'ولي أمر أحمد',
+      email: PARENT_LOGIN.email,
+      phone: PARENT_LOGIN.phone,
+      password: parentPassword,
+      role: Role.PARENT,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  await prisma.parentStudentLink.create({
+    data: {
+      parentId: parent.id,
+      studentId: student.id,
+      status: 'ACTIVE',
     },
   });
 

@@ -32,6 +32,12 @@ export const authController = {
     res.status(StatusCodes.CREATED).json({ status: 'success', data: { user, accessToken } });
   }),
 
+  registerParent: asyncHandler(async (req: Request, res: Response) => {
+    const { user, accessToken, refreshToken } = await authService.registerParent(req.body);
+    setRefreshCookie(res, refreshToken);
+    res.status(StatusCodes.CREATED).json({ status: 'success', data: { user, accessToken } });
+  }),
+
   login: asyncHandler(async (req: Request, res: Response) => {
     const { user, accessToken, refreshToken } = await authService.login(req.body);
     setRefreshCookie(res, refreshToken);

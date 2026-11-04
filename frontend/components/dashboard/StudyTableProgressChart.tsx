@@ -24,11 +24,11 @@ import { getStudyTableProgress, listStudyTables } from "@/lib/study-table";
 
 function getEncouragement(percent: number, total: number) {
   if (total === 0) return "لا توجد جلسات بعد في جداولك.";
-  if (percent === 100) return "أنجزت كل الجلسات! أحسنت 🎉";
-  if (percent >= 75) return "اقتربت من خط النهاية، جلسات قليلة وتنتهي 🔥";
-  if (percent >= 40) return "تتقدم بثبات، استمر على هذا الإيقاع 👏";
-  if (percent > 0) return "بداية موفقة، خطوة بعد خطوة 💪";
-  return "ابدأ أول جلسة وسيظهر تقدمك هنا 🚀";
+  if (percent === 100) return "أنجزت كل الجلسات! أحسنت  ";
+  if (percent >= 75) return "اقتربت من خط النهاية، جلسات قليلة وتنتهي  ";
+  if (percent >= 40) return "تتقدم بثبات، استمر على هذا الإيقاع  ";
+  if (percent > 0) return "بداية موفقة، خطوة بعد خطوة  ";
+  return "ابدأ أول جلسة وسيظهر تقدمك هنا  ";
 }
 
 export default function StudyTableProgressChart() {

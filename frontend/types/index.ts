@@ -6,13 +6,13 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  phone: string;
-  gender: Gender;
-  role: "USER" | "ADMIN" | "DOCTOR";
-  level: Level;
-  track: Track;
-  parentPhone: string;
-  country: string;
+  phone: string | null;
+  gender: Gender | null;
+  role: "USER" | "ADMIN" | "DOCTOR" | "PARENT";
+  level: Level | null;
+  track: Track | null;
+  parentPhone: string | null;
+  country: string | null;
   createdAt: string;
   updatedAt: string;
 }

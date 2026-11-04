@@ -17,6 +17,18 @@ export async function register(payload: RegisterPayload) {
   return res.data.data;
 }
 
+export interface ParentRegisterPayload {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+}
+
+export async function registerParent(payload: ParentRegisterPayload) {
+  const res = await api.post<AuthResponse>("/auth/register-parent", payload);
+  return res.data.data;
+}
+
 export async function fetchMe(): Promise<User> {
   const res = await api.get<MeResponse>("/auth/me");
   return res.data.data;
