@@ -17,15 +17,8 @@ import {
   YAxis,
 } from "recharts";
 import { Card } from "@/components/ui/card";
+import { PARENT_CHART_COLORS } from "@/constants";
 import type { ParentOverview } from "@/types/parent";
-
-const CHART_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
 
 function shortLabel(value: string, maxLength = 12) {
   return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
@@ -225,16 +218,16 @@ export function ParentProgressCharts({
                   type="monotone"
                   dataKey="tasks"
                   name="المهام"
-                  stroke={CHART_COLORS[0]}
-                  fill={CHART_COLORS[0]}
+                  stroke={PARENT_CHART_COLORS[0]}
+                  fill={PARENT_CHART_COLORS[0]}
                   fillOpacity={0.2}
                 />
                 <Area
                   type="monotone"
                   dataKey="habits"
                   name="العادات"
-                  stroke={CHART_COLORS[1]}
-                  fill={CHART_COLORS[1]}
+                  stroke={PARENT_CHART_COLORS[1]}
+                  fill={PARENT_CHART_COLORS[1]}
                   fillOpacity={0.18}
                 />
               </AreaChart>
@@ -268,7 +261,7 @@ export function ParentProgressCharts({
                   axisLine={false}
                 />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="completed" name="مرات الإكمال" fill={CHART_COLORS[0]} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="completed" name="مرات الإكمال" fill={PARENT_CHART_COLORS[0]} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -303,7 +296,7 @@ export function ParentProgressCharts({
                 <Bar
                   dataKey="completed"
                   name="مرات الإكمال"
-                  fill={CHART_COLORS[1]}
+                  fill={PARENT_CHART_COLORS[1]}
                   radius={[6, 6, 0, 0]}
                 />
               </BarChart>
@@ -337,7 +330,7 @@ export function ParentProgressCharts({
                   axisLine={false}
                 />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="completed" name="مكتملة" stackId="sessions" fill={CHART_COLORS[1]} />
+                <Bar dataKey="completed" name="مكتملة" stackId="sessions" fill={PARENT_CHART_COLORS[1]} />
                 <Bar dataKey="remaining" name="متبقية" stackId="sessions" fill="var(--study-progress-remaining)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -370,7 +363,7 @@ export function ParentProgressCharts({
                   axisLine={false}
                 />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="completed" name="دروس مكتملة" fill={CHART_COLORS[4]} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="completed" name="دروس مكتملة" fill={PARENT_CHART_COLORS[4]} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -397,7 +390,7 @@ export function ParentProgressCharts({
                   paddingAngle={4}
                 >
                   {completionMix.map((item, index) => (
-                    <Cell key={item.name} fill={CHART_COLORS[index]} />
+                    <Cell key={item.name} fill={PARENT_CHART_COLORS[index]} />
                   ))}
                 </Pie>
               </PieChart>
@@ -434,7 +427,7 @@ export function ParentProgressCharts({
                 <Bar
                   dataKey="sessions"
                   name="جلسات"
-                  fill={CHART_COLORS[2]}
+                  fill={PARENT_CHART_COLORS[2]}
                   radius={[6, 6, 0, 0]}
                 />
               </BarChart>
@@ -471,9 +464,9 @@ export function ParentProgressCharts({
                   type="monotone"
                   dataKey="completed"
                   name="دروس مكتملة"
-                  stroke={CHART_COLORS[4]}
+                  stroke={PARENT_CHART_COLORS[4]}
                   strokeWidth={2}
-                  dot={{ fill: CHART_COLORS[4], r: 4 }}
+                  dot={{ fill: PARENT_CHART_COLORS[4], r: 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>

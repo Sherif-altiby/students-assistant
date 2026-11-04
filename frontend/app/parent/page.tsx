@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock3, UserRound, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
@@ -11,30 +11,25 @@ import MainButton from "@/components/ui/MainButton";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { listParentStudents, requestStudentAccess } from "@/lib/parent";
-import type { ParentLinkStatus } from "@/types/parent";
-
-const STATUS_LABELS: Record<ParentLinkStatus, string> = {
-  ACTIVE: "تم الربط",
-  PENDING: "بانتظار موافقة الطالب",
-  REJECTED: "تم رفض الطلب",
-};
+import { requestStudentAccess } from "@/lib/parent";
+import { PARENT_LINK_STATUS_LABELS, PARENT_STUDENTS_QUERY_KEY } from "@/constants";
+import { useParentStudents } from "@/hooks/useParentStudents";
+import { SuggestionForm } from "@/components/suggestions/SuggestionForm";
 
 export default function ParentHomePage() {
   const queryClient = useQueryClient();
   const [studentEmail, setStudentEmail] = useState("");
   const [formError, setFormError] = useState("");
-  const studentsQuery = useQuery({
-    queryKey: ["parent", "students"],
-    queryFn: listParentStudents,
-  });
+  const studentsQuery = useParentStudents();
   const requestMutation = useMutation({
     mutationFn: requestStudentAccess,
     onSuccess: async () => {
       setStudentEmail("");
       setFormError("");
       toast.success("تم إرسال طلب الربط للطالب");
-      await queryClient.invalidateQueries({ queryKey: ["parent", "students"] });
+      await queryClient.invalidateQueries({
+        queryKey: PARENT_STUDENTS_QUERY_KEY,
+      });
     },
     onError: (error) => {
       setFormError(
@@ -153,7 +148,7 @@ export default function ParentHomePage() {
                     </div>
                   </div>
                   <Badge variant={link.status === "ACTIVE" ? "default" : "secondary"}>
-                    {STATUS_LABELS[link.status]}
+                    {PARENT_LINK_STATUS_LABELS[link.status]}
                   </Badge>
                 </div>
                 {link.status === "ACTIVE" ? (
@@ -179,6 +174,7 @@ export default function ParentHomePage() {
           </div>
         )}
       </section>
+      <SuggestionForm />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { userService } from './user.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { Role } from '@prisma/client';
 
-const VALID_ROLES = ['USER', 'ADMIN', 'DOCTOR'];
+const VALID_ROLES = ['USER', 'ADMIN', 'DOCTOR', 'PARENT'];
 
 export const userController = {
   create: asyncHandler(async (req: Request, res: Response) => {
@@ -49,6 +49,11 @@ export const userController = {
 
   remove: asyncHandler(async (req: Request, res: Response) => {
     await userService.deleteUser(req.params['id'] as string);
+    res.status(StatusCodes.NO_CONTENT).send();
+  }),
+
+  removeDoctor: asyncHandler(async (req: Request, res: Response) => {
+    await userService.deleteDoctor(req.params['id'] as string);
     res.status(StatusCodes.NO_CONTENT).send();
   }),
 

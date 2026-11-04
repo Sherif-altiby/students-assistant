@@ -1,33 +1,13 @@
 "use client";
 
-import {
-  BarChart3,
-  BookOpen,
-  House,
-  ListTodo,
-  Repeat2,
-  Table2,
-  Users,
-} from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { House, Users } from "lucide-react";
 import { Header } from "@/components/header/Header";
 import { Sidebar, type SidebarItem } from "@/components/Sidebar";
-import { listParentStudents } from "@/lib/parent";
-
-const STUDENT_SECTIONS = [
-  { slug: "", label: "نظرة عامة", icon: House },
-  { slug: "analytics", label: "التحليلات والرسوم", icon: BarChart3 },
-  { slug: "tasks", label: "المهام", icon: ListTodo },
-  { slug: "habits", label: "العادات", icon: Repeat2 },
-  { slug: "tables", label: "جداول المذاكرة", icon: Table2 },
-  { slug: "lessons", label: "الدروس", icon: BookOpen },
-] satisfies Array<Pick<SidebarItem, "label" | "icon"> & { slug: string }>;
+import { PARENT_STUDENT_NAV_SECTIONS } from "@/constants";
+import { useParentStudents } from "@/hooks/useParentStudents";
 
 export function ParentLayout({ children }: { children: React.ReactNode }) {
-  const studentsQuery = useQuery({
-    queryKey: ["parent", "students"],
-    queryFn: listParentStudents,
-  });
+  const studentsQuery = useParentStudents();
   const linkedStudents =
     studentsQuery.data?.filter((link) => link.status === "ACTIVE") ?? [];
 
@@ -36,15 +16,19 @@ export function ParentLayout({ children }: { children: React.ReactNode }) {
       href: "/parent",
       label: "الأبناء وطلبات الربط",
       icon: Users,
+      exact: true,
     },
     ...linkedStudents.map(({ student }) => ({
       href: `/parent/students/${student.id}`,
       label: student.name,
       icon: House,
-      children: STUDENT_SECTIONS.map(({ slug, label, icon }) => ({
+      exact: true,
+      collapsible: true,
+      children: PARENT_STUDENT_NAV_SECTIONS.map(({ slug, label, icon }) => ({
         href: `/parent/students/${student.id}${slug ? `/${slug}` : ""}`,
         label,
         icon,
+        exact: true,
       })),
     })),
   ];

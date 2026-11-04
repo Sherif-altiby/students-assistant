@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CalendarDays,
   Check,
+  ChevronDown,
   Minus,
   Plus,
 } from "lucide-react";
@@ -47,7 +48,7 @@ interface CreateStudyTableDialogProps {
 }
 
 const selectClass =
-  "h-11 w-full rounded-[var(--radius-md)] border border-input bg-background px-3 text-sm outline-none transition-colors " +
+  "h-11 w-full appearance-none rounded-[var(--radius-md)] border border-input bg-background px-3 pe-10 text-sm outline-none transition-colors " +
   "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-60";
 
 const th = "px-3 py-2.5 text-start text-xs font-medium text-muted-foreground";
@@ -408,18 +409,24 @@ export function CreateStudyTableDialog({
               <div className="grid items-end gap-3 sm:grid-cols-2">
                 <label className="space-y-2 text-sm font-medium">
                   الشهر
-                  <select
-                    className={selectClass}
-                    value={selectedMonth ? `${selectedMonth.year}-${selectedMonth.month}` : ""}
-                    disabled={availableMonthsQuery.isLoading || availableMonthsQuery.isError}
-                    onChange={(event) => { setSelectedMonthKey(event.target.value); invalidatePreview(); }}
-                  >
-                    {availableMonths.map((option) => (
-                      <option key={`${option.year}-${option.month}`} value={`${option.year}-${option.month}`}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="relative block">
+                    <select
+                      className={selectClass}
+                      value={selectedMonth ? `${selectedMonth.year}-${selectedMonth.month}` : ""}
+                      disabled={availableMonthsQuery.isLoading || availableMonthsQuery.isError}
+                      onChange={(event) => { setSelectedMonthKey(event.target.value); invalidatePreview(); }}
+                    >
+                      {availableMonths.map((option) => (
+                        <option key={`${option.year}-${option.month}`} value={`${option.year}-${option.month}`}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      aria-hidden="true"
+                      className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                    />
+                  </span>
                 </label>
                 {availableMonthsQuery.isLoading && (
                   <p className="pb-3 text-sm text-muted-foreground">جارٍ تحميل الأشهر المتاحة...</p>

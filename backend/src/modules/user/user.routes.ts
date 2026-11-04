@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { userController } from './user.controller';
 import { validate } from '../../middlewares/validate';
 import { authenticate } from '../../middlewares/authenticate';
-import { acceptInvitationSchema, inviteDoctorSchema } from './user.schema';
+import { acceptInvitationSchema, getUserSchema, inviteDoctorSchema } from './user.schema';
 import { authorize } from '../../middlewares/authorize';
 
 const router = Router();
@@ -14,12 +14,13 @@ router.post('/accept-invitation', validate(acceptInvitationSchema), userControll
 
 // --- Protected ---
 router.get('/', authenticate, authorize('ADMIN'), userController.list);
-router.get('/doctors', authenticate, authorize('USER'), userController.listDoctors);
+router.get('/doctors', authenticate, authorize('USER', 'PARENT'), userController.listDoctors);
 // router.get('/:id', authenticate, validate(getUserSchema), userController.getById);
 // router.patch('/:id', authenticate, validate(updateUserSchema), userController.update);
 // router.delete('/:id', authenticate, validate(getUserSchema), userController.remove);
 
 // --- Admin only ---
 router.post( '/doctors/invite', authenticate, authorize('ADMIN'), validate(inviteDoctorSchema), userController.inviteDoctor);
+router.delete('/doctors/:id', authenticate, authorize('ADMIN'), validate(getUserSchema), userController.removeDoctor);
 
 export { router as userRouter };

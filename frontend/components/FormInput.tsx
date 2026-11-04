@@ -69,7 +69,7 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
         </div>
 
         {/* Input wrapper */}
-        <div className="relative">
+        <div className="relative" dir={props.dir}>
           {/* Start icon */}
           {startIcon && (
             <span

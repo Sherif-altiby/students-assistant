@@ -1,42 +1,7 @@
-import {
-  BookOpen,
-  CheckCircle2,
-  ListTodo,
-  Repeat2,
-  Table2,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { PARENT_PROGRESS_METRICS } from "@/constants";
 import type { ParentOverview } from "@/types/parent";
-
-const METRICS: Array<{
-  key: keyof ParentOverview["summary"];
-  label: string;
-  icon: LucideIcon;
-  totalKey?: keyof ParentOverview["summary"];
-}> = [
-  {
-    key: "completedTaskCount",
-    label: "إنجازات المهام",
-    icon: ListTodo,
-  },
-  {
-    key: "habitCompletionCount",
-    label: "إنجازات العادات",
-    icon: Repeat2,
-  },
-  {
-    key: "completedStudySessionCount",
-    label: "جلسات مكتملة",
-    icon: Table2,
-    totalKey: "studySessionCount",
-  },
-  {
-    key: "completedLessonCount",
-    label: "دروس مكتملة",
-    icon: BookOpen,
-  },
-] as const;
 
 export function ParentStudentProgress({
   overview,
@@ -51,7 +16,7 @@ export function ParentStudentProgress({
           <h2 className="text-lg font-bold text-foreground">ملخص التقدم</h2>
         </div>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          {METRICS.map(({ key, label, icon: Icon, totalKey }) => {
+          {PARENT_PROGRESS_METRICS.map(({ key, label, icon: Icon, totalKey }) => {
             const value = overview.summary[key];
             const total = totalKey ? overview.summary[totalKey] : null;
             return (

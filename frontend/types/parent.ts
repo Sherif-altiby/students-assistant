@@ -1,6 +1,10 @@
 import type { Level, Track } from "@/types";
 
 export type ParentLinkStatus = "PENDING" | "ACTIVE" | "REJECTED";
+export type ParentStudentSection = "tasks" | "habits" | "tables" | "lessons";
+export type ParentTaskFilter = "all" | "daily" | "today" | "pending";
+export type ParentHabitFilter = "all" | "done" | "pending";
+export type ParentStudySessionFilter = "all" | "pending" | "overdue" | "done";
 
 export interface ParentStudentLink {
   id: string;

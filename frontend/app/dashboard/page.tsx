@@ -32,6 +32,7 @@ import {
 } from "@/components/dashboard/home/home-page-components";
 import { useHabitStats } from "@/hooks/useHabits";
 import { ParentLinkRequests } from "@/components/dashboard/ParentLinkRequests";
+import { SuggestionForm } from "@/components/suggestions/SuggestionForm";
 
 // One short, personal line under the greeting, based on the student's own streak.
 function getMotivation(longestStreak: number, hasData: boolean) {
@@ -186,6 +187,7 @@ export default function DashboardOverviewPage() {
           />
         </div>
       </section>
+      {user?.role === "USER" && <SuggestionForm />}
     </div>
   );
 }

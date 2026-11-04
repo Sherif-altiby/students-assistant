@@ -4,6 +4,22 @@
 
 @import "tailwindcss";
 
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  display: none;
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: none;
+}
+
+select::-ms-expand {
+  display: none;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

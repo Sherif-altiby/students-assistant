@@ -10,6 +10,7 @@ import { lessonDateRouter } from '../modules/lesson-date/lesson-date.routes';
 import { subjectRouter } from '../modules/subject/subject.routes';
 import { notificationRouter } from '../modules/notification/notification.routes';
 import { parentRouter, studentParentLinkRouter } from '../modules/parent/parent.routes';
+import { suggestionRouter } from '../modules/suggestion/suggestion.routes';
  
 const router = Router(); 
 
@@ -26,5 +27,6 @@ router.use('/subjects', subjectRouter)
 router.use('/notifications', notificationRouter);
 router.use('/parent', parentRouter);
 router.use('/parent-links', studentParentLinkRouter);
+router.use('/suggestions', suggestionRouter);
 
 export { router as apiRouter };

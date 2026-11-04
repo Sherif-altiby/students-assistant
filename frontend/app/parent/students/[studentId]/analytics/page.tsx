@@ -1,5 +1,10 @@
-import { ParentStudentSectionPage } from "@/components/parent/ParentStudentSectionPage";
+import { redirect } from "next/navigation";
 
-export default function ParentStudentAnalyticsPage() {
-  return <ParentStudentSectionPage section="analytics" />;
+export default async function ParentStudentAnalyticsPage({
+  params,
+}: {
+  params: Promise<{ studentId: string }>;
+}) {
+  const { studentId } = await params;
+  redirect(`/parent/students/${studentId}`);
 }

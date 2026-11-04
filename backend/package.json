@@ -23,7 +23,7 @@
     "deepmerge-ts": "^8.0.0"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "6.19.3",
     "@types/socket.io": "^3.0.1",
     "arabic-reshaper": "^1.1.0",

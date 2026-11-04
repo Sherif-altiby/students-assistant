@@ -203,6 +203,14 @@ export const userService = {
     await userRepository.delete(id);
   },
 
+  async deleteDoctor(id: string): Promise<void> {
+    const doctor = await userRepository.findById(id);
+    if (!doctor || doctor.role !== 'DOCTOR') {
+      throw new NotFoundError('Doctor not found');
+    }
+    await userRepository.delete(id);
+  },
+
   /**
    * Admin-only: creates a DOCTOR user with no password yet, generates a
    * single-use invitation token, and emails the doctor a link to activate

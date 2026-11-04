@@ -118,6 +118,7 @@ export default function LoginPage() {
               clearFieldError("email");
             }}
             placeholder="name@example.com"
+
             autoComplete="email"
             startIcon={<Mail />}
             dir="ltr"

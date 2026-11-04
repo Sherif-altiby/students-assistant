@@ -46,6 +46,7 @@ model User {
   doctorSlots             AvailabilitySlot[]       @relation("DoctorSlots")
   bookings                SessionBooking[]         @relation("UserBookings")
   ratingsGiven            SessionRating[]          @relation("UserRatings")
+  suggestions             Suggestion[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

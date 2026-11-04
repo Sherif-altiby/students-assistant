@@ -19,13 +19,14 @@ export function RoleGuard({
   redirectTo = "/login",
 }: RoleGuardProps) {
   const router = useRouter();
-  const { user, } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const isBootstrapping = useAuthStore((s) => s.isBootstrapping);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    // Wait until the store has finished hydrating/loading before deciding anything
-
+    if (isBootstrapping) return;
     if (!user) {
+      setIsAuthorized(false);
       router.replace(redirectTo);
       return;
     }
@@ -34,6 +35,7 @@ export function RoleGuard({
     if (allowedRoles.includes(userRole)) {
       setIsAuthorized(true);
     } else {
+      setIsAuthorized(false);
       const roleRoutes: Record<UserRole, string> = {
         USER: "/dashboard",
         ADMIN: "/admin",
@@ -42,7 +44,7 @@ export function RoleGuard({
       };
       router.replace(roleRoutes[userRole] || "/dashboard");
     }
-  }, [user, router, allowedRoles, redirectTo]);
+  }, [user, isBootstrapping, router, allowedRoles, redirectTo]);
 
 
   if (!isAuthorized) return null;

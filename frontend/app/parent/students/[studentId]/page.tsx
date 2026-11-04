@@ -6,6 +6,7 @@ import { ArrowRight, UserRound } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ParentStudentProgress } from "@/components/parent/ParentStudentProgress";
+import { ParentProgressCharts } from "@/components/parent/ParentProgressCharts";
 import { useParentStudentOverview } from "@/hooks/useParentStudentOverview";
 
 export default function ParentStudentPage() {
@@ -48,14 +49,10 @@ export default function ParentStudentPage() {
             className="px-4 pt-3 sm:px-6"
             title={overviewQuery.data.student.name}
             description="نظرة عامة على تقدم الطالب. جميع البيانات للمتابعة فقط."
-            action={
-              <div className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
-                <UserRound className="h-4 w-4" aria-hidden="true" />
-                {overviewQuery.data.student.level ?? "المرحلة غير محددة"}
-              </div>
-            }
+             
           />
           <ParentStudentProgress overview={overviewQuery.data} />
+          <ParentProgressCharts overview={overviewQuery.data} />
         </div>
       ) : null}
     </div>

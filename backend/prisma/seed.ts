@@ -20,9 +20,19 @@ const STUDENT_LOGIN = {
   password: 'Student123!',
 };
 
+const SECOND_STUDENT_LOGIN = {
+  email: 'student2@studentsassistant.com',
+  password: 'Student456!',
+};
+
 const DOCTOR_LOGIN = {
   email: 'doctor@studentsassistant.com',
   password: 'Doctor123!',
+};
+
+const ADMIN_LOGIN = {
+  email: 'admin@studentsassistant.com',
+  password: 'Admin123!',
 };
 
 const PARENT_LOGIN = {
@@ -181,11 +191,14 @@ async function main() {
   await prisma.habit.deleteMany();
   await prisma.taskHistory.deleteMany();
   await prisma.task.deleteMany();
+  await prisma.suggestion.deleteMany();
   await prisma.user.deleteMany();
 
   console.log('👤 Creating seed login accounts...');
   const studentPassword = await hashPassword(STUDENT_LOGIN.password);
+  const secondStudentPassword = await hashPassword(SECOND_STUDENT_LOGIN.password);
   const doctorPassword = await hashPassword(DOCTOR_LOGIN.password);
+  const adminPassword = await hashPassword(ADMIN_LOGIN.password);
   const parentPassword = await hashPassword(PARENT_LOGIN.password);
 
   const student = await prisma.user.create({
@@ -203,6 +216,21 @@ async function main() {
     },
   });
 
+  const secondStudent = await prisma.user.create({
+    data: {
+      name: 'سارة محمود',
+      email: SECOND_STUDENT_LOGIN.email,
+      phone: '01012345679',
+      password: secondStudentPassword,
+      level: EducationLevel.BACHELOR,
+      track: Track.BACHELOR_SECOND_MEDICAL,
+      parentPhone: PARENT_LOGIN.phone,
+      country: 'مصر',
+      role: Role.USER,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
   const doctor = await prisma.user.create({
     data: {
       name: 'د. محمد علي',
@@ -210,6 +238,16 @@ async function main() {
       phone: '01055555555',
       password: doctorPassword,
       role: Role.DOCTOR,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  const admin = await prisma.user.create({
+    data: {
+      name: 'مدير المنصة',
+      email: ADMIN_LOGIN.email,
+      password: adminPassword,
+      role: Role.ADMIN,
       status: UserStatus.ACTIVE,
     },
   });
@@ -225,12 +263,29 @@ async function main() {
     },
   });
 
-  await prisma.parentStudentLink.create({
-    data: {
+  await prisma.parentStudentLink.createMany({
+    data: [student, secondStudent].map(({ id }) => ({
       parentId: parent.id,
-      studentId: student.id,
+      studentId: id,
       status: 'ACTIVE',
-    },
+    })),
+  });
+
+  await prisma.suggestion.createMany({
+    data: [
+      {
+        userId: student.id,
+        message: 'أتمنى إضافة تذكير يومي بالمهام التي لم تكتمل.',
+      },
+      {
+        userId: secondStudent.id,
+        message: 'سيكون مفيدًا إضافة إمكانية ترتيب المواد حسب الأولوية.',
+      },
+      {
+        userId: parent.id,
+        message: 'أقترح إضافة ملخص أسبوعي يوضح تقدم الأبناء.',
+      },
+    ],
   });
 
   // ------------------------------------------------------------
@@ -495,7 +550,10 @@ async function main() {
 
   console.log('✅ Seed complete:');
   console.log(`   student: ${student.email} / ${STUDENT_LOGIN.password}`);
+  console.log(`   second student: ${secondStudent.email} / ${SECOND_STUDENT_LOGIN.password}`);
   console.log(`   doctor: ${doctor.email} / ${DOCTOR_LOGIN.password}`);
+  console.log(`   admin: ${admin.email} / ${ADMIN_LOGIN.password}`);
+  console.log('   suggestions: 3 (2 students, 1 parent)');
   console.log(`   tasks created: ${taskCount + everydayTasks.length}`);
   console.log(`   task history rows: ${taskHistoryCount}`);
   console.log(`   habits: ${habits.length}, completions: ${habitCompletionCount}`);
