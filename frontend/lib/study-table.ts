@@ -197,6 +197,10 @@ export async function markNotificationRead(id: string): Promise<NotificationItem
   return response.data.data;
 }
 
+export async function deleteNotification(id: string): Promise<void> {
+  await api.delete(`/notifications/${id}`);
+}
+
 export async function markAllNotificationsRead(): Promise<{ updatedCount: number }> {
   const response = await api.post<ApiEnvelope<{ updatedCount: number }>>(
     "/notifications/read-all",

@@ -49,4 +49,11 @@ export const notificationService = {
     });
     return { updatedCount: result.count };
   },
+
+  async delete(userId: string, id: string) {
+    const result = await prisma.notification.deleteMany({
+      where: { id, userId },
+    });
+    if (!result.count) throw new NotFoundError('الإشعار غير موجود');
+  },
 };

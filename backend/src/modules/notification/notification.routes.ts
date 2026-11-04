@@ -23,5 +23,6 @@ router.get('/unread-count', notificationController.unreadCount);
 router.get('/', validate(listNotificationsSchema), notificationController.list);
 router.post('/read-all', notificationController.markAllRead);
 router.patch('/:id/read', validate(notificationIdSchema), notificationController.markRead);
+router.delete('/:id', validate(notificationIdSchema), notificationController.delete);
 
 export { router as notificationRouter };

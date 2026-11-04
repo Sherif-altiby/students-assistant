@@ -25,4 +25,9 @@ export const notificationController = {
     const result = await notificationService.markAllRead(req.user!.id);
     res.status(StatusCodes.OK).json({ status: 'success', data: result });
   }),
+
+  delete: asyncHandler(async (req: Request, res: Response) => {
+    await notificationService.delete(req.user!.id, req.params.id as string);
+    res.status(StatusCodes.NO_CONTENT).send();
+  }),
 };
