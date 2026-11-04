@@ -14,3 +14,13 @@ export const STUDY_TABLE_CREATION_MODE_OPTIONS = [
   { value: "generate", label: "توليد الجلسات تلقائياً" },
   { value: "empty", label: "إنشاء جدول فارغ" },
 ] as const;
+
+export const STUDY_TABLE_WEEKDAYS = [
+  "الأحد",
+  "الإثنين",
+  "الثلاثاء",
+  "الأربعاء",
+  "الخميس",
+  "الجمعة",
+  "السبت",
+] as const;

@@ -2,17 +2,16 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus, Inbox } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { CustomSelect } from "@/components/ui/CustomSelect";
+import MainButton from "@/components/ui/MainButton";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { FormInput } from "@/components/FormInput";
+import { FormCustomSelect } from "@/components/FormCustomSelect";
 
 import type { TaskFrequency } from "@/types/task";
 import { useTasks } from "@/hooks/Usetasks";
 import { StatsCards } from "./Statscards";
 import { TaskItem } from "./Taskitem";
 import { TaskHistory } from "./Taskhistory";
-import { Label } from "@/components/ui/label";
 
 const FREQUENCY_OPTIONS: { value: TaskFrequency; label: string }[] = [
   { value: "TODAY", label: "اليوم فقط" },
@@ -59,48 +58,35 @@ export default function TasksPage() {
         onSubmit={handleCreate}
         className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-end"
       >
-        <div className="flex-1 space-y-1.5">
-          <Label
-            htmlFor="task-title"
-            className="text-sm font-medium text-foreground "
-          >
-            عنوان المهمة
-          </Label>
-          <Input
+        <div className="flex-1">
+          <FormInput
+            label="عنوان المهمة"
             id="task-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="مثال: مراجعة الفصل الثالث في الفيزياء"
             required
             disabled={isCreating}
-            className="h-11 w-full rounded-(--radius-md) border border-border bg-input/30 px-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:ring-1 focus:border-ring focus:ring-ring/30"
           />
         </div>
 
-        <div className="space-y-1.5 sm:w-44">
-          <Label
-            htmlFor="task-frequency"
-            className="text-sm font-medium text-foreground"
-          >
-            التكرار
-          </Label>
-          <CustomSelect
-            id="task-frequency"
-            value={frequency}
-            onChange={(v) => setFrequency(v as TaskFrequency)}
-            options={FREQUENCY_OPTIONS}
-            disabled={isCreating}
-          />
-        </div>
+        <FormCustomSelect
+          className="sm:w-44"
+          label="التكرار"
+          id="task-frequency"
+          value={frequency}
+          onChange={setFrequency}
+          options={FREQUENCY_OPTIONS}
+          disabled={isCreating}
+        />
 
-        <Button
+        <MainButton
           type="submit"
           disabled={isCreating || !title.trim()}
-          className="h-11 gap-2 rounded-[var(--radius-md)] bg-primary px-6 font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-        >
-          <Plus className="h-4 w-4" />
-          {isCreating ? "جارٍ الإضافة..." : "إضافة مهمة"}
-        </Button>
+          className="px-6"
+          icon={<Plus className="h-4 w-4" />}
+          title={isCreating ? "جارٍ الإضافة..." : "إضافة مهمة"}
+        />
       </form>
 
       {error && (

@@ -281,3 +281,7 @@
     background-image: none;
   }
 }
+
+button{
+  cursor: pointer;
+}

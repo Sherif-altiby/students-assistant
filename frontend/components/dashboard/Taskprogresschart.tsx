@@ -162,7 +162,7 @@ export default function TaskProgressChart() {
   const noun = PERIOD_NOUN[filter];
 
   return (
-    <Card className="gap-0 border border-border  p-5   sm:p-6">
+    <Card className="gap-0 border border-border p-5 shadow-none ring-0 sm:p-6">
       <ScrollbarStyles />
 
       {/* Header */}

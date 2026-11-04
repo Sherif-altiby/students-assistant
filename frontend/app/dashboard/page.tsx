@@ -90,7 +90,7 @@ export default function DashboardOverviewPage() {
   return (
     <div className="flex flex-col gap-8 p-4 sm:p-6">
       {/* ------------------------------ Greeting ------------------------------ */}
-      <header className="flex items-center gap-4">
+      {/* <header className="flex items-center gap-4">
         <div
           aria-hidden
           className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-primary font-display text-2xl font-extrabold text-primary-foreground"
@@ -112,7 +112,7 @@ export default function DashboardOverviewPage() {
             {getMotivation(bestStreak, hasData)}
           </p>
         </div>
-      </header>
+      </header> */}
 
       {/* ------------------------------ Quick numbers ------------------------------ */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

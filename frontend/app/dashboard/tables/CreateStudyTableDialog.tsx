@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import {
+  AlertTriangle,
+  CalendarDays,
+  Check,
+  Minus,
+  Plus,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import MainButton from "@/components/ui/MainButton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormInput } from "@/components/FormInput";
 import { FormCustomSelect } from "@/components/FormCustomSelect";
@@ -12,15 +19,16 @@ import { FormDatePicker } from "@/components/FormDatePicker";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import {
   STUDY_TABLE_CREATION_MODE_OPTIONS,
   STUDY_TABLE_TYPE_OPTIONS,
-} from "@/constants/study-table";
+  STUDY_TABLE_WEEKDAYS,
+} from "@/constants";
 import { listAvailableStudyMonths, listStudySubjects } from "@/lib/study-table";
 import type {
   GenerateStudyTableInput,
@@ -38,8 +46,12 @@ interface CreateStudyTableDialogProps {
   isCreating: boolean;
 }
 
-const weekdays = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-const inputClass = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
+const selectClass =
+  "h-11 w-full rounded-[var(--radius-md)] border border-input bg-background px-3 text-sm outline-none transition-colors " +
+  "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-60";
+
+const th = "px-3 py-2.5 text-start text-xs font-medium text-muted-foreground";
+const td = "border-t px-3 py-2.5 align-top";
 
 function localDateString(date: Date) {
   const year = date.getFullYear();
@@ -82,19 +94,91 @@ function sessionRows(
     if (items.length === 0) {
       return (
         <tr key={date}>
-          <th className="border p-2 text-right">{formatDate(date)}</th>
-          <td colSpan={2} className="border p-2 text-muted-foreground">لا توجد جلسات</td>
+          <th scope="row" className={cn(td, "whitespace-nowrap text-start font-medium")}>{formatDate(date)}</th>
+          <td colSpan={2} className={cn(td, "text-muted-foreground")}>لا توجد جلسات</td>
         </tr>
       );
     }
     return items.map((session, index) => (
       <tr key={`${date}-${session.lessonId}`}>
-        {index === 0 && <th rowSpan={items.length} className="border p-2 text-right">{formatDate(date)}</th>}
-        <td className="border p-2">{session.subject?.title ?? "—"}</td>
-        <td className="border p-2">{session.lesson?.title ?? "—"}</td>
+        {index === 0 && (
+          <th
+            scope="row"
+            rowSpan={items.length}
+            className={cn(td, "whitespace-nowrap border-e bg-muted/30 text-start font-medium")}
+          >
+            {formatDate(date)}
+          </th>
+        )}
+        <td className={td}>{session.subject?.title ?? "—"}</td>
+        <td className={td}>{session.lesson?.title ?? "—"}</td>
       </tr>
     ));
   });
+}
+
+/** A titled group of fields with a quiet container. */
+function Section({
+  title,
+  hint,
+  action,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3 rounded-[var(--radius-lg,0.75rem)] border bg-muted/20 p-4">
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">{title}</h3>
+          {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+        </div>
+        {action}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+/** Pressable chip used for weekdays and subjects. */
+function Chip({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        selected
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-input bg-background text-foreground hover:bg-muted",
+      )}
+    >
+      {selected && <Check className="size-3.5" aria-hidden />}
+      {children}
+    </button>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="rounded-lg border bg-background px-3 py-2.5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold tabular-nums">{value}</p>
+    </div>
+  );
 }
 
 export function CreateStudyTableDialog({
@@ -246,198 +330,336 @@ export function CreateStudyTableDialog({
     invalidatePreview();
   }
 
+  function toggleWeekday(index: number) {
+    setStudyWeekdays((current) => current.includes(index)
+      ? current.filter((value) => value !== index)
+      : [...current, index].sort());
+    invalidatePreview();
+  }
+
+  function changeSessions(next: number) {
+    setMaxSessionsPerDay(Math.min(50, Math.max(1, next || 1)));
+    invalidatePreview();
+  }
+
   const loading = busy || isCreating;
+  const submitDisabled =
+    subjectsQuery.isError ||
+    (type === "MONTHLY" && (availableMonthsQuery.isLoading || availableMonthsQuery.isError)) ||
+    (mode === "generate" && studyWeekdays.length === 0);
+  const showSubjectList = type === "GLOBAL" || !allSubjects;
+
+  const eligibleDays = preview && maxSessionsPerDay > 0 ? preview.capacity / maxSessionsPerDay : 0;
+  const averagePerDay = preview && eligibleDays > 0
+    ? (preview.scheduledCount / eligibleDays).toFixed(1)
+    : "0.0";
 
   return (
     <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setPreview(null); }}>
-      <DialogTrigger render={<Button className="gap-2"><Plus className="h-4 w-4" />جدول مذاكرة جديد</Button>} />
-      <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader><DialogTitle className="text-center text-xl font-bold">إنشاء جدول مذاكرة</DialogTitle></DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <FormInput
-              label="عنوان الجدول"
-              value={title}
-              maxLength={255}
-              required
-              onChange={(event) => {
-                setTitle(event.target.value);
-                invalidatePreview();
-              }}
-            />
-            <FormCustomSelect
-              label="نوع الجدول"
-              value={type}
-              onChange={(value) => {
-                setType(value);
-                invalidatePreview();
-              }}
-              options={STUDY_TABLE_TYPE_OPTIONS}
-            />
-            <FormCustomSelect
-              label="طريقة الإنشاء"
-              value={mode}
-              onChange={(value) => {
-                setMode(value);
-                invalidatePreview();
-              }}
-              options={STUDY_TABLE_CREATION_MODE_OPTIONS}
-            />
-          </div>
+      <DialogTrigger render={<MainButton icon={<Plus />} title="جدول مذاكرة جديد" />} />
+      <DialogContent
+        dir="rtl"
+        closeButtonClassName="right-auto left-2"
+        className="max-h-[90vh] gap-0 overflow-y-auto sm:max-w-3xl"
+      >
+        <DialogHeader className="pb-4 text-start">
+          <DialogTitle className="text-xl font-bold">إنشاء جدول مذاكرة</DialogTitle>
+          <DialogDescription>
+            حدّد الفترة والمواد وأيام المذاكرة، وراجع الخطة قبل حفظها.
+          </DialogDescription>
+        </DialogHeader>
 
-          {type === "MONTHLY" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-2 text-sm font-medium">الشهر
-                <select className={inputClass}
-                  value={selectedMonth ? `${selectedMonth.year}-${selectedMonth.month}` : ""}
-                  disabled={availableMonthsQuery.isLoading || availableMonthsQuery.isError}
-                  onChange={(event) => { setSelectedMonthKey(event.target.value); invalidatePreview(); }}>
-                  {availableMonths.map((option) => <option
-                    key={`${option.year}-${option.month}`}
-                    value={`${option.year}-${option.month}`}>
-                    {option.label}
-                  </option>)}
-                </select>
-              </label>
-              {availableMonthsQuery.isLoading && <p className="self-center text-sm text-muted-foreground">
-                جارٍ تحميل الأشهر المتاحة...
-              </p>}
-              {availableMonthsQuery.isError && <p role="alert" className="self-center text-sm text-destructive">
-                تعذر تحميل الأشهر المتاحة
-              </p>}
-              {selectedMonth?.isCurrent && availableMonthsQuery.data && <p className="self-center text-sm text-muted-foreground">
-                سيبدأ الجدول من اليوم {availableMonthsQuery.data.today}
-              </p>}
-            </div>
-          ) : (
-            <div className={`grid gap-3 ${type === "WEEKLY" ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
-            
-              <FormDatePicker
-                label="تاريخ البداية"
-                value={startDate}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Section title="الأساسيات">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <FormInput
+                label="عنوان الجدول"
+                value={title}
+                maxLength={255}
                 required
-                onChange={(value) => {
-                  setStartDate(value);
-                  if (endDate < value) setEndDate(value);
+                onChange={(event) => {
+                  setTitle(event.target.value);
                   invalidatePreview();
                 }}
               />
-              {type !== "WEEKLY" && (
+              <FormCustomSelect
+                label="نوع الجدول"
+                value={type}
+                onChange={(value) => {
+                  setType(value);
+                  invalidatePreview();
+                }}
+                options={STUDY_TABLE_TYPE_OPTIONS}
+              />
+              <FormCustomSelect
+                label="طريقة الإنشاء"
+                value={mode}
+                onChange={(value) => {
+                  setMode(value);
+                  invalidatePreview();
+                }}
+                options={STUDY_TABLE_CREATION_MODE_OPTIONS}
+              />
+            </div>
+          </Section>
+
+          <Section title="الفترة">
+            {type === "MONTHLY" ? (
+              <div className="grid items-end gap-3 sm:grid-cols-2">
+                <label className="space-y-2 text-sm font-medium">
+                  الشهر
+                  <select
+                    className={selectClass}
+                    value={selectedMonth ? `${selectedMonth.year}-${selectedMonth.month}` : ""}
+                    disabled={availableMonthsQuery.isLoading || availableMonthsQuery.isError}
+                    onChange={(event) => { setSelectedMonthKey(event.target.value); invalidatePreview(); }}
+                  >
+                    {availableMonths.map((option) => (
+                      <option key={`${option.year}-${option.month}`} value={`${option.year}-${option.month}`}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {availableMonthsQuery.isLoading && (
+                  <p className="pb-3 text-sm text-muted-foreground">جارٍ تحميل الأشهر المتاحة...</p>
+                )}
+                {availableMonthsQuery.isError && (
+                  <p role="alert" className="pb-3 text-sm text-destructive">تعذر تحميل الأشهر المتاحة</p>
+                )}
+                {selectedMonth?.isCurrent && availableMonthsQuery.data && (
+                  <p className="flex items-center gap-1.5 pb-3 text-sm text-muted-foreground">
+                    <CalendarDays className="size-4 shrink-0" aria-hidden />
+                    سيبدأ الجدول من اليوم {availableMonthsQuery.data.today}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className={cn("grid gap-3", type === "WEEKLY" ? "sm:grid-cols-1" : "sm:grid-cols-2")}>
                 <FormDatePicker
-                  label="تاريخ النهاية"
-                  value={endDate}
-                  minDate={startDate}
+                  label="تاريخ البداية"
+                  value={startDate}
                   required
                   onChange={(value) => {
-                    setEndDate(value);
+                    setStartDate(value);
+                    if (endDate < value) setEndDate(value);
                     invalidatePreview();
                   }}
                 />
-              )}
-            </div>
+                {type !== "WEEKLY" && (
+                  <FormDatePicker
+                    label="تاريخ النهاية"
+                    value={endDate}
+                    minDate={startDate}
+                    required
+                    onChange={(value) => {
+                      setEndDate(value);
+                      invalidatePreview();
+                    }}
+                  />
+                )}
+              </div>
+            )}
+          </Section>
+
+          <Section
+            title="المواد"
+            hint={showSubjectList && selectedSubjects.length > 0
+              ? `${selectedSubjects.length} مادة مختارة`
+              : undefined}
+            action={type !== "GLOBAL" ? (
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <Checkbox
+                  checked={allSubjects}
+                  onCheckedChange={(checked) => { setAllSubjects(checked === true); invalidatePreview(); }}
+                />
+                جميع المواد
+              </label>
+            ) : undefined}
+          >
+            {!showSubjectList ? (
+              <p className="text-sm text-muted-foreground">سيتم تضمين كل المواد في الجدول.</p>
+            ) : subjectsQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">جارٍ تحميل المواد...</p>
+            ) : subjectsQuery.isError ? (
+              <p role="alert" className="text-sm text-destructive">تعذر تحميل قائمة المواد</p>
+            ) : (
+              <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+                {(subjectsQuery.data ?? []).map((subject) => (
+                  <Chip
+                    key={subject.id}
+                    selected={selectedSubjects.includes(subject.id)}
+                    onClick={() => toggleSubject(subject.id)}
+                  >
+                    {subject.title}
+                  </Chip>
+                ))}
+              </div>
+            )}
+          </Section>
+
+          {mode === "generate" && (
+            <Section title="جدولة المذاكرة">
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">أيام المذاكرة</legend>
+                <div className="flex flex-wrap gap-2">
+                  {STUDY_TABLE_WEEKDAYS.map((day, index) => (
+                    <Chip key={day} selected={studyWeekdays.includes(index)} onClick={() => toggleWeekday(index)}>
+                      {day}
+                    </Chip>
+                  ))}
+                </div>
+                {studyWeekdays.length === 0 && (
+                  <p role="alert" className="text-xs text-destructive">اختر يوماً واحداً على الأقل.</p>
+                )}
+              </fieldset>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+                <div>
+                  <p id="sessions-label" className="text-sm font-medium">الحد الأقصى للجلسات يومياً</p>
+                  <p className="text-xs text-muted-foreground">من 1 إلى 6 جلسة</p>
+                </div>
+                <div
+                  role="group"
+                  aria-labelledby="sessions-label"
+                  className="flex h-11 items-center rounded-[var(--radius-md)] border bg-background"
+                >
+                  <button
+                    type="button"
+                    aria-label="تقليل"
+                    disabled={maxSessionsPerDay <= 1}
+                    onClick={() => changeSessions(maxSessionsPerDay - 1)}
+                    className="grid size-11 place-items-center rounded-s-[var(--radius-md)] text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+                  >
+                    <Minus className="size-4" aria-hidden />
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={50}
+                    value={maxSessionsPerDay}
+                    onChange={(event) => changeSessions(Number(event.target.value))}
+                    className="h-full w-14 bg-transparent text-center text-sm font-semibold tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <button
+                    type="button"
+                    aria-label="زيادة"
+                    disabled={maxSessionsPerDay >= 50}
+                    onClick={() => changeSessions(maxSessionsPerDay + 1)}
+                    className="grid size-11 place-items-center rounded-e-[var(--radius-md)] text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+                  >
+                    <Plus className="size-4" aria-hidden />
+                  </button>
+                </div>
+              </div>
+            </Section>
           )}
 
-          <section className="space-y-3">
-            {type !== "GLOBAL" && <label className="flex items-center gap-2 text-sm font-medium">
-              <Checkbox checked={allSubjects} onCheckedChange={(checked) => { setAllSubjects(checked === true); invalidatePreview(); }} />
-              جميع المواد
-            </label>}
-            {(type === "GLOBAL" || !allSubjects) && (
-              subjectsQuery.isLoading ? <p className="text-sm text-muted-foreground">جارٍ تحميل المواد...</p> :
-                subjectsQuery.isError ? <p role="alert" className="text-sm text-destructive">تعذر تحميل قائمة المواد</p> :
-                  <div className="grid max-h-36 grid-cols-2 gap-2 overflow-auto rounded-md border p-3 sm:grid-cols-3">
-                    {(subjectsQuery.data ?? []).map((subject) => <label key={subject.id} className="flex items-center gap-2 text-sm">
-                      <Checkbox checked={selectedSubjects.includes(subject.id)} onCheckedChange={() => toggleSubject(subject.id)} />
-                      {subject.title}
-                    </label>)}
+          {preview && (
+            <Section title="معاينة الخطة">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <Stat label="دروس مجدولة" value={`${preview.scheduledCount} / ${preview.totalLessons}`} />
+                <Stat label="أيام المذاكرة" value={eligibleDays} />
+                <Stat label="المتوسط اليومي" value={averagePerDay} />
+                <Stat label="السعة" value={preview.capacity} />
+              </div>
+
+              {(preview.skippedCompletedCount > 0 || preview.unscheduledLessonsCount > 0) && (
+                <p className="text-sm text-muted-foreground">
+                  {preview.skippedCompletedCount > 0 && `${preview.skippedCompletedCount} درس مكتمل تم تخطيه`}
+                  {preview.skippedCompletedCount > 0 && preview.unscheduledLessonsCount > 0 && " — "}
+                  {preview.unscheduledLessonsCount > 0 && `${preview.unscheduledLessonsCount} درس غير مجدول`}
+                </p>
+              )}
+
+              {preview.suggestions.length > 0 && (
+                <div
+                  role="status"
+                  className="flex gap-2.5 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+                >
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  <ul className="space-y-1">
+                    {preview.suggestions.map((suggestion) => (
+                      <li key={suggestion.code}>{suggestion.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {preview.months?.map((plannedMonth) => (
+                <details
+                  key={`${plannedMonth.year}-${plannedMonth.month}`}
+                  open
+                  className="group space-y-2"
+                >
+                  <summary className="cursor-pointer text-sm font-semibold marker:text-muted-foreground">
+                    {plannedMonth.monthName} {plannedMonth.year}
+                  </summary>
+                  <div className="overflow-x-auto rounded-lg border bg-background">
+                    <table className="w-full min-w-[600px] border-collapse text-sm">
+                      <thead className="bg-muted/60">
+                        <tr>
+                          <th className={th}>الأسبوع</th>
+                          <th className={th}>الأيام</th>
+                          <th className={th}>المواد</th>
+                          <th className={th}>الدروس</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {plannedMonth.weeks.map((week) => (
+                          <tr key={week.week}>
+                            <th scope="row" className={cn(td, "whitespace-nowrap text-start font-medium")}>
+                              الأسبوع {week.week}
+                            </th>
+                            <td className={td}>{week.days.map((day) => formatDate(day.date)).join("، ")}</td>
+                            <td className={td}>
+                              {week.days.flatMap((day) => day.sessions).map((session) => session.subject?.title ?? "—").join("، ")}
+                            </td>
+                            <td className={td}>
+                              {week.days.flatMap((day) => day.sessions).map((session) => session.lesson?.title ?? "—").join("، ")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-            )}
-          </section>
+                </details>
+              ))}
 
-          {mode === "generate" && <>
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-semibold">أيام المذاكرة</legend>
-              <div className="flex flex-wrap gap-3">
-                {weekdays.map((day, index) => <label key={day} className="flex items-center gap-1.5 text-sm">
-                  <Checkbox checked={studyWeekdays.includes(index)} onCheckedChange={() => {
-                    setStudyWeekdays((current) => current.includes(index)
-                      ? current.filter((value) => value !== index)
-                      : [...current, index].sort());
-                    invalidatePreview();
-                  }} />{day}
-                </label>)}
-              </div>
-            </fieldset>
-            <label className="block max-w-xs space-y-2 text-sm font-medium">الحد الأقصى للجلسات يومياً
-              <Input type="number" min={1} max={50} value={maxSessionsPerDay}
-                onChange={(event) => { setMaxSessionsPerDay(Number(event.target.value)); invalidatePreview(); }} />
-            </label>
-          </>}
+              {!preview.months && (
+                <div className="max-h-72 overflow-auto rounded-lg border bg-background">
+                  <table className="w-full min-w-[640px] border-collapse text-sm">
+                    <thead className="sticky top-0 bg-muted">
+                      <tr>
+                        <th className={th}>اليوم</th>
+                        <th className={th}>المادة</th>
+                        <th className={th}>الدرس</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sessionRows(
+                        preview.sessions,
+                        preview.range?.startDate,
+                        preview.range?.endDate,
+                        studyWeekdays,
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Section>
+          )}
 
-          {preview && <section className="space-y-3 rounded-md border p-3">
-            {(() => {
-              const eligibleDays = maxSessionsPerDay > 0
-                ? preview.capacity / maxSessionsPerDay
-                : 0;
-              const averagePerDay = eligibleDays > 0
-                ? (preview.scheduledCount / eligibleDays).toFixed(1)
-                : "0.0";
-              return <p className="text-sm font-semibold">
-                الدروس: {preview.scheduledCount} مجدول من {preview.totalLessons}
-                {preview.skippedCompletedCount > 0
-                  && ` — ${preview.skippedCompletedCount} مكتمل`}
-                {" — "}أيام المذاكرة: {eligibleDays}
-                {" — "}المتوسط: {averagePerDay} درس يومياً
-              </p>;
-            })()}
-            <p className="text-sm font-semibold">
-              المعاينة: {preview.sessions.length} جلسة — السعة {preview.capacity}
-              {preview.unscheduledLessonsCount > 0 && ` — ${preview.unscheduledLessonsCount} درس غير مجدول`}
-            </p>
-            {preview.suggestions.length > 0 && <ul className="list-inside list-disc text-sm text-amber-700">
-              {preview.suggestions.map((suggestion) => <li key={suggestion.code}>{suggestion.message}</li>)}
-            </ul>}
-            {preview.months?.map((plannedMonth) => <details key={`${plannedMonth.year}-${plannedMonth.month}`} open className="space-y-2">
-              <summary className="cursor-pointer font-semibold">{plannedMonth.monthName} {plannedMonth.year}</summary>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[600px] border-collapse text-sm">
-                  <thead><tr className="bg-muted"><th className="border p-2">الأسبوع</th><th className="border p-2">الأيام</th><th className="border p-2">المواد</th><th className="border p-2">الدروس</th></tr></thead>
-                  <tbody>{plannedMonth.weeks.map((week) => <tr key={week.week}>
-                    <th className="border p-2">الأسبوع {week.week}</th>
-                    <td className="border p-2">{week.days.map((day) => formatDate(day.date)).join("، ")}</td>
-                    <td className="border p-2">{week.days.flatMap((day) => day.sessions).map((session) => session.subject?.title ?? "—").join("، ")}</td>
-                    <td className="border p-2">{week.days.flatMap((day) => day.sessions).map((session) => session.lesson?.title ?? "—").join("، ")}</td>
-                  </tr>)}</tbody>
-                </table>
-              </div>
-            </details>)}
-            {!preview.months && <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] border-collapse text-sm">
-                <thead><tr className="bg-muted"><th className="border p-2">اليوم</th><th className="border p-2">المادة</th><th className="border p-2">الدرس</th></tr></thead>
-                <tbody>{sessionRows(
-                  preview.sessions,
-                  preview.range?.startDate,
-                  preview.range?.endDate,
-                  studyWeekdays,
-                )}</tbody>
-              </table>
-            </div>}
-          </section>}
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
+          <div className="sticky bottom-0 -mx-1 border-t bg-background/95 px-1 pb-1 pt-3 backdrop-blur">
+            <MainButton
               type="submit"
-              className="flex-1"
-              disabled={loading || subjectsQuery.isError
-                || (type === "MONTHLY" && (availableMonthsQuery.isLoading || availableMonthsQuery.isError))
-                || (mode === "generate" && studyWeekdays.length === 0)}
-            >
-              {loading
-                ? <Loader2 className="h-4 w-4 animate-spin" />
-                : mode === "generate" && !preview
-                  ? "معاينة الخطة"
-                  : "حفظ الجدول"}
-            </Button>
+              fullWidth
+              loading={loading}
+              loadingTitle={mode === "generate" && !preview ? "جارٍ إعداد المعاينة…" : "جارٍ الحفظ…"}
+              disabled={submitDisabled}
+              title={mode === "generate" && !preview ? "معاينة الخطة" : "حفظ الجدول"}
+            />
           </div>
         </form>
       </DialogContent>

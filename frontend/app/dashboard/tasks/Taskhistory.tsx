@@ -67,10 +67,13 @@ export function TaskHistory() {
       const retainedDates = current.filter((date) =>
         availableDates.includes(date),
       );
+      const nextDates =
+        retainedDates.length > 0 ? retainedDates : availableDates.slice(0, 1);
 
-      return retainedDates.length > 0
-        ? retainedDates
-        : availableDates.slice(0, 1);
+      return current.length === nextDates.length &&
+        current.every((date, index) => date === nextDates[index])
+        ? current
+        : nextDates;
     });
   }, [days]);
 
@@ -90,9 +93,19 @@ export function TaskHistory() {
             </p>
           </div>
         </div>
-        {isFetching && !isLoading && (
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        )}
+        <div className="flex items-center gap-2">
+          {days.length > 0 && (
+            <Badge
+              variant="secondary"
+              className="rounded-full bg-muted px-2.5 text-xs font-medium text-muted-foreground"
+            >
+              {days.length} {days.length === 1 ? "يوم" : "أيام"}
+            </Badge>
+          )}
+          {isFetching && !isLoading && (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4 pt-4">

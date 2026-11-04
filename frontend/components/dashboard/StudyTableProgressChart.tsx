@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { ArrowLeft, CalendarCheck, Table2 } from "lucide-react";
 import {
   Card,
@@ -56,11 +64,6 @@ export default function StudyTableProgressChart() {
   const completionPercent = totalSessions
     ? Math.round((completedSessions / totalSessions) * 100)
     : 0;
-  const pieData = [
-    { name: "مكتمل", value: completedSessions, color: "var(--study-progress-completed)" },
-    { name: "متبقي", value: remainingSessions, color: "var(--study-progress-remaining)" },
-  ].filter((item) => item.value > 0);
-
   return (
     <Card className="min-w-0 gap-4 p-5 sm:p-6">
       <CardHeader className="flex flex-row items-start justify-between gap-3 p-0">
@@ -114,40 +117,57 @@ export default function StudyTableProgressChart() {
           </p>
         ) : (
           <>
-            <div className="relative h-64" dir="ltr">
+            <div className="h-64 min-w-0" dir="ltr">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius="68%"
-                    outerRadius="88%"
-                    cornerRadius={10}
-                    paddingAngle={
-                      remainingSessions > 0 && completedSessions > 0 ? 4 : 0
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 12, right: 12, left: -16, bottom: 4 }}
+                >
+                  <CartesianGrid
+                    stroke="var(--border)"
+                    strokeDasharray="4 4"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="title"
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={0}
+                    tickFormatter={(title: string) =>
+                      title.length > 10 ? `${title.slice(0, 10)}…` : title
                     }
-                    stroke="none"
-                    startAngle={90}
-                    endAngle={-270}
-                  >
-                    {pieData.map((item) => (
-                      <Cell key={item.name} fill={item.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value, name) => [`${value} جلسة`, name]} />
-                </PieChart>
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value, name) => [`${value} جلسة`, name]}
+                    labelFormatter={(label) => `الجدول: ${label}`}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="completed"
+                    name="مكتمل"
+                    stackId="sessions"
+                    stroke="var(--study-progress-completed)"
+                    fill="var(--study-progress-completed)"
+                    fillOpacity={0.75}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="remaining"
+                    name="متبقي"
+                    stackId="sessions"
+                    stroke="var(--study-progress-remaining)"
+                    fill="var(--study-progress-remaining)"
+                    fillOpacity={0.35}
+                  />
+                </AreaChart>
               </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-black tabular-nums text-foreground">
-                  {completionPercent}%
-                </span>
-                <span className="mt-1 text-xs text-muted-foreground">
-                  نسبة الإنجاز
-                </span>
-              </div>
             </div>
 
             <p className="mt-3 text-center text-sm font-semibold text-foreground">

@@ -18,10 +18,16 @@ import {
   listTaskHistory,
   getTaskStats,
 } from "@/lib/tasks";
-import type { CreateTaskPayload, Task, UpdateTaskPayload } from "@/types/task";
+import type {
+  CreateTaskPayload,
+  Task,
+  TaskHistoryDay,
+  UpdateTaskPayload,
+} from "@/types/task";
 import type { TaskProgressPeriod } from "@/lib/tasks";
 
 const TASKS_KEY = ["tasks"] as const;
+const EMPTY_TASK_HISTORY_DAYS: TaskHistoryDay[] = [];
 
 /** Matches the API's unpadded date-segment format, e.g. "2026-7-17". */
 function toHistoryDateKey(date: Date): string {
@@ -36,7 +42,7 @@ export function useTaskHistory(page: number, limit = 10) {
   });
 
   return {
-    days: query.data?.data ?? [],
+    days: query.data?.data ?? EMPTY_TASK_HISTORY_DAYS,
     pagination: query.data?.pagination ?? null,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
