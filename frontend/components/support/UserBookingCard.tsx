@@ -12,12 +12,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { Star, Video, XCircle } from "lucide-react";
 import type { BookingWithSlot } from "@/lib/support";
 import { BookingStatusBadge } from "./BookingtatusBadge";
 import { RatingDialog } from "./RatingDialog";
- 
 
 function formatSlotTime(slot: BookingWithSlot["slot"]): string {
   const start = new Date(slot.startTime);
@@ -27,8 +31,14 @@ function formatSlotTime(slot: BookingWithSlot["slot"]): string {
     day: "numeric",
     month: "long",
   });
-  const startTime = start.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
-  const endTime = end.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
+  const startTime = start.toLocaleTimeString("ar-EG", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const endTime = end.toLocaleTimeString("ar-EG", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   return `${date} · ${startTime} - ${endTime}`;
 }
 
@@ -47,9 +57,11 @@ export function UserBookingCard({
   onCancel,
   onRate,
 }: UserBookingCardProps) {
-  const canCancel = booking.status === "PENDING" || booking.status === "ACCEPTED";
+  const canCancel =
+    booking.status === "PENDING" || booking.status === "ACCEPTED";
   const canRate = booking.status === "COMPLETED";
-  const canJoin = booking.status === "ACCEPTED" && Boolean(booking.slot.meetingLink);
+  const canJoin =
+    booking.status === "ACCEPTED" && Boolean(booking.slot.meetingLink);
 
   return (
     <Card>
@@ -76,18 +88,20 @@ export function UserBookingCard({
         <CardFooter className="justify-end gap-2">
           {canCancel && (
             <AlertDialog>
-              <AlertDialogTrigger>
-                <Button variant="outline" size="sm" disabled={isCancelling}>
-                  <XCircle className="me-1 h-4 w-4" />
-                  إلغاء الحجز
-                </Button>
-              </AlertDialogTrigger>
+              <AlertDialogTrigger
+                render={
+                  <Button variant="outline" size="sm" disabled={isCancelling}>
+                    <XCircle className="me-1 h-4 w-4" />
+                    إلغاء الحجز
+                  </Button>
+                }
+              />
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>إلغاء الحجز؟</AlertDialogTitle>
                   <AlertDialogDescription>
-                    سيتم إلغاء هذا الحجز وتحرير الموعد لمرضى آخرين. لا يمكن التراجع عن هذا
-                    الإجراء.
+                    سيتم إلغاء هذا الحجز وتحرير الموعد لمرضى آخرين. لا يمكن
+                    التراجع عن هذا الإجراء.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

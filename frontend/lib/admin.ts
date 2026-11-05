@@ -35,14 +35,14 @@ export async function listAdminUsers(params: {
   return response.data.data;
 }
 
-export async function inviteDoctor(payload: {
+export async function createDoctor(payload: {
   name: string;
   email: string;
-  phone: string;
+  password: string;
 }) {
   const response = await api.post<
     ApiEnvelope<Pick<AdminUser, "id" | "email" | "status">>
-  >("/users/doctors/invite", payload);
+  >("/users/doctors", payload);
   return response.data.data;
 }
 

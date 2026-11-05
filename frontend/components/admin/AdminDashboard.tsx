@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Lightbulb, Users } from "lucide-react";
+import { ADMIN_DASHBOARD_VIEWS } from "@/constants";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Button } from "@/components/ui/button";
+import MainButton from "@/components/ui/MainButton";
 import { AdminSuggestionsSection } from "@/components/admin/AdminSuggestionsSection";
 import { AdminUsersSection } from "@/components/admin/AdminUsersSection";
 
-type AdminView = "users" | "suggestions";
-
 export function AdminDashboard() {
-  const [view, setView] = useState<AdminView>("users");
+  const [view, setView] =
+    useState<(typeof ADMIN_DASHBOARD_VIEWS)[number]["id"]>("users");
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -23,26 +22,19 @@ export function AdminDashboard() {
         role="tablist"
         aria-label="أقسام الإدارة"
       >
-        <Button
-          type="button"
-          role="tab"
-          aria-selected={view === "users"}
-          variant={view === "users" ? "default" : "outline"}
-          onClick={() => setView("users")}
-        >
-          <Users className="size-4" aria-hidden="true" />
-          الحسابات
-        </Button>
-        <Button
-          type="button"
-          role="tab"
-          aria-selected={view === "suggestions"}
-          variant={view === "suggestions" ? "default" : "outline"}
-          onClick={() => setView("suggestions")}
-        >
-          <Lightbulb className="size-4" aria-hidden="true" />
-          الاقتراحات
-        </Button>
+        {ADMIN_DASHBOARD_VIEWS.map(({ id, label, icon: Icon }) => (
+          <MainButton
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={view === id}
+            variant={view === id ? "default" : "outline"}
+            onClick={() => setView(id)}
+            title={label}
+            icon={<Icon aria-hidden="true" />}
+            className="h-9"
+          />
+        ))}
       </div>
       {view === "users" ? <AdminUsersSection /> : <AdminSuggestionsSection />}
     </div>

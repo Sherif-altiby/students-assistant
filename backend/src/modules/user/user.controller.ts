@@ -57,6 +57,11 @@ export const userController = {
     res.status(StatusCodes.NO_CONTENT).send();
   }),
 
+  createDoctor: asyncHandler(async (req: Request, res: Response) => {
+    const result = await userService.createDoctor(req.body);
+    res.status(StatusCodes.CREATED).json({ status: 'success', data: result });
+  }),
+
   inviteDoctor: asyncHandler(async (req: Request, res: Response) => {
     const result = await userService.inviteDoctor(req.body);
     res.status(StatusCodes.CREATED).json({ status: 'success', data: result });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Link2, Loader2 } from "lucide-react";
 
 interface MeetingLinkDialogProps {
-  trigger: ReactNode;
+  trigger: ReactElement;
   currentLink?: string | null;
   isSubmitting?: boolean;
   onSubmit: (meetingLink: string) => void;
@@ -45,7 +45,7 @@ export function MeetingLinkDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>{trigger}</DialogTrigger>
+      <DialogTrigger render={trigger} />
       <DialogContent className="sm:max-w-sm [&>button]:hidden">
         <DialogHeader className="text-start">
           <DialogTitle>رابط الجلسة</DialogTitle>
@@ -66,7 +66,11 @@ export function MeetingLinkDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+          >
             إلغاء
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={!canSubmit}>

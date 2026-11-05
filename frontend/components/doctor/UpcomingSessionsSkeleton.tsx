@@ -1,11 +1,12 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { DOCTOR_SESSION_SKELETON_ROWS } from "@/constants";
 
 export function UpcomingSessionsSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <Card key={i} className="border-border shadow-sm">
+      {Array.from({ length: DOCTOR_SESSION_SKELETON_ROWS }, (_, index) => (
+        <Card key={index} className="border-border shadow-sm">
           <CardHeader className="flex flex-row items-center gap-3 pb-3">
             <Skeleton className="h-10 w-10 rounded-full" />
             <div className="flex-1 space-y-2">
@@ -17,9 +18,6 @@ export function UpcomingSessionsSkeleton() {
             <Skeleton className="h-3.5 w-20" />
             <Skeleton className="h-3.5 w-32" />
           </CardContent>
-          <CardFooter>
-            <Skeleton className="h-8 w-full rounded-md" />
-          </CardFooter>
         </Card>
       ))}
     </div>

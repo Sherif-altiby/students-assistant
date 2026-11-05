@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import {
   Dialog,
   DialogContent,
@@ -52,7 +52,7 @@ const TYPE_LABELS: Record<AvailabilityRuleType, string> = {
 
 interface RuleFormDialogProps {
   /** Element that opens the dialog when clicked. */
-  trigger: ReactNode;
+  trigger: ReactElement;
   /** Pass an existing rule to edit it; omit to create a new one. */
   rule?: AvailabilityRule;
   isSubmitting?: boolean;
@@ -113,7 +113,7 @@ export function RuleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>{trigger}</DialogTrigger>
+      <DialogTrigger render={trigger} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>

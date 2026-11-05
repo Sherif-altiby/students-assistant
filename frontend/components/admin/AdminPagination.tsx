@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import MainButton from "@/components/ui/MainButton";
 
 export function AdminPagination({
   page,
@@ -26,20 +26,18 @@ export function AdminPagination({
         صفحة {page} من {totalPages} · {total} نتيجة
       </p>
       <div className="flex gap-2">
-        <Button
+        <MainButton
+          title="السابقة"
           variant="outline"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
-        >
-          السابقة
-        </Button>
-        <Button
+        />
+        <MainButton
+          title="التالية"
           variant="outline"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
-        >
-          التالية
-        </Button>
+        />
       </div>
     </nav>
   );

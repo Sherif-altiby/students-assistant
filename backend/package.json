@@ -4,7 +4,9 @@
   "description": "",
   "main": "dist/server.js",
   "scripts": {
+    "predev": "npm run prisma:generate",
     "dev": "tsx watch src/server.ts",
+    "prebuild": "npm run prisma:generate",
     "build": "tsc && node scripts/copy-assets.js",
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.ts\"",

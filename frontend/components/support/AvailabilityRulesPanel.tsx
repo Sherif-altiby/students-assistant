@@ -85,7 +85,9 @@ export function AvailabilityRulesPanel() {
               <p className="text-xs font-medium text-muted-foreground">
                 إجمالي المواعيد
               </p>
-              <p className="text-2xl font-bold tracking-tight">{rules.length}</p>
+              <p className="text-2xl font-bold tracking-tight">
+                {rules.length}
+              </p>
             </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <CalendarClock className="h-5 w-5" />
@@ -214,16 +216,18 @@ export function AvailabilityRulesPanel() {
                 />
 
                 <AlertDialog>
-                  <AlertDialogTrigger>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label="حذف الموعد"
-                      className="hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </AlertDialogTrigger>
+                  <AlertDialogTrigger
+                    render={
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="حذف الموعد"
+                        className="hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    }
+                  />
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>حذف موعد الإتاحة؟</AlertDialogTitle>

@@ -1,6 +1,5 @@
 "use client";
 
-import { CheckCircle2, Users, Star } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -8,6 +7,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { useDoctorStats } from "@/hooks/useSupport";
+import { DOCTOR_STATS_METRICS } from "@/constants";
 import { DoctorStatsSkeleton } from "./DoctorStatsSkeleton";
 import { DoctorStatsEmpty } from "./DoctorStatsEmpty";
 
@@ -22,31 +22,17 @@ export function DoctorStats() {
     return <DoctorStatsEmpty message={error ?? undefined} />;
   }
 
-  const items = [
-    {
-      label: "الجلسات المكتملة",
-      value: String(stats.completedSessions),
-      hint: `${stats.completedSessions} جلسة مكتملة حتى الآن`,
-      icon: CheckCircle2,
-    },
-    {
-      label: "عدد المستفيدين",
-      value: String(stats.totalBeneficiaries),
-      hint: "طالب استفاد من الدعم",
-      icon: Users,
-    },
-    {
-      label: "التقييم العام",
-      value: String(stats.averageRating),
-      hint: stats.ratingLabel,
-      icon: Star,
-    },
-  ];
-
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      {items.map((stat) => {
+      {DOCTOR_STATS_METRICS.map((stat) => {
         const Icon = stat.icon;
+        const hint =
+          stat.hintKey === "completedSessions"
+            ? `${stats.completedSessions} جلسة مكتملة حتى الآن`
+            : stat.hintKey === "totalBeneficiaries"
+              ? "طالب استفاد من الدعم"
+              : stats.ratingLabel;
+
         return (
           <Card key={stat.label} className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -59,9 +45,9 @@ export function DoctorStats() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-semibold tracking-tight text-foreground">
-                {stat.value}
+                {stats[stat.key]}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">{stat.hint}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
             </CardContent>
           </Card>
         );

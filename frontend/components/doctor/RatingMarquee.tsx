@@ -3,28 +3,29 @@
 import { Star } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  DOCTOR_RATING_STAR_COUNT,
+  DOCTOR_RATINGS_MARQUEE_SPEED_SECONDS,
+} from "@/constants";
+import { getDoctorInitial } from "@/lib/doctor";
 
 export interface Rating {
   id: string;
   name: string;
-  score: number; // 1-5
+  score: 1 | 2 | 3 | 4 | 5;
   comment: string;
 }
 
 interface RatingsMarqueeProps {
-  ratings: Rating[];
+  ratings: readonly Rating[];
   /** Seconds for one full loop. Lower = faster. Default 35s. */
   speed?: number;
-}
-
-function initials(name: string) {
-  return name.trim().split(" ")[0]?.charAt(0) ?? "؟";
 }
 
 function StarRow({ score }: { score: number }) {
   return (
     <div className="flex items-center gap-0.5" dir="ltr">
-      {Array.from({ length: 5 }).map((_, i) => (
+      {Array.from({ length: DOCTOR_RATING_STAR_COUNT }, (_, i) => (
         <Star
           key={i}
           className={
@@ -44,7 +45,7 @@ function RatingCard({ rating }: { rating: Rating }) {
       <CardHeader className="flex flex-row items-center gap-3 pb-2">
         <Avatar className="h-9 w-9 border border-border">
           <AvatarFallback className="bg-card text-foreground text-xs">
-            {initials(rating.name)}
+            {getDoctorInitial(rating.name)}
           </AvatarFallback>
         </Avatar>
         <div>
@@ -71,7 +72,10 @@ function RatingCard({ rating }: { rating: Rating }) {
  *   double-width track lands exactly back on the start of the first copy).
  * - Respects prefers-reduced-motion by disabling the animation entirely.
  */
-export function RatingsMarquee({ ratings, speed = 35 }: RatingsMarqueeProps) {
+export function RatingsMarquee({
+  ratings,
+  speed = DOCTOR_RATINGS_MARQUEE_SPEED_SECONDS,
+}: RatingsMarqueeProps) {
   if (ratings.length === 0) return null;
 
   return (

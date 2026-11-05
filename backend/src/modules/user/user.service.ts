@@ -5,6 +5,7 @@ import { userRepository } from './user.repository';
 import {
   CreateUserInput,
   UpdateUserInput,
+  CreateDoctorInput,
   InviteDoctorInput,
   AcceptInvitationInput,
 } from './user.schema';
@@ -209,6 +210,26 @@ export const userService = {
       throw new NotFoundError('Doctor not found');
     }
     await userRepository.delete(id);
+  },
+
+  async createDoctor(
+    input: CreateDoctorInput
+  ): Promise<{ id: string; email: string; status: string }> {
+    const existing = await userRepository.findByEmail(input.email);
+    if (existing) {
+      throw new ConflictError('A user with this email already exists');
+    }
+
+    const hashedPassword = await bcrypt.hash(input.password, SALT_ROUNDS);
+    const doctor = await userRepository.create({
+      name: input.name,
+      email: input.email,
+      password: hashedPassword,
+      role: 'DOCTOR',
+      status: 'ACTIVE',
+    });
+
+    return { id: doctor.id, email: doctor.email, status: doctor.status };
   },
 
   /**

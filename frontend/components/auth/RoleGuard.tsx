@@ -9,13 +9,15 @@ type UserRole = "USER" | "ADMIN" | "DOCTOR" | "PARENT";
 
 interface RoleGuardProps {
   children: React.ReactNode;
-  allowedRoles?: UserRole[];
+  allowedRoles?: readonly UserRole[];
   redirectTo?: string;
 }
 
+const DEFAULT_ALLOWED_ROLES: readonly UserRole[] = ["USER", "ADMIN", "DOCTOR"];
+
 export function RoleGuard({
   children,
-  allowedRoles = ["USER", "ADMIN", "DOCTOR"],
+  allowedRoles = DEFAULT_ALLOWED_ROLES,
   redirectTo = "/login",
 }: RoleGuardProps) {
   const router = useRouter();
@@ -31,7 +33,7 @@ export function RoleGuard({
       return;
     }
 
-    const userRole = user.role as UserRole;
+    const userRole = user.role;
     if (allowedRoles.includes(userRole)) {
       setIsAuthorized(true);
     } else {
@@ -45,7 +47,6 @@ export function RoleGuard({
       router.replace(roleRoutes[userRole] || "/dashboard");
     }
   }, [user, isBootstrapping, router, allowedRoles, redirectTo]);
-
 
   if (!isAuthorized) return null;
 

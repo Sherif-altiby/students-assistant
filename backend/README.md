@@ -70,8 +70,10 @@ This keeps business logic testable and decoupled from both HTTP and the database
 4. **Generate the Prisma client**
 
    ```bash
-   npx prisma generate
+   npm run prisma:generate
    ```
+
+   The client is also generated automatically before starting the development server or building the backend.
 
 5. **Run the first migration** (creates the `users` table)
 

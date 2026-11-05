@@ -1,9 +1,13 @@
 import {
   BookOpen,
+  CheckCircle2,
   House,
+  Lightbulb,
   ListTodo,
   Repeat2,
+  Star,
   Table2,
+  Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type {
@@ -15,6 +19,7 @@ import type {
 } from "@/types/parent";
 import type { StudyTableType } from "@/types/study-table";
 import type { AdminRole } from "@/types/admin";
+import type { DoctorStats } from "@/types/support";
 
 export const PARENT_STUDENTS_QUERY_KEY = ["parent", "students"] as const;
 
@@ -96,6 +101,91 @@ export const ADMIN_USER_FILTER_OPTIONS: readonly {
   { id: "DOCTOR", label: "الأطباء" },
   { id: "ADMIN", label: "المشرفون" },
 ];
+
+export const ADMIN_PAGE_SIZE = 10;
+export const ADMIN_USERS_QUERY_KEY = ["admin", "users"] as const;
+export const ADMIN_USER_SKELETON_ROWS = 5;
+export const ADMIN_SUGGESTION_LONG_MESSAGE_LENGTH = 220;
+
+export const ADMIN_DASHBOARD_VIEWS = [
+  { id: "users", label: "الحسابات", icon: Users },
+  { id: "suggestions", label: "الاقتراحات", icon: Lightbulb },
+] as const;
+
+export const ADMIN_USER_STATUS_LABELS: Record<"ACTIVE" | "PENDING", string> = {
+  ACTIVE: "نشط",
+  PENDING: "بانتظار التفعيل",
+};
+
+export const DOCTOR_ALLOWED_ROLES = ["DOCTOR"] as const;
+export const DOCTOR_SESSION_SKELETON_ROWS = 3;
+export const DOCTOR_RATINGS_MARQUEE_SPEED_SECONDS = 35;
+export const DOCTOR_RATING_STAR_COUNT = 5;
+export const DOCTOR_SAMPLE_RATINGS = [
+  {
+    id: "1",
+    name: "سارة أحمد",
+    score: 5,
+    comment: "الجلسة كانت مريحة جدًا وساعدتني أرتب أفكاري قبل الامتحانات.",
+  },
+  {
+    id: "2",
+    name: "محمد علي",
+    score: 4,
+    comment: "الدكتور كان متفهم وأعطاني خطوات عملية للتعامل مع القلق.",
+  },
+  {
+    id: "3",
+    name: "ندى خالد",
+    score: 5,
+    comment: "أول مرة أحس إني اتسمعت فعلاً، شكرًا على الوقت والصبر.",
+  },
+  {
+    id: "4",
+    name: "عمر حسن",
+    score: 5,
+    comment: "نصائح بسيطة وقابلة للتطبيق، حسّت بفرق من نفس اليوم.",
+  },
+] as const;
+
+export const DOCTOR_STATS_METRICS: readonly {
+  key: keyof Pick<
+    DoctorStats,
+    "completedSessions" | "totalBeneficiaries" | "averageRating"
+  >;
+  label: string;
+  icon: LucideIcon;
+  hintKey: "completedSessions" | "totalBeneficiaries" | "rating";
+}[] = [
+  {
+    key: "completedSessions",
+    label: "الجلسات المكتملة",
+    icon: CheckCircle2,
+    hintKey: "completedSessions",
+  },
+  {
+    key: "totalBeneficiaries",
+    label: "عدد المستفيدين",
+    icon: Users,
+    hintKey: "totalBeneficiaries",
+  },
+  {
+    key: "averageRating",
+    label: "التقييم العام",
+    icon: Star,
+    hintKey: "rating",
+  },
+];
+
+export const DOCTOR_SESSION_LABELS = {
+  confirmed: "مؤكدة",
+  pendingLink: "بانتظار الرابط",
+  today: "اليوم",
+  tomorrow: "غدًا",
+} as const;
+
+export const DOCTOR_RATING_EMPTY_INITIAL = "؟";
+export const DOCTOR_DASHBOARD_FALLBACK_NAME = "الطبيب";
 
 export const ADMIN_ROLE_LABELS: Record<Exclude<AdminRole, "ALL">, string> = {
   USER: "طالب",

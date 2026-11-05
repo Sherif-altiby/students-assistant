@@ -1,99 +1,39 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Trash2, UserRoundPlus, Users } from "lucide-react";
-import { toast } from "sonner";
-import { ADMIN_ROLE_LABELS, ADMIN_USER_FILTER_OPTIONS } from "@/constants";
-import { FormInput } from "@/components/FormInput";
-import { AdminPagination } from "@/components/admin/AdminPagination";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
-  listAdminUsers,
-  inviteDoctor,
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { Search, UserRoundPlus, Users, X } from "lucide-react";
+import { toast } from "sonner";
+import {
+  ADMIN_PAGE_SIZE,
+  ADMIN_USERS_QUERY_KEY,
+  ADMIN_USER_FILTER_OPTIONS,
+} from "@/constants";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import {
+  AdminUserEmptyState,
+  AdminUserList,
+  AdminUserListError,
+  AdminUserListSkeleton,
+} from "@/components/admin/AdminUserList";
+import {
+  DoctorCreateDialog,
+  DoctorDeleteDialog,
+} from "@/components/admin/AdminUserDialogs";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import MainButton from "@/components/ui/MainButton";
+import {
   deleteDoctor,
+  listAdminUsers,
   type AdminRole,
+  type AdminUser,
 } from "@/lib/admin";
-
-const PAGE_SIZE = 10;
-
-function DoctorInviteForm({ onClose }: { onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [values, setValues] = useState({ name: "", email: "", phone: "" });
-  const inviteMutation = useMutation({
-    mutationFn: inviteDoctor,
-    onSuccess: async () => {
-      toast.success("تم إرسال دعوة الطبيب بنجاح.");
-      onClose();
-      await queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-    },
-    onError: () =>
-      toast.error("تعذر إرسال الدعوة. تحقق من البيانات وحاول مرة أخرى."),
-  });
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    inviteMutation.mutate({
-      name: values.name.trim(),
-      email: values.email.trim(),
-      phone: values.phone.trim(),
-    });
-  }
-
-  return (
-    <Card className="gap-4 border border-primary/20 p-5 shadow-none ring-0">
-      <div>
-        <h3 className="font-bold text-card-foreground">إضافة طبيب</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          ستُرسل للطبيب رسالة دعوة لتفعيل حسابه وإنشاء كلمة مرور.
-        </p>
-      </div>
-      <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
-        <FormInput
-          label="اسم الطبيب"
-          required
-          minLength={2}
-          value={values.name}
-          onChange={(event) =>
-            setValues({ ...values, name: event.target.value })
-          }
-        />
-        <FormInput
-          label="البريد الإلكتروني"
-          type="email"
-          dir="ltr"
-          required
-          value={values.email}
-          onChange={(event) =>
-            setValues({ ...values, email: event.target.value })
-          }
-        />
-        <FormInput
-          label="رقم الهاتف"
-          type="tel"
-          dir="ltr"
-          required
-          minLength={8}
-          value={values.phone}
-          onChange={(event) =>
-            setValues({ ...values, phone: event.target.value })
-          }
-        />
-        <div className="flex items-end gap-2">
-          <Button type="submit" disabled={inviteMutation.isPending}>
-            <Plus className="size-4" aria-hidden="true" />
-            {inviteMutation.isPending ? "جارٍ الإرسال..." : "إرسال الدعوة"}
-          </Button>
-          <Button type="button" variant="outline" onClick={onClose}>
-            إلغاء
-          </Button>
-        </div>
-      </form>
-    </Card>
-  );
-}
 
 export function AdminUsersSection() {
   const queryClient = useQueryClient();
@@ -101,24 +41,45 @@ export function AdminUsersSection() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [showInvite, setShowInvite] = useState(false);
+  const [showCreateDoctor, setShowCreateDoctor] = useState(false);
+  const [doctorToDelete, setDoctorToDelete] = useState<AdminUser | null>(null);
+
   const usersQuery = useQuery({
-    queryKey: ["admin", "users", { role, search, page }],
-    queryFn: () => listAdminUsers({ role, search, page, limit: PAGE_SIZE }),
+    queryKey: [...ADMIN_USERS_QUERY_KEY, { role, search, page }],
+    queryFn: () =>
+      listAdminUsers({ role, search, page, limit: ADMIN_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
   });
   const deleteMutation = useMutation({
     mutationFn: deleteDoctor,
     onSuccess: async () => {
       toast.success("تم حذف حساب الطبيب.");
-      await queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      setDoctorToDelete(null);
+      await queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
     },
     onError: () => toast.error("تعذر حذف الطبيب. حاول مرة أخرى."),
   });
 
-  function searchUsers(event: FormEvent<HTMLFormElement>) {
+  const result = usersQuery.data;
+  const users = result?.users ?? [];
+  const isFiltered = Boolean(search) || role !== "ALL";
+  const canDelete = role === "DOCTOR";
+
+  useEffect(() => {
+    const lastPage = Math.ceil((result?.total ?? 0) / ADMIN_PAGE_SIZE);
+    if (page > Math.max(1, lastPage)) setPage(Math.max(1, lastPage));
+  }, [page, result?.total]);
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setPage(1);
     setSearch(searchInput.trim());
+    setPage(1);
+  }
+
+  function clearSearch() {
+    setSearchInput("");
+    setSearch("");
+    setPage(1);
   }
 
   function changeRole(nextRole: AdminRole) {
@@ -126,168 +87,131 @@ export function AdminUsersSection() {
     setPage(1);
   }
 
-  function handleDeleteDoctor(id: string) {
-    if (window.confirm("هل أنت متأكد من حذف حساب الطبيب؟")) {
-      deleteMutation.mutate(id);
-    }
-  }
-
-  const usersResult = usersQuery.data;
-  const users = usersResult?.users ?? [];
-  useEffect(() => {
-    const lastPage = usersResult ? Math.ceil(usersResult.total / PAGE_SIZE) : 0;
-    if (lastPage > 0 && page > lastPage) setPage(lastPage);
-  }, [page, usersResult?.total]);
-
   return (
     <section className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
-            <Users className="size-5 text-primary" aria-hidden="true" />
-            إدارة الحسابات
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            تصفح الطلاب وأولياء الأمور والأطباء والمشرفين، وابحث مع تقسيم
-            النتائج إلى صفحات.
-          </p>
+        <div className="flex items-start gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Users className="size-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
+              إدارة الحسابات
+              {result && (
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
+                  {result.total.toLocaleString("ar-EG")}
+                </span>
+              )}
+            </h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              تصفح الطلاب وأولياء الأمور والأطباء والمشرفين.
+            </p>
+          </div>
         </div>
-        <Button type="button" onClick={() => setShowInvite((shown) => !shown)}>
-          <UserRoundPlus className="size-4" aria-hidden="true" />
-          دعوة طبيب
-        </Button>
+        <MainButton
+          type="button"
+          title="إضافة طبيب"
+          icon={<UserRoundPlus aria-hidden="true" />}
+          onClick={() => setShowCreateDoctor(true)}
+        />
       </div>
 
-      {showInvite && <DoctorInviteForm onClose={() => setShowInvite(false)} />}
+      <DoctorCreateDialog
+        open={showCreateDoctor}
+        onOpenChange={setShowCreateDoctor}
+      />
+      <DoctorDeleteDialog
+        doctor={doctorToDelete}
+        pending={deleteMutation.isPending}
+        onCancel={() => setDoctorToDelete(null)}
+        onConfirm={() => {
+          if (doctorToDelete) deleteMutation.mutate(doctorToDelete.id);
+        }}
+      />
 
-      <Card className="gap-4 border border-border p-4 shadow-none ring-0 sm:p-5">
-        <div
-          className="flex flex-wrap gap-2"
-          role="group"
-          aria-label="تصفية حسب نوع الحساب"
-        >
-          {ADMIN_USER_FILTER_OPTIONS.map((option) => (
-            <Button
-              key={option.id}
-              type="button"
-              size="sm"
-              variant={role === option.id ? "default" : "outline"}
-              aria-pressed={role === option.id}
-              onClick={() => changeRole(option.id)}
-            >
-              {option.label}
-            </Button>
-          ))}
+      <Card className="gap-5 border border-border p-4 shadow-none ring-0 sm:p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div
+            className="-mx-1 overflow-x-auto px-1 lg:mx-0 lg:px-0"
+            role="group"
+            aria-label="تصفية حسب نوع الحساب"
+          >
+            <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
+              {ADMIN_USER_FILTER_OPTIONS.map((option) => (
+                <MainButton
+                  key={option.id}
+                  type="button"
+                  size="sm"
+                  variant={role === option.id ? "secondary" : "ghost"}
+                  aria-pressed={role === option.id}
+                  title={option.label}
+                  className="whitespace-nowrap"
+                  onClick={() => changeRole(option.id)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <form
+            onSubmit={submitSearch}
+            role="search"
+            className="flex gap-2 lg:w-96"
+          >
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                type="search"
+                aria-label="البحث بالاسم أو البريد الإلكتروني"
+                placeholder="ابحث بالاسم أو البريد الإلكتروني"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                className="h-10 rounded-lg border-input bg-background ps-9 pe-9 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 [&::-webkit-search-cancel-button]:hidden"
+              />
+              {searchInput && (
+                <MainButton
+                  type="button"
+                  variant="ghost"
+                  title="مسح البحث"
+                  icon={<X aria-hidden="true" />}
+                  iconOnly
+                  size="icon-xs"
+                  aria-label="مسح البحث"
+                  className="absolute end-2 top-1/2 -translate-y-1/2"
+                  onClick={clearSearch}
+                />
+              )}
+            </div>
+            <MainButton type="submit" title="بحث" className="h-10 sm:px-5" />
+          </form>
         </div>
-        <form onSubmit={searchUsers} className="flex gap-2">
-          <FormInput
-            label="بحث"
-            aria-label="البحث بالاسم أو البريد الإلكتروني"
-            placeholder="ابحث بالاسم أو البريد الإلكتروني"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            className="flex-1"
-          />
-          <Button type="submit" variant="outline" aria-label="بحث">
-            <Search className="size-4" aria-hidden="true" />
-            بحث
-          </Button>
-        </form>
 
         {usersQuery.isLoading ? (
-          <div className="h-48 animate-pulse rounded-xl bg-muted/50" />
+          <AdminUserListSkeleton />
         ) : usersQuery.isError ? (
-          <p
-            role="alert"
-            className="rounded-lg bg-destructive/5 p-4 text-sm text-destructive"
-          >
-            تعذر تحميل الحسابات. حاول تحديث الصفحة.
-          </p>
-        ) : !usersResult || users.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            لا توجد حسابات تطابق البحث.
-          </p>
+          <AdminUserListError onRetry={() => usersQuery.refetch()} />
+        ) : !result || users.length === 0 ? (
+          <AdminUserEmptyState filtered={isFiltered} />
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[46rem] border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-border text-right text-xs text-muted-foreground">
-                    <th scope="col" className="px-3 py-3">
-                      الاسم
-                    </th>
-                    <th scope="col" className="px-3 py-3">
-                      البريد الإلكتروني
-                    </th>
-                    <th scope="col" className="px-3 py-3">
-                      الهاتف
-                    </th>
-                    <th scope="col" className="px-3 py-3">
-                      نوع الحساب
-                    </th>
-                    <th scope="col" className="px-3 py-3">
-                      الحالة
-                    </th>
-                    {role === "DOCTOR" && (
-                      <th scope="col" className="px-3 py-3">
-                        إجراء
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="border-b border-border last:border-0"
-                    >
-                      <td className="px-3 py-3 font-semibold text-foreground">
-                        {user.name}
-                      </td>
-                      <td
-                        dir="ltr"
-                        className="px-3 py-3 text-right text-muted-foreground"
-                      >
-                        {user.email}
-                      </td>
-                      <td
-                        dir="ltr"
-                        className="px-3 py-3 text-right text-muted-foreground"
-                      >
-                        {user.phone ?? "—"}
-                      </td>
-                      <td className="px-3 py-3">
-                        <Badge variant="secondary">
-                          {ADMIN_ROLE_LABELS[user.role]}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-3 text-muted-foreground">
-                        {user.status === "PENDING" ? "بانتظار التفعيل" : "نشط"}
-                      </td>
-                      {role === "DOCTOR" && (
-                        <td className="px-3 py-3">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            disabled={deleteMutation.isPending}
-                            onClick={() => handleDeleteDoctor(user.id)}
-                            aria-label={`حذف حساب ${user.name}`}
-                          >
-                            <Trash2 className="size-4" aria-hidden="true" />
-                            حذف
-                          </Button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div
+              className={`transition-opacity ${
+                usersQuery.isPlaceholderData ? "opacity-60" : ""
+              }`}
+              aria-busy={usersQuery.isFetching}
+            >
+              <AdminUserList
+                users={users}
+                canDelete={canDelete}
+                onDelete={setDoctorToDelete}
+              />
             </div>
             <AdminPagination
-              page={usersResult.page}
-              total={usersResult.total}
-              limit={usersResult.limit}
+              page={result.page}
+              total={result.total}
+              limit={result.limit}
               onPageChange={setPage}
             />
           </>

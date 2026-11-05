@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type ReactElement } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { Loader2, Star } from "lucide-react";
 
 interface RatingDialogProps {
-  trigger: ReactNode;
+  trigger: ReactElement;
   isSubmitting?: boolean;
   onSubmit: (score: number) => void;
 }
@@ -45,7 +45,7 @@ export function RatingDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger>{trigger}</DialogTrigger>
+      <DialogTrigger render={trigger} />
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>قيّم الجلسة</DialogTitle>

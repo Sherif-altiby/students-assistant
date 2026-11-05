@@ -84,7 +84,18 @@ export const getUserSchema = z.object({
   }),
 });
 
-// --- Admin invites a doctor ---
+// --- Admin creates a doctor account ---
+export const createDoctorSchema = z.object({
+  body: z.object({
+    name: z.string().min(2, 'Name must be at least 2 characters'),
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+  }),
+  query: z.object({}).optional(),
+  params: z.object({}).optional(),
+});
+
+// --- Admin invites a doctor by email ---
 export const inviteDoctorSchema = z.object({
   body: z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -110,5 +121,6 @@ export const acceptInvitationSchema = z.object({
 
 export type CreateUserInput = z.infer<typeof createUserSchema>['body'];
 export type UpdateUserInput = z.infer<typeof updateUserSchema>['body'];
+export type CreateDoctorInput = z.infer<typeof createDoctorSchema>['body'];
 export type InviteDoctorInput = z.infer<typeof inviteDoctorSchema>['body'];
 export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>['body'];

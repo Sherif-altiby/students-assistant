@@ -84,9 +84,7 @@ function isTomorrow(iso: string): boolean {
   );
 }
 
-function getDayBadge(
-  iso: string,
-): {
+function getDayBadge(iso: string): {
   label: string;
   variant: "default" | "secondary" | "destructive" | "outline";
 } | null {
@@ -277,21 +275,23 @@ export function SlotPicker({ doctorId }: { doctorId: string }) {
 
                         {/* Book Button */}
                         <AlertDialog>
-                          <AlertDialogTrigger>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              disabled={isBooking}
-                              className={cn(
-                                "group/btn mt-auto w-full gap-2 rounded-lg font-semibold",
-                                "transition-all duration-300 hover:shadow-md hover:shadow-primary/20",
-                                "active:scale-[0.98]",
-                              )}
-                            >
-                              <span>طلب دعم نفسي</span>
-                              <ArrowLeft className="h-3.5 w-3.5 transition-transform duration-300 group-hover/btn:-translate-x-0.5" />
-                            </Button>
-                          </AlertDialogTrigger>
+                          <AlertDialogTrigger
+                            render={
+                              <Button
+                                variant="default"
+                                size="sm"
+                                disabled={isBooking}
+                                className={cn(
+                                  "group/btn mt-auto w-full gap-2 rounded-lg font-semibold",
+                                  "transition-all duration-300 hover:shadow-md hover:shadow-primary/20",
+                                  "active:scale-[0.98]",
+                                )}
+                              >
+                                <span>طلب دعم نفسي</span>
+                                <ArrowLeft className="h-3.5 w-3.5 transition-transform duration-300 group-hover/btn:-translate-x-0.5" />
+                              </Button>
+                            }
+                          />
 
                           <AlertDialogContent className="max-w-md overflow-hidden p-0">
                             <div className="p-6">
