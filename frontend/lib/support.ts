@@ -9,10 +9,12 @@ import type {
   Booking,
   BookingWithSlot,
   BookingWithSlotAndUser,
+  SessionRating,
   ListDoctorsParams,
   ListDoctorsResult,
   ListDoctorsApiResponse,
   DoctorStats,
+  DoctorRating,
   UpcomingSession,
 } from "@/types/support";
 import type {
@@ -33,10 +35,12 @@ export type {
   BookingUser,
   BookingWithSlot,
   BookingWithSlotAndUser,
+  SessionRating,
   DoctorSummary,
   ListDoctorsParams,
   ListDoctorsResult,
   DoctorStats,
+  DoctorRating,
   UpcomingSession,
 } from "@/types/support";
 
@@ -152,10 +156,11 @@ export async function respondToBooking(
 export async function rateBooking(
   bookingId: string,
   score: number,
-): Promise<Booking> {
-  const res = await api.post<ItemResponse<Booking>>(
+  comment?: string,
+): Promise<SessionRating> {
+  const res = await api.post<ItemResponse<SessionRating>>(
     `/support/bookings/${bookingId}/rating`,
-    { score },
+    { score, comment },
   );
   return res.data.data;
 }
@@ -183,6 +188,13 @@ export async function listDoctors(
 
 export async function getDoctorStats(): Promise<DoctorStats> {
   const res = await api.get<ItemResponse<DoctorStats>>("/support/doctor/stats");
+  return res.data.data;
+}
+
+export async function getDoctorRatings(): Promise<DoctorRating[]> {
+  const res = await api.get<ListResponse<DoctorRating>>(
+    "/support/doctor/ratings",
+  );
   return res.data.data;
 }
 

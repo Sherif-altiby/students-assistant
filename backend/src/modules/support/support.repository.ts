@@ -133,6 +133,23 @@ export const supportRepository = {
     });
   },
 
+  findRatingsByDoctor(doctorId: string) {
+    return prisma.sessionRating.findMany({
+      where: {
+        booking: { slot: { doctorId } },
+        comment: { not: null },
+      },
+      select: {
+        id: true,
+        score: true,
+        comment: true,
+        user: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+  },
+
   // --- Upcoming sessions ---
   findUpcomingBookingsForDoctor(doctorId: string, limit: number) {
     return prisma.sessionBooking.findMany({

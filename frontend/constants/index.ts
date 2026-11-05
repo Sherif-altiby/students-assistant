@@ -125,32 +125,6 @@ export const DOCTOR_ALLOWED_ROLES = ["DOCTOR"] as const;
 export const DOCTOR_SESSION_SKELETON_ROWS = 3;
 export const DOCTOR_RATINGS_MARQUEE_SPEED_SECONDS = 35;
 export const DOCTOR_RATING_STAR_COUNT = 5;
-export const DOCTOR_SAMPLE_RATINGS = [
-  {
-    id: "1",
-    name: "سارة أحمد",
-    score: 5,
-    comment: "الجلسة كانت مريحة جدًا وساعدتني أرتب أفكاري قبل الامتحانات.",
-  },
-  {
-    id: "2",
-    name: "محمد علي",
-    score: 4,
-    comment: "الدكتور كان متفهم وأعطاني خطوات عملية للتعامل مع القلق.",
-  },
-  {
-    id: "3",
-    name: "ندى خالد",
-    score: 5,
-    comment: "أول مرة أحس إني اتسمعت فعلاً، شكرًا على الوقت والصبر.",
-  },
-  {
-    id: "4",
-    name: "عمر حسن",
-    score: 5,
-    comment: "نصائح بسيطة وقابلة للتطبيق، حسّت بفرق من نفس اليوم.",
-  },
-] as const;
 
 export const DOCTOR_STATS_METRICS: readonly {
   key: keyof Pick<

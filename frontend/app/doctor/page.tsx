@@ -6,15 +6,18 @@ import MainButton from "@/components/ui/MainButton";
 import { RatingsMarquee } from "@/components/doctor/RatingMarquee";
 import { DoctorStats } from "@/components/doctor/DoctorStats";
 import { UpcomingSessions } from "@/components/doctor/UpcomingSessions";
-import {
-  DOCTOR_DASHBOARD_FALLBACK_NAME,
-  DOCTOR_SAMPLE_RATINGS,
-} from "@/constants";
+import { useDoctorRatings } from "@/hooks/useSupport";
+import { DOCTOR_DASHBOARD_FALLBACK_NAME } from "@/constants";
 
 export default function DoctorDashboardPage() {
   const name = useAuthStore(
     (state) => state.user?.name ?? DOCTOR_DASHBOARD_FALLBACK_NAME,
   );
+  const {
+    ratings,
+    isLoading: ratingsLoading,
+    error: ratingsError,
+  } = useDoctorRatings();
 
   return (
     <div dir="rtl" className="min-h-screen bg-background text-foreground">
@@ -57,7 +60,21 @@ export default function DoctorDashboardPage() {
             آراء المستفيدين
           </h2>
 
-          <RatingsMarquee ratings={DOCTOR_SAMPLE_RATINGS} />
+          {ratingsLoading ? (
+            <p className="text-sm text-muted-foreground" role="status">
+              جارٍ تحميل الآراء...
+            </p>
+          ) : ratingsError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {ratingsError}
+            </p>
+          ) : ratings.length > 0 ? (
+            <RatingsMarquee ratings={ratings} />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              لا توجد آراء للمستفيدين حتى الآن.
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -47,7 +47,7 @@ interface UserBookingCardProps {
   isCancelling?: boolean;
   isRating?: boolean;
   onCancel: () => void;
-  onRate: (score: number) => void;
+  onRate: (score: number, comment: string) => void;
 }
 
 export function UserBookingCard({

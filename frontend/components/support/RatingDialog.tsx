@@ -11,13 +11,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Loader2, Star } from "lucide-react";
 
 interface RatingDialogProps {
   trigger: ReactElement;
   isSubmitting?: boolean;
-  onSubmit: (score: number) => void;
+  onSubmit: (score: number, comment: string) => void;
 }
 
 export function RatingDialog({
@@ -28,18 +30,20 @@ export function RatingDialog({
   const [open, setOpen] = useState(false);
   const [score, setScore] = useState(0);
   const [hovered, setHovered] = useState(0);
+  const [comment, setComment] = useState("");
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
     if (!next) {
       setScore(0);
       setHovered(0);
+      setComment("");
     }
   }
 
   function handleSubmit() {
     if (score === 0 || isSubmitting) return;
-    onSubmit(score);
+    onSubmit(score, comment.trim());
     setOpen(false);
   }
 
@@ -75,6 +79,18 @@ export function RatingDialog({
               />
             </button>
           ))}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="session-rating-comment">رأيك (اختياري)</Label>
+          <Textarea
+            id="session-rating-comment"
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            maxLength={500}
+            placeholder="شاركنا تجربتك مع الطبيب"
+            className="min-h-24 resize-y py-3"
+          />
         </div>
 
         <DialogFooter>

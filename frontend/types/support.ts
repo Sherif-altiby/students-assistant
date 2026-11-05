@@ -133,6 +133,15 @@ export interface BookingWithSlotAndUser extends BookingWithSlot {
   user: BookingUser;
 }
 
+export interface SessionRating {
+  id: string;
+  bookingId: string;
+  userId: string;
+  score: 1 | 2 | 3 | 4 | 5;
+  comment: string | null;
+  createdAt: string;
+}
+
 /* ------------------------------------------------------------------ */
 /* Doctors directory                                                    */
 /* ------------------------------------------------------------------ */
@@ -188,6 +197,13 @@ export interface DoctorStats {
   averageRating: number;
   totalRatings: number;
   ratingLabel: string; // e.g. "4.8 من 5 عبر 96 تقييم"
+}
+
+export interface DoctorRating {
+  id: string;
+  name: string;
+  score: 1 | 2 | 3 | 4 | 5;
+  comment: string;
 }
 
 /* ------------------------------------------------------------------ */

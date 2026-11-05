@@ -262,6 +262,21 @@ export const supportService = {
     };
   },
 
+  async getDoctorRatings(doctorId: string) {
+    const ratings = await supportRepository.findRatingsByDoctor(doctorId);
+    return ratings.flatMap(({ id, score, comment, user }) => {
+      const trimmedComment = comment?.trim();
+      if (!trimmedComment) return [];
+
+      return [{
+        id,
+        name: user.name,
+        score,
+        comment: trimmedComment,
+      }];
+    });
+  },
+
   // --- Upcoming sessions ---
   async getUpcomingSessions(doctorId: string, limit = 3) {
     return supportRepository.findUpcomingBookingsForDoctor(doctorId, limit);

@@ -8,16 +8,10 @@ import {
   DOCTOR_RATINGS_MARQUEE_SPEED_SECONDS,
 } from "@/constants";
 import { getDoctorInitial } from "@/lib/doctor";
-
-export interface Rating {
-  id: string;
-  name: string;
-  score: 1 | 2 | 3 | 4 | 5;
-  comment: string;
-}
+import type { DoctorRating } from "@/types/support";
 
 interface RatingsMarqueeProps {
-  ratings: readonly Rating[];
+  ratings: readonly DoctorRating[];
   /** Seconds for one full loop. Lower = faster. Default 35s. */
   speed?: number;
 }
@@ -39,7 +33,7 @@ function StarRow({ score }: { score: number }) {
   );
 }
 
-function RatingCard({ rating }: { rating: Rating }) {
+function RatingCard({ rating }: { rating: DoctorRating }) {
   return (
     <Card className="h-full w-80 shrink-0 border-border bg-muted/40 shadow-none">
       <CardHeader className="flex flex-row items-center gap-3 pb-2">

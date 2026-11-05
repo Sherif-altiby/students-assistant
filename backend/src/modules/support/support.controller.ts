@@ -106,6 +106,11 @@ export const supportController = {
     res.status(StatusCodes.OK).json({ status: 'success', data: stats });
   }),
 
+  getRatings: asyncHandler(async (req: Request, res: Response) => {
+    const ratings = await supportService.getDoctorRatings(req.user!.id);
+    res.status(StatusCodes.OK).json({ status: 'success', data: ratings });
+  }),
+
   // --- Upcoming sessions ---
   getUpcomingSessions: asyncHandler(async (req: Request, res: Response) => {
     const sessions = await supportService.getUpcomingSessions(req.user!.id, 3);

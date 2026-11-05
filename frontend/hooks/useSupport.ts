@@ -15,6 +15,7 @@ import {
   getDoctorBookings,
   getDoctorSlots,
   getDoctorStats,
+  getDoctorRatings,
   getUpcomingSessions,
   getUserBookings,
   listAvailabilityRules,
@@ -51,8 +52,13 @@ export function useAvailabilityRules() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: UpdateAvailabilityRulePayload }) =>
-      updateAvailabilityRule(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: UpdateAvailabilityRulePayload;
+    }) => updateAvailabilityRule(id, payload),
     onSuccess: invalidate,
   });
 
@@ -141,8 +147,15 @@ export function useUserBookings() {
   });
 
   const rateMutation = useMutation({
-    mutationFn: ({ bookingId, score }: { bookingId: string; score: number }) =>
-      rateBooking(bookingId, score),
+    mutationFn: ({
+      bookingId,
+      score,
+      comment,
+    }: {
+      bookingId: string;
+      score: number;
+      comment: string;
+    }) => rateBooking(bookingId, score, comment),
     onSuccess: invalidate,
   });
 
@@ -246,6 +259,20 @@ export function useDoctorStats() {
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     error,
+  };
+}
+
+export function useDoctorRatings() {
+  const query = useQuery({
+    queryKey: ["support", "doctor-ratings"],
+    queryFn: getDoctorRatings,
+  });
+
+  return {
+    ratings: query.data ?? [],
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    error: query.isError ? "تعذر تحميل آراء المستفيدين" : null,
   };
 }
 

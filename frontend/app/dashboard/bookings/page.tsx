@@ -40,7 +40,9 @@ export default function UserBookingsPage() {
             isCancelling={isCancelling}
             isRating={isRating}
             onCancel={() => cancelBooking(booking.id)}
-            onRate={(score) => rateBooking({ bookingId: booking.id, score })}
+            onRate={(score, comment) =>
+              rateBooking({ bookingId: booking.id, score, comment })
+            }
           />
         ))}
       </div>
