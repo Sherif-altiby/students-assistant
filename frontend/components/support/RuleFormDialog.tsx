@@ -10,45 +10,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormCustomSelect } from "@/components/FormCustomSelect";
+import { FormInput } from "@/components/FormInput";
+import MainButton from "@/components/ui/MainButton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+  AVAILABILITY_RULE_DAY_OPTIONS,
+  AVAILABILITY_RULE_TYPE_OPTIONS,
+} from "@/constants";
 import type {
   AvailabilityRule,
   AvailabilityRuleType,
   CreateAvailabilityRulePayload,
   DayOfWeek,
 } from "@/lib/support";
-
-const DAYS: { value: DayOfWeek; label: string }[] = [
-  { value: "SATURDAY", label: "السبت" },
-  { value: "SUNDAY", label: "الأحد" },
-  { value: "MONDAY", label: "الإثنين" },
-  { value: "TUESDAY", label: "الثلاثاء" },
-  { value: "WEDNESDAY", label: "الأربعاء" },
-  { value: "THURSDAY", label: "الخميس" },
-  { value: "FRIDAY", label: "الجمعة" },
-];
-
-const TYPES: { value: AvailabilityRuleType; label: string }[] = [
-  { value: "DAILY", label: "يومي" },
-  { value: "WEEKLY", label: "أسبوعي" },
-  { value: "CUSTOM", label: "تاريخ محدد" },
-];
-
-const TYPE_LABELS: Record<AvailabilityRuleType, string> = {
-  DAILY: "يومي",
-  WEEKLY: "أسبوعي",
-  CUSTOM: "تاريخ محدد",
-};
 
 interface RuleFormDialogProps {
   /** Element that opens the dialog when clicked. */
@@ -114,7 +88,10 @@ export function RuleFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        closeButtonClassName="right-auto left-2"
+      >
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? "تعديل موعد الإتاحة" : "إضافة موعد إتاحة"}
@@ -125,77 +102,49 @@ export function RuleFormDialog({
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
-          <div className="grid gap-2">
-            <Label htmlFor="rule-type">النوع</Label>
-            <Select
-              value={type}
-              onValueChange={(v) => setType(v as AvailabilityRuleType)}
-            >
-              <SelectTrigger id="rule-type">
-                <SelectValue>{TYPE_LABELS[type]}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FormCustomSelect
+            id="rule-type"
+            label="النوع"
+            value={type}
+            onChange={setType}
+            options={AVAILABILITY_RULE_TYPE_OPTIONS}
+          />
 
           {type === "WEEKLY" && (
-            <div className="grid gap-2">
-              <Label htmlFor="rule-day">اليوم</Label>
-              <Select
-                value={dayOfWeek}
-                onValueChange={(v) => setDayOfWeek(v as DayOfWeek)}
-              >
-                <SelectTrigger id="rule-day">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DAYS.map((d) => (
-                    <SelectItem key={d.value} value={d.value}>
-                      {d.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <FormCustomSelect
+              id="rule-day"
+              label="اليوم"
+              value={dayOfWeek}
+              onChange={setDayOfWeek}
+              options={AVAILABILITY_RULE_DAY_OPTIONS}
+            />
           )}
 
           {type === "CUSTOM" && (
-            <div className="grid gap-2">
-              <Label htmlFor="rule-date">التاريخ</Label>
-              <Input
-                id="rule-date"
-                type="date"
-                value={customDate}
-                onChange={(e) => setCustomDate(e.target.value)}
-              />
-            </div>
+            <FormInput
+              id="rule-date"
+              label="التاريخ"
+              type="date"
+              value={customDate}
+              onChange={(event) => setCustomDate(event.target.value)}
+            />
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="rule-start">من</Label>
-              <Input
-                id="rule-start"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="rule-end">إلى</Label>
-              <Input
-                id="rule-end"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
+            <FormInput
+              id="rule-start"
+              label="من"
+              type="time"
+              value={startTime}
+              onChange={(event) => setStartTime(event.target.value)}
+            />
+            <FormInput
+              id="rule-end"
+              label="إلى"
+              type="time"
+              value={endTime}
+              onChange={(event) => setEndTime(event.target.value)}
+            />
           </div>
 
           {!isTimeValid && (
@@ -206,17 +155,20 @@ export function RuleFormDialog({
         </div>
 
         <DialogFooter>
-          <Button
+          <MainButton
             type="button"
             variant="outline"
+            title="إلغاء"
             onClick={() => setOpen(false)}
-          >
-            إلغاء
-          </Button>
-          <Button type="button" onClick={handleSubmit} disabled={!canSubmit}>
-            {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-            {isEditMode ? "حفظ التعديل" : "إضافة"}
-          </Button>
+          />
+          <MainButton
+            type="button"
+            title={isEditMode ? "حفظ التعديل" : "إضافة"}
+            disabled={!canSubmit}
+            loading={isSubmitting}
+            loadingTitle="جارٍ الحفظ..."
+            onClick={handleSubmit}
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>

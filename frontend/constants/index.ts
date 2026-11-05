@@ -19,7 +19,11 @@ import type {
 } from "@/types/parent";
 import type { StudyTableType } from "@/types/study-table";
 import type { AdminRole } from "@/types/admin";
-import type { DoctorStats } from "@/types/support";
+import type {
+  AvailabilityRuleType,
+  DayOfWeek,
+  DoctorStats,
+} from "@/types/support";
 
 export const PARENT_STUDENTS_QUERY_KEY = ["parent", "students"] as const;
 
@@ -186,6 +190,25 @@ export const DOCTOR_SESSION_LABELS = {
 
 export const DOCTOR_RATING_EMPTY_INITIAL = "؟";
 export const DOCTOR_DASHBOARD_FALLBACK_NAME = "الطبيب";
+
+export const AVAILABILITY_RULE_DAY_OPTIONS = [
+  { value: "SATURDAY", label: "السبت" },
+  { value: "SUNDAY", label: "الأحد" },
+  { value: "MONDAY", label: "الإثنين" },
+  { value: "TUESDAY", label: "الثلاثاء" },
+  { value: "WEDNESDAY", label: "الأربعاء" },
+  { value: "THURSDAY", label: "الخميس" },
+  { value: "FRIDAY", label: "الجمعة" },
+] as const satisfies readonly { value: DayOfWeek; label: string }[];
+
+export const AVAILABILITY_RULE_TYPE_OPTIONS = [
+  { value: "DAILY", label: "يومي" },
+  { value: "WEEKLY", label: "أسبوعي" },
+  { value: "CUSTOM", label: "تاريخ محدد" },
+] as const satisfies readonly {
+  value: AvailabilityRuleType;
+  label: string;
+}[];
 
 export const ADMIN_ROLE_LABELS: Record<Exclude<AdminRole, "ALL">, string> = {
   USER: "طالب",

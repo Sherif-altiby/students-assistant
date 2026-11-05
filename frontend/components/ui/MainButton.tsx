@@ -29,6 +29,7 @@ const MainButton = ({
   ...props
 }: MainButtonProps) => {
   const isDisabled = disabled || loading;
+  const isCustomElement = Boolean(props.render);
 
   const leading = loading ? (
     <Loader2
@@ -45,6 +46,7 @@ const MainButton = ({
     <Button
       type={type}
       disabled={isDisabled}
+      nativeButton={isCustomElement ? false : undefined}
       variant={variant}
       aria-label={iconOnly ? (ariaLabel ?? title) : ariaLabel}
       aria-busy={loading || undefined}
