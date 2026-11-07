@@ -16,7 +16,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "test": "tsx --test test/study-table/*.test.ts test/subject/*.test.ts test/notification/*.test.ts test/lesson-date/*.test.ts"
+    "test": "tsx --test test/study-table/*.test.ts test/subject/*.test.ts test/notification/*.test.ts test/lesson-date/*.test.ts test/support/*.test.ts"
   },
   "keywords": [],
   "author": "",
@@ -58,12 +58,14 @@
     "@types/pdfkit": "^0.17.6",
     "@types/pdfmake": "^0.3.3",
     "@types/pg": "^8.20.0",
+    "@types/supertest": "^7.2.1",
     "eslint": "^10.7.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "pdfkit": "^0.19.1",
     "prettier": "^3.9.5",
     "prisma": "6.19.3",
+    "supertest": "^7.3.1",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.23.1",
     "typescript": "^6.0.3",

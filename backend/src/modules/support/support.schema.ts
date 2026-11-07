@@ -44,7 +44,12 @@ export const respondToBookingSchema = z.object({
 });
 
 export const setMeetingLinkSchema = z.object({
-  meetingLink: z.string().url(),
+  meetingLink: z
+    .string()
+    .url()
+    .refine((value) => /^https:\/\//i.test(value), {
+      message: "meetingLink must use HTTPS",
+    }),
 });
 
 export const rateSessionSchema = z.object({

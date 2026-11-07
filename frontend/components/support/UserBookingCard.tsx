@@ -42,6 +42,16 @@ function formatSlotTime(slot: BookingWithSlot["slot"]): string {
   return `${date} · ${startTime} - ${endTime}`;
 }
 
+function getSafeMeetingLink(value: string | null): string | null {
+  if (!value) return null;
+
+  try {
+    return new URL(value).protocol === "https:" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 interface UserBookingCardProps {
   booking: BookingWithSlot;
   isCancelling?: boolean;
@@ -57,11 +67,11 @@ export function UserBookingCard({
   onCancel,
   onRate,
 }: UserBookingCardProps) {
+  const meetingLink = getSafeMeetingLink(booking.slot.meetingLink);
   const canCancel =
     booking.status === "PENDING" || booking.status === "ACCEPTED";
   const canRate = booking.status === "COMPLETED";
-  const canJoin =
-    booking.status === "ACCEPTED" && Boolean(booking.slot.meetingLink);
+  const canJoin = booking.status === "ACCEPTED" && meetingLink !== null;
 
   return (
     <Card>
@@ -73,7 +83,7 @@ export function UserBookingCard({
       {canJoin && (
         <CardContent>
           <a
-            href={booking.slot.meetingLink ?? "#"}
+            href={meetingLink ?? "#"}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
