@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Role } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { subjectService } from './subject.service';
@@ -18,7 +19,11 @@ export const subjectController = {
   }),
 
   create: asyncHandler(async (req: Request, res: Response) => {
-    const subject = await subjectService.createSubject(req.body);
+    const subject = await subjectService.createSubject(
+      req.body,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.CREATED).json({ status: 'success', data: subject });
   }),
 

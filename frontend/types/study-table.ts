@@ -275,6 +275,14 @@ export interface StudySubjectSummary {
   progressPercent: number;
 }
 
+export interface CreateStudySubjectInput {
+  title: string;
+  units: Array<{
+    title: string;
+    lessons: Array<{ title: string }>;
+  }>;
+}
+
 export interface ListStudySubjectsResponse {
   data: StudySubjectSummary[];
   pagination: PaginationMeta;

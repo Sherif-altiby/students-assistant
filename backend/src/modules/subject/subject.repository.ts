@@ -63,11 +63,9 @@ export const subjectRepository = {
     page: number,
     limit: number,
     userId: string,
-    subjectTitles?: readonly string[],
+    accessWhere?: Prisma.StudySubjectWhereInput,
   ) {
-    const where: Prisma.StudySubjectWhereInput = subjectTitles
-      ? { title: { in: [...subjectTitles] } }
-      : {};
+    const where: Prisma.StudySubjectWhereInput = accessWhere ?? {};
     const [subjects, totalItems] = await Promise.all([
       prisma.studySubject.findMany({
         where,
@@ -126,15 +124,15 @@ export const subjectRepository = {
     return prisma.studySubject.findUnique({ where: { id } });
   },
 
-  findSubjectByTitle(title: string) {
-    return prisma.studySubject.findUnique({ where: { title } });
+  findSubjectByTitle(title: string, ownerId: string | null) {
+    return prisma.studySubject.findFirst({ where: { title, ownerId } });
   },
 
-  findSubjectGraph(id: string, subjectTitles?: readonly string[]) {
+  findSubjectGraph(id: string, accessWhere?: Prisma.StudySubjectWhereInput) {
     return prisma.studySubject.findFirst({
       where: {
         id,
-        ...(subjectTitles ? { title: { in: [...subjectTitles] } } : {}),
+        ...accessWhere,
       },
       include: graphInclude,
     });
@@ -151,9 +149,10 @@ export const subjectRepository = {
   async createSubject(
     title: string,
     units: Array<{ title: string; lessons?: Array<{ title: string }> }>,
+    ownerId: string | null,
   ) {
     return prisma.$transaction(async (tx) => {
-      const subject = await tx.studySubject.create({ data: { title } });
+      const subject = await tx.studySubject.create({ data: { title, ownerId } });
       for (const unit of assignSyllabusOrder(units)) {
         await tx.studyUnit.create({
           data: {
@@ -161,7 +160,10 @@ export const subjectRepository = {
             title: unit.title,
             order: unit.order,
             lessons: {
-              create: unit.lessons,
+              create: (unit.lessons ?? []).map((lesson, index) => ({
+                ...lesson,
+                order: index + 1,
+              })),
             },
           },
         });

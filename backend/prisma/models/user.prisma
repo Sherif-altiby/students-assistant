@@ -13,8 +13,6 @@ model User {
   status   UserStatus @default(ACTIVE)
   gender   Gender?
 
-  level       EducationLevel?
-  track       Track?
   parentPhone String?         @map("parent_phone")
   country     String?
   timezone    String          @default("Africa/Cairo")
@@ -26,6 +24,7 @@ model User {
   tasks  Task[]
 
   studyTables       StudyTable[]
+  studySubjects     StudySubject[]
   lessonCompletions StudyLessonCompletion[]
   studySessions     StudySession[]
   notifications     Notification[]

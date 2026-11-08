@@ -18,7 +18,7 @@ import { SessionInput, SessionReplaceInput } from './study-table.schema';
 
 export const studyTableSessionsService = {
   async createSession(userId: string, tableId: string, input: SessionInput) {
-    const { timezone, subjectTitles } = await getUserContext(userId);
+    const { timezone, subjectOwnerId } = await getUserContext(userId);
     const todayKey = localDateKey(new Date(), timezone);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
@@ -38,7 +38,7 @@ export const studyTableSessionsService = {
             })
           : null;
       if (!day) throw new BadRequestError('يوم المذاكرة غير موجود في الجدول');
-      await assertSessionReferences(tx, table.id, table.allSubjects, [input], subjectTitles);
+      await assertSessionReferences(tx, table.id, table.allSubjects, [input], subjectOwnerId);
       const duplicate = await tx.studySession.findUnique({
         where: { studyTableId_lessonId: { studyTableId: tableId, lessonId: input.lessonId } },
       });
@@ -62,7 +62,7 @@ export const studyTableSessionsService = {
   },
 
   async updateSession(userId: string, sessionId: string, input: Partial<SessionInput>) {
-    const { timezone, subjectTitles } = await getUserContext(userId);
+    const { timezone, subjectOwnerId } = await getUserContext(userId);
     const todayKey = localDateKey(new Date(), timezone);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
@@ -94,7 +94,7 @@ export const studyTableSessionsService = {
         current.studyTableId,
         current.studyTable.allSubjects,
         [{ subjectId, lessonId }],
-        subjectTitles
+        subjectOwnerId
       );
       if (lessonId !== current.lessonId) {
         const duplicate = await tx.studySession.findFirst({
@@ -147,7 +147,7 @@ export const studyTableSessionsService = {
   },
 
   async replaceDaySessions(userId: string, dayId: string, inputs: SessionReplaceInput[]) {
-    const { timezone, subjectTitles } = await getUserContext(userId);
+    const { timezone, subjectOwnerId } = await getUserContext(userId);
     const todayKey = localDateKey(new Date(), timezone);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
@@ -176,7 +176,7 @@ export const studyTableSessionsService = {
         day.studyTableId,
         day.studyTable.allSubjects,
         inputs,
-        subjectTitles
+        subjectOwnerId
       );
       const existing = await tx.studySession.findMany({
         where: { dayId },

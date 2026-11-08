@@ -6,7 +6,6 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
-  GraduationCap,
   Loader2,
   Mail,
   Phone,
@@ -25,19 +24,6 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { listStudySubjectsPage, listStudyTables } from "@/lib/study-table";
 import { useAuthStore } from "@/store/useAuthStore";
-import type { Level, Track } from "@/types";
-
-const LEVEL_LABELS: Record<Level, string> = {
-  SECONDARY_GENERAL: "الثانوية العامة",
-  SECONDARY_AZHARI: "الثانوية الأزهرية",
-};
-
-const TRACK_LABELS: Record<Track, string> = {
-  SCIENCE_MATH: "علمي رياضة",
-  SCIENCE_SCIENCE: "علمي علوم",
-  SCIENCE: "علمي أزهري",
-  LITERARY: "أدبي",
-};
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ar-EG", {
@@ -119,19 +105,6 @@ export default function StudentProfilePage() {
                 )}
               </div>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {user?.level && (
-              <span className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-3 py-2 text-sm font-semibold">
-                <GraduationCap className="h-4 w-4 text-primary" />
-                {LEVEL_LABELS[user.level]}
-              </span>
-            )}
-            {user?.track && (
-              <span className="rounded-full border bg-background/80 px-3 py-2 text-sm font-semibold">
-                {TRACK_LABELS[user.track]}
-              </span>
-            )}
           </div>
         </CardContent>
       </Card>

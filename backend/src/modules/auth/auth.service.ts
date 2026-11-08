@@ -38,8 +38,6 @@ export const authService = {
       email: input.email,
       password: hashedPassword,
       gender: input.gender,
-      level: input.level,
-      track: input.track,
       parentPhone: input.parentPhone,
       phone: input.phone,
       country: input.country,

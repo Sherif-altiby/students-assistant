@@ -1,6 +1,7 @@
 import { Prisma, StudyTableType } from '@prisma/client';
 import { BadRequestError, NotFoundError } from '../../utils/AppError';
 import { prisma } from '../../config/prisma';
+import { getSubjectAccessWhere } from '../subject/subject-access';
 import {
   addCalendarDays,
   calendarDays,
@@ -11,7 +12,6 @@ import {
   validateTimezone,
 } from './date-time';
 import { getSubjectScopeWhere } from './study-table.scope';
-import { getSubjectTitlesForTrack } from '../subject/subject-tracks';
 import { getStudySessionStatus } from './study-table.status';
 export { forgetLessonCompletions } from './study-table.completion';
 export { reorderDay, reindexDay, updateSessionAssignments } from './study-table.ordering';
@@ -74,14 +74,13 @@ export function addMonthName<T extends { month: number | null; year: number | nu
 export interface StudyTableUserContext {
   timezone: string;
   role: 'USER' | 'ADMIN' | string;
-  track: string | null;
-  subjectTitles: readonly string[] | undefined;
+  subjectOwnerId: string | undefined;
 }
 
 export async function getUserContext(userId: string): Promise<StudyTableUserContext> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { timezone: true, role: true, track: true },
+    select: { timezone: true, role: true },
   });
   if (!user) throw new NotFoundError('المستخدم غير موجود');
   if (!validateTimezone(user.timezone)) {
@@ -90,8 +89,7 @@ export async function getUserContext(userId: string): Promise<StudyTableUserCont
   return {
     timezone: user.timezone,
     role: user.role,
-    track: user.track,
-    subjectTitles: user.role === 'USER' ? getSubjectTitlesForTrack(user.track) : undefined,
+    subjectOwnerId: user.role === 'ADMIN' ? undefined : userId,
   };
 }
 
@@ -183,14 +181,15 @@ export async function assertSubjectScope(
   tableId: string,
   allSubjects: boolean,
   subjectId: string,
-  subjectTitles?: readonly string[]
+  subjectOwnerId?: string
 ) {
-  if (subjectTitles !== undefined) {
+  const accessWhere = getSubjectAccessWhere(subjectOwnerId);
+  if (accessWhere) {
     const subject = await tx.studySubject.findFirst({
-      where: { id: subjectId, title: { in: [...subjectTitles] } },
+      where: { id: subjectId, ...accessWhere },
       select: { id: true },
     });
-    if (!subject) throw new BadRequestError('المادة غير متاحة للمسار الدراسي');
+    if (!subject) throw new BadRequestError('المادة غير متاحة لهذا المستخدم');
   }
   if (allSubjects) return;
   const subject = await tx.studyTableSubject.findUnique({
@@ -213,7 +212,7 @@ export async function assertSessionReferences(
   tableId: string,
   allSubjects: boolean,
   sessions: readonly { subjectId: string; lessonId: string }[],
-  subjectTitles?: readonly string[]
+  subjectOwnerId?: string
 ): Promise<void> {
   const subjectIds = [...new Set(sessions.map(({ subjectId }) => subjectId))];
   const lessonIds = [...new Set(sessions.map(({ lessonId }) => lessonId))];
@@ -221,48 +220,29 @@ export async function assertSessionReferences(
     ? await tx.studySubject.findMany({
         where: {
           id: { in: subjectIds },
-          ...(subjectTitles ? { title: { in: [...subjectTitles] } } : {}),
+          ...getSubjectAccessWhere(subjectOwnerId),
         },
-        select: { id: true, title: true },
+        select: { id: true },
       })
     : await tx.studyTableSubject.findMany({
-        where: { studyTableId: tableId, subjectId: { in: subjectIds } },
-        select: { subjectId: true, subject: { select: { title: true } } },
+        where: {
+          studyTableId: tableId,
+          subjectId: { in: subjectIds },
+          ...(subjectOwnerId === undefined
+            ? {}
+            : { subject: getSubjectAccessWhere(subjectOwnerId) }),
+        },
+        select: { subjectId: true },
       });
-  const subjectById = new Map(
-    scopedSubjects.map((subject) => [
-      'id' in subject ? subject.id : subject.subjectId,
-      'id' in subject ? subject.title : subject.subject.title,
-    ])
+  const subjectIdsInScope = new Set(
+    scopedSubjects.map((subject) => ('id' in subject ? subject.id : subject.subjectId))
   );
-  const missingSubjectIds = subjectIds.filter((subjectId) => !subjectById.has(subjectId));
-  const trackSubjectIds =
-    subjectTitles !== undefined && !allSubjects && missingSubjectIds.length
-      ? new Set(
-          (
-            await tx.studySubject.findMany({
-              where: {
-                id: { in: missingSubjectIds },
-                title: { in: [...subjectTitles] },
-              },
-              select: { id: true },
-            })
-          ).map(({ id }) => id)
-        )
-      : new Set<string>();
-
   for (const subjectId of subjectIds) {
-    const subjectTitle = subjectById.get(subjectId);
-    if (
-      subjectTitles !== undefined &&
-      (subjectTitle !== undefined
-        ? !subjectTitles.includes(subjectTitle)
-        : !trackSubjectIds.has(subjectId))
-    ) {
-      throw new BadRequestError('المادة غير متاحة للمسار الدراسي');
-    }
-    if (!allSubjects && !subjectById.has(subjectId)) {
+    if (!allSubjects && !subjectIdsInScope.has(subjectId)) {
       throw new BadRequestError('المادة خارج نطاق هذا الجدول');
+    }
+    if (allSubjects && !subjectIdsInScope.has(subjectId)) {
+      throw new BadRequestError('المادة غير متاحة لهذا المستخدم');
     }
   }
 
@@ -282,14 +262,14 @@ export async function writeScope(
   tx: Transaction,
   tableId: string,
   scope: StudyTableInput['subjects'],
-  subjectTitles?: readonly string[],
+  subjectOwnerId?: string,
   isNewTable = false
 ) {
   if (scope !== 'ALL') {
     const count = await tx.studySubject.count({
       where: {
         id: { in: scope },
-        ...(subjectTitles ? { title: { in: [...subjectTitles] } } : {}),
+        ...getSubjectAccessWhere(subjectOwnerId),
       },
     });
     if (count !== scope.length) throw new BadRequestError('تتضمن المواد المحددة مادة غير موجودة');
@@ -367,11 +347,11 @@ export async function listCatalog(
   tx: Transaction,
   scope: StudyTableInput['subjects'],
   userId: string,
-  subjectTitles?: readonly string[]
+  subjectOwnerId?: string
 ): Promise<{ subjects: GeneratorSubject[]; completed: Set<string> }> {
   const [subjects, completionRows] = await Promise.all([
     tx.studySubject.findMany({
-      where: getSubjectScopeWhere(scope, subjectTitles),
+      where: getSubjectScopeWhere(scope, subjectOwnerId),
       orderBy: { title: 'asc' },
       include: {
         units: {
@@ -410,7 +390,7 @@ export async function createTableRecord(
   input: StudyTableInput,
   range: Range,
   schedule?: GenerateStudyTableInput['schedule'],
-  subjectTitles?: readonly string[]
+  subjectOwnerId?: string
 ) {
   const allSubjects = input.subjects === 'ALL';
   const table = await tx.studyTable.create({
@@ -431,7 +411,7 @@ export async function createTableRecord(
         : {}),
     },
   });
-  if (!allSubjects) await writeScope(tx, table.id, input.subjects, subjectTitles, true);
+  if (!allSubjects) await writeScope(tx, table.id, input.subjects, subjectOwnerId, true);
   await createDays(tx, table.id, range);
   return table;
 }

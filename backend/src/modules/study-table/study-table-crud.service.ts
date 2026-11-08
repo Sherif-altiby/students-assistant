@@ -1,6 +1,7 @@
 import { Prisma, StudyTableType } from '@prisma/client';
 import { BadRequestError, NotFoundError } from '../../utils/AppError';
 import { prisma } from '../../config/prisma';
+import { getSubjectAccessWhere } from '../subject/subject-access';
 import { dateKey, localDateKey } from './date-time';
 import { groupGlobalPlan } from './study-table.generator';
 import type { StudyTablePdfData } from './pdf.service';
@@ -50,10 +51,10 @@ export const studyTableCrudService = {
   },
 
   async getById(userId: string, tableId: string) {
-    const [table, userContext] = await Promise.all([
-      prisma.studyTable.findFirst({
-        where: { id: tableId, userId },
-        select: {
+    const userContext = await getUserContext(userId);
+    const table = await prisma.studyTable.findFirst({
+      where: { id: tableId, userId },
+      select: {
           id: true,
           title: true,
           type: true,
@@ -68,6 +69,9 @@ export const studyTableCrudService = {
           createdAt: true,
           updatedAt: true,
           subjects: {
+            where: userContext.subjectOwnerId === undefined
+              ? {}
+              : { subject: getSubjectAccessWhere(userContext.subjectOwnerId) },
             select: {
               id: true,
               studyTableId: true,
@@ -84,6 +88,9 @@ export const studyTableCrudService = {
               studyTableId: true,
               createdAt: true,
               sessions: {
+                where: userContext.subjectOwnerId === undefined
+                  ? {}
+                  : { subject: getSubjectAccessWhere(userContext.subjectOwnerId) },
                 orderBy: [{ order: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                 select: {
                   id: true,
@@ -106,21 +113,19 @@ export const studyTableCrudService = {
               },
             },
           },
-        },
-      }),
-      getUserContext(userId),
-    ]);
+      },
+    });
     if (!table) throw new NotFoundError('جدول المذاكرة غير موجود');
-    const { timezone, subjectTitles } = userContext;
+    const { timezone } = userContext;
     const todayKey = localDateKey(new Date(), timezone);
     const days = table.days.map((day) => ({
       id: day.id,
       date: dateKey(day.date),
       studyTableId: day.studyTableId,
       createdAt: day.createdAt,
-      sessions: day.sessions
-        .filter(({ subject }) => !subjectTitles || subjectTitles.includes(subject.title))
-        .map((session) => sessionResponse(session, dateKey(day.date), todayKey)),
+      sessions: day.sessions.map((session) =>
+        sessionResponse(session, dateKey(day.date), todayKey)
+      ),
     }));
     return {
       ...addMonthName(table),
@@ -138,7 +143,7 @@ export const studyTableCrudService = {
   },
 
   async getPdfData(userId: string, tableId: string): Promise<StudyTablePdfData> {
-    const { subjectTitles } = await getUserContext(userId);
+    const { subjectOwnerId } = await getUserContext(userId);
     const table = await prisma.studyTable.findFirst({
       where: { id: tableId, userId },
       select: {
@@ -151,7 +156,9 @@ export const studyTableCrudService = {
           select: {
             date: true,
             sessions: {
-              where: subjectTitles ? { subject: { title: { in: [...subjectTitles] } } } : {},
+              where: subjectOwnerId === undefined
+                ? {}
+                : { subject: getSubjectAccessWhere(subjectOwnerId) },
               orderBy: [{ order: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
               select: {
                 order: true,
@@ -188,7 +195,7 @@ export const studyTableCrudService = {
   },
 
   async update(userId: string, tableId: string, input: StudyTableUpdateInput) {
-    const { timezone, subjectTitles } = await getUserContext(userId);
+    const { timezone, subjectOwnerId } = await getUserContext(userId);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       const table = await tx.studyTable.findFirst({ where: { id: tableId, userId } });
@@ -242,7 +249,7 @@ export const studyTableCrudService = {
       const subjectUpdates =
         input.subjects === undefined
           ? {}
-          : await writeScope(tx, tableId, input.subjects, subjectTitles);
+          : await writeScope(tx, tableId, input.subjects, subjectOwnerId);
       const updated = await tx.studyTable.update({
         where: { id: tableId },
         data: {

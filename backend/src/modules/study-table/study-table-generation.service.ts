@@ -77,13 +77,13 @@ function makePlan(
 
 export const studyTableGenerationService = {
   async create(userId: string, input: CreateStudyTableInput) {
-    const { timezone, subjectTitles } = await getUserContext(userId);
+    const { timezone, subjectOwnerId } = await getUserContext(userId);
     const range = tableRange(input, timezone);
     validateRange(input.type, range);
     return prisma.$transaction(async (tx) => {
       await acquireUserStudyLock(tx, userId);
       return addMonthName(
-        await createTableRecord(tx, userId, input, range, undefined, subjectTitles)
+        await createTableRecord(tx, userId, input, range, undefined, subjectOwnerId)
       );
     });
   },
@@ -94,7 +94,7 @@ export const studyTableGenerationService = {
   },
 
   async generate(userId: string, input: GenerateStudyTableInput, preview: boolean) {
-    const { timezone, subjectTitles } = await getUserContext(userId);
+    const { timezone, subjectOwnerId } = await getUserContext(userId);
     const todayKey = localDateKey(new Date(), timezone);
     const { schedule, ...tableInput } = input;
     const range = tableRange(tableInput, timezone);
@@ -107,7 +107,7 @@ export const studyTableGenerationService = {
           tx,
           tableInput.subjects,
           userId,
-          subjectTitles
+          subjectOwnerId
         );
         if (tableInput.subjects !== 'ALL' && subjects.length !== tableInput.subjects.length) {
           throw new BadRequestError('تتضمن المواد المحددة مادة غير موجودة');
@@ -147,7 +147,7 @@ export const studyTableGenerationService = {
           tableInput,
           range,
           schedule,
-          subjectTitles
+          subjectOwnerId
         );
         const persistedSessions = await savePlannedSessions(
           tx,

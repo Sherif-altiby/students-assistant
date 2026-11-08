@@ -2,8 +2,6 @@ import 'dotenv/config';
 import { prisma } from '../src/config/prisma';
 
 import {
-  EducationLevel,
-  Track,
   TaskFrequency,
   StudyTableType,
   Role,
@@ -55,19 +53,6 @@ function pick<T>(arr: T[]): T {
   const value = arr[randomInt(0, arr.length - 1)];
   if (value === undefined) throw new Error('Cannot pick from an empty array');
   return value;
-}
-
-function sample<T>(arr: T[], count: number): T[] {
-  const copy = [...arr];
-  const result: T[] = [];
-  const n = Math.min(count, copy.length);
-  for (let i = 0; i < n; i++) {
-    const idx = randomInt(0, copy.length - 1);
-    const value = copy.splice(idx, 1)[0];
-    if (value === undefined) throw new Error('Unable to sample from the data pool');
-    result.push(value);
-  }
-  return result;
 }
 
 function chance(probability: number): boolean {
@@ -125,213 +110,6 @@ const HABIT_TITLES = [
   'الابتعاد عن الموبايل ساعة قبل النوم',
 ];
 
-const SUBJECT_POOL = [
-  'اللغة العربية',
-  'اللغة الإنجليزية',
-  'الرياضيات',
-  'الفيزياء',
-  'الكيمياء',
-  'الأحياء',
-];
-
-const TRACK_SUBJECT_SYLLABUS = {
-  استاتيكا: [
-    {
-      title: 'القوى والاتزان',
-      lessons: [
-        'تمثيل القوة ومحصلة قوتين',
-        'تحليل القوى إلى مركبات',
-        'اتزان جسيم تحت تأثير قوى مستوية',
-      ],
-    },
-    {
-      title: 'العزوم والازدواج',
-      lessons: ['عزم القوة حول نقطة', 'نظرية فارنيون للعزوم', 'اتزان جسم صلب تحت تأثير قوى'],
-    },
-    {
-      title: 'الاحتكاك',
-      lessons: ['قوانين الاحتكاك السكوني', 'زاوية الاحتكاك ورد الفعل', 'اتزان جسم على مستوى خشن'],
-    },
-    {
-      title: 'مراكز الثقل',
-      lessons: [
-        'مركز ثقل مجموعة قوى متوازية',
-        'مركز ثقل الأجسام المنتظمة',
-        'اتزان الأجسام تحت تأثير الوزن',
-      ],
-    },
-  ],
-  ديناميكا: [
-    {
-      title: 'الحركة في خط مستقيم',
-      lessons: ['الإزاحة والسرعة والعجلة', 'الحركة بعجلة منتظمة', 'السقوط الحر'],
-    },
-    {
-      title: 'قوانين نيوتن للحركة',
-      lessons: ['قانون نيوتن الأول والثاني', 'قانون نيوتن الثالث', 'تطبيقات قوانين نيوتن'],
-    },
-    {
-      title: 'الشغل والطاقة',
-      lessons: ['الشغل المبذول بواسطة قوة', 'نظرية الشغل والطاقة', 'القدرة وكفاءة الآلات'],
-    },
-    {
-      title: 'كمية الحركة والدفع',
-      lessons: ['كمية الحركة الخطية', 'الدفع والتغير في كمية الحركة', 'التصادم في خط مستقيم'],
-    },
-  ],
-  'تفاضل وتكامل': [
-    {
-      title: 'النهايات والاتصال',
-      lessons: ['مفهوم النهاية وخواصها', 'حساب النهايات الجبرية', 'اتصال الدوال'],
-    },
-    {
-      title: 'التفاضل',
-      lessons: ['معدل التغير والمشتقة', 'قواعد اشتقاق الدوال', 'مشتقات الدوال المثلثية'],
-    },
-    {
-      title: 'تطبيقات التفاضل',
-      lessons: ['معادلة المماس والعمودي', 'فترات التزايد والتناقص', 'القيم العظمى والصغرى'],
-    },
-    {
-      title: 'التكامل',
-      lessons: ['التكامل غير المحدد', 'طرق التكامل الأساسية', 'التكامل المحدد وتطبيقاته'],
-    },
-  ],
-  'هندسة فراغية': [
-    {
-      title: 'المتجهات في الفراغ',
-      lessons: [
-        'تمثيل المتجهات وإحداثياتها',
-        'عمليات جمع المتجهات وضربها',
-        'الضرب القياسي للمتجهات',
-      ],
-    },
-    {
-      title: 'المستقيمات في الفراغ',
-      lessons: ['معادلة المستقيم في الفراغ', 'اتجاهات المستقيمات', 'تقاطع وتوازي المستقيمات'],
-    },
-    {
-      title: 'المستويات',
-      lessons: ['معادلة المستوى', 'العلاقة بين مستقيم ومستوى', 'الزاوية والمسافة في الفراغ'],
-    },
-    {
-      title: 'الأجسام الهندسية',
-      lessons: ['مساحة وحجم المنشور والأسطوانة', 'مساحة وحجم المخروط', 'مساحة وحجم الكرة'],
-    },
-  ],
-  جبر: [
-    {
-      title: 'المصفوفات',
-      lessons: ['أنواع المصفوفات وتساويها', 'جمع المصفوفات وضربها', 'مصفوفة الوحدة والمعكوس'],
-    },
-    {
-      title: 'المحددات',
-      lessons: [
-        'حساب محددات الرتبة الثانية والثالثة',
-        'خواص المحددات',
-        'حل المعادلات باستخدام المحددات',
-      ],
-    },
-    {
-      title: 'العد والتباديل والتوافيق',
-      lessons: ['مبدأ العد الأساسي', 'التباديل', 'التوافيق وتطبيقاتها'],
-    },
-    {
-      title: 'الاحتمال والإحصاء',
-      lessons: ['فضاء العينة والحوادث', 'احتمال الحوادث', 'مقاييس النزعة المركزية والتشتت'],
-    },
-  ],
-  تاريخ: [
-    {
-      title: 'مصر في العصر الحديث',
-      lessons: [
-        'الحملة الفرنسية على مصر',
-        'بناء الدولة في عهد محمد علي',
-        'الحركة الوطنية وثورة 1919',
-      ],
-    },
-    {
-      title: 'مصر والعالم المعاصر',
-      lessons: [
-        'ثورة يوليو والتحولات السياسية',
-        'قضايا الاستقلال في العالم العربي',
-        'مصر والقضية الفلسطينية',
-      ],
-    },
-    {
-      title: 'الحربان العالميتان',
-      lessons: [
-        'أسباب ونتائج الحرب العالمية الأولى',
-        'العالم بين الحربين',
-        'أسباب ونتائج الحرب العالمية الثانية',
-      ],
-    },
-    {
-      title: 'النظام الدولي الحديث',
-      lessons: ['نشأة الأمم المتحدة', 'الحرب الباردة', 'التكتلات والتحولات العالمية'],
-    },
-  ],
-  جغرافيا: [
-    {
-      title: 'جغرافية التنمية',
-      lessons: ['مفهوم التنمية ومؤشراتها', 'التنمية المستدامة', 'التفاوت في مستويات التنمية'],
-    },
-    {
-      title: 'الموارد والأنشطة الاقتصادية',
-      lessons: ['الموارد الطبيعية والبشرية', 'الزراعة والصناعة', 'التجارة والنقل والخدمات'],
-    },
-    {
-      title: 'جغرافية السكان والعمران',
-      lessons: ['توزيع السكان ونموهم', 'الهجرة والتركيب السكاني', 'المدن والتخطيط العمراني'],
-    },
-    {
-      title: 'البيئة والمخاطر',
-      lessons: [
-        'النظم البيئية والتوازن البيئي',
-        'التغير المناخي والتلوث',
-        'إدارة الموارد ومواجهة المخاطر',
-      ],
-    },
-  ],
-  فلسفة: [
-    {
-      title: 'الفلسفة والأخلاق',
-      lessons: ['طبيعة التفكير الفلسفي', 'القيم الأخلاقية والحرية', 'المسؤولية الأخلاقية'],
-    },
-    {
-      title: 'المنطق والتفكير العلمي',
-      lessons: ['مبادئ التفكير المنطقي', 'القضايا والاستدلال', 'المنهج العلمي والتفكير الناقد'],
-    },
-    {
-      title: 'فلسفة العلم',
-      lessons: ['طبيعة المعرفة العلمية', 'التفسير والنظرية العلمية', 'أخلاقيات البحث العلمي'],
-    },
-    {
-      title: 'قضايا فلسفية معاصرة',
-      lessons: ['الإنسان والتقنية', 'العدالة وحقوق الإنسان', 'الحوار والتسامح'],
-    },
-  ],
-  'علم نفس': [
-    {
-      title: 'التعلم والذاكرة',
-      lessons: ['مفهوم التعلم وأنواعه', 'نظريات التعلم', 'الذاكرة وطرق تحسينها'],
-    },
-    {
-      title: 'الشخصية والدوافع',
-      lessons: ['مفهوم الشخصية وقياسها', 'الدوافع والحاجات', 'الانفعالات وأساليب تنظيمها'],
-    },
-    {
-      title: 'علم النفس الاجتماعي',
-      lessons: ['التفاعل الاجتماعي', 'الاتجاهات وتكوين الرأي', 'الجماعة والقيادة'],
-    },
-    {
-      title: 'الصحة النفسية',
-      lessons: ['مفهوم الصحة النفسية', 'التوافق ومواجهة الضغوط', 'طلب المساعدة والدعم النفسي'],
-    },
-  ],
-} satisfies Record<string, Array<{ title: string; lessons: string[] }>>;
-
-// ------------------------------------------------------------------
 // Main seed routine
 // ------------------------------------------------------------------
 async function main() {
@@ -373,8 +151,6 @@ async function main() {
       email: STUDENT_LOGIN.email,
       phone: '01012345678',
       password: studentPassword,
-      level: EducationLevel.BACHELOR,
-      track: Track.BACHELOR_SECOND_MEDICAL,
       parentPhone: '01098765432',
       country: 'مصر',
       role: Role.USER,
@@ -388,8 +164,6 @@ async function main() {
       email: SECOND_STUDENT_LOGIN.email,
       phone: '01012345679',
       password: secondStudentPassword,
-      level: EducationLevel.BACHELOR,
-      track: Track.BACHELOR_SECOND_MEDICAL,
       parentPhone: PARENT_LOGIN.phone,
       country: 'مصر',
       role: Role.USER,
@@ -819,8 +593,7 @@ async function main() {
   });
 
   // ------------------------------------------------------------
-  // Day-by-day generation: tasks, task histories, habit
-  // completions, and study-day content for both study tables
+  // Day-by-day generation: tasks, task histories, and habit completions
   // ------------------------------------------------------------
   console.log(
     '🗓️  Generating daily data (June 1 - ' + END_DATE.toISOString().split('T')[0] + ')...'
@@ -830,124 +603,6 @@ async function main() {
   let taskCount = 0;
   let taskHistoryCount = 0;
   let habitCompletionCount = 0;
-  let studyDayCount = 0;
-  let lessonCount = 0;
-  let lessonCompletionCount = 0;
-  const studyCatalog = new Map<string, { id: string; lessons: Array<{ id: string }> }>();
-  const usedLessonsByTable = new Map<string, Set<string>>([
-    [mainStudyTable.id, new Set()],
-    [finalSprintTable.id, new Set()],
-    [secondStudentTable.id, new Set()],
-  ]);
-
-  console.log('📖 Creating shared study catalog...');
-  for (const subjectTitle of SUBJECT_POOL) {
-    const subject = await prisma.studySubject.create({
-      data: { title: subjectTitle },
-    });
-    const subjectLessons: Array<{ id: string }> = [];
-    const unitCount = randomInt(1, 2);
-
-    for (let unitOrder = 1; unitOrder <= unitCount; unitOrder++) {
-      const unit = await prisma.studyUnit.create({
-        data: { title: `الوحدة ${unitOrder}`, subjectId: subject.id, order: unitOrder },
-      });
-
-      const lessonsInUnit = randomInt(1, 3);
-      for (let lessonOrder = 1; lessonOrder <= lessonsInUnit; lessonOrder++) {
-        const lesson = await prisma.studyLesson.create({
-          data: { title: `الدرس ${lessonOrder}`, unitId: unit.id, order: lessonOrder },
-        });
-        subjectLessons.push(lesson);
-        lessonCount++;
-      }
-    }
-
-    studyCatalog.set(subjectTitle, { id: subject.id, lessons: subjectLessons });
-  }
-
-  for (const [subjectTitle, units] of Object.entries(TRACK_SUBJECT_SYLLABUS)) {
-    lessonCount += units.reduce((total, unit) => total + unit.lessons.length, 0);
-    await prisma.studySubject.create({
-      data: {
-        title: subjectTitle,
-        units: {
-          create: units.map((unit, unitIndex) => ({
-            title: unit.title,
-            order: unitIndex + 1,
-            lessons: {
-              create: unit.lessons.map((title, lessonIndex) => ({
-                title,
-                order: lessonIndex + 1,
-              })),
-            },
-          })),
-        },
-      },
-    });
-  }
-
-  const allSubjects = await prisma.studySubject.findMany({ select: { id: true } });
-  await prisma.studyTableSubject.createMany({
-    data: [mainStudyTable, finalSprintTable, secondStudentTable].flatMap((table) =>
-      allSubjects.map(({ id }) => ({ studyTableId: table.id, subjectId: id }))
-    ),
-  });
-
-  const completedLessonIds = new Set<string>();
-  async function addStudyDay(
-    studyTableId: string,
-    userId: string,
-    date: Date,
-    subjectCount: number,
-    completionChance: number
-  ) {
-    const studyDay = await prisma.studyDay.create({
-      data: { date, studyTableId },
-    });
-    studyDayCount++;
-
-    const usedLessons = usedLessonsByTable.get(studyTableId)!;
-    const subjectsToday = sample([...studyCatalog.entries()], subjectCount);
-    let sessionIndex = 0;
-    for (const [, catalogSubject] of subjectsToday) {
-      const availableLessons = catalogSubject.lessons.filter(
-        (lesson) => !usedLessons.has(lesson.id)
-      );
-      const lessonsForDay = sample(availableLessons, Math.min(1, availableLessons.length));
-
-      for (const lesson of lessonsForDay) {
-        usedLessons.add(lesson.id);
-        const completed = chance(completionChance);
-        await prisma.studySession.create({
-          data: {
-            userId,
-            studyTableId,
-            dayId: studyDay.id,
-            subjectId: catalogSubject.id,
-            lessonId: lesson.id,
-            order: sessionIndex,
-            completedAt: completed ? date : null,
-          },
-        });
-        sessionIndex++;
-
-        const completionKey = `${userId}:${lesson.id}`;
-        if (completed && !completedLessonIds.has(completionKey)) {
-          await prisma.studyLessonCompletion.create({
-            data: {
-              userId,
-              lessonId: lesson.id,
-              completedAt: date,
-            },
-          });
-          completedLessonIds.add(completionKey);
-          lessonCompletionCount++;
-        }
-      }
-    }
-  }
-
   for (const date of dateRange(START_DATE, END_DATE)) {
     _dayIndex++;
     if (_dayIndex % 10 === 0) {
@@ -1016,20 +671,6 @@ async function main() {
       }
     }
 
-    // --- Study day content on the main table (skip ~15% of days,
-    // like weekends off or rest days)
-    if (chance(0.85)) {
-      await addStudyDay(mainStudyTable.id, student.id, date, randomInt(2, 3), 0.6);
-    }
-
-    // --- Study day content on the intensive last-two-weeks table
-    if (date >= recentTableStart) {
-      await addStudyDay(finalSprintTable.id, student.id, date, randomInt(1, 2), 0.8);
-    }
-
-    if (date >= secondStudentTableStart) {
-      await addStudyDay(secondStudentTable.id, secondStudent.id, date, 1, 0.6);
-    }
   }
 
   console.log('✅ Seed complete:');
@@ -1043,8 +684,7 @@ async function main() {
   console.log(
     `   habits: ${[...habitsByUser.values()].flat().length}, completions: ${habitCompletionCount}`
   );
-  console.log(`   study tables: 3, study days: ${studyDayCount}`);
-  console.log(`   lessons: ${lessonCount}, completions: ${lessonCompletionCount}`);
+  console.log('   study tables: 3, no subjects or lessons seeded');
 }
 
 main()

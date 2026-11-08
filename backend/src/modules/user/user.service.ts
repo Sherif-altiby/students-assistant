@@ -121,8 +121,6 @@ export const userService = {
       name: input.name,
       password: hashedPassword,
       gender: input.gender,
-      level: input.level,
-      track: input.track,
       parentPhone: input.parentPhone,
       phone: input.phone,
       country: input.country,
@@ -235,9 +233,8 @@ export const userService = {
   /**
    * Admin-only: creates a DOCTOR user with no password yet, generates a
    * single-use invitation token, and emails the doctor a link to activate
-   * their account. This is the fix for the Prisma type error: `gender`,
-   * `level`, `track`, `parentPhone`, and `country` are optional on the
-   * model now, so a doctor row can omit them entirely.
+   * their account. Profile fields are optional for a doctor, so a doctor row
+   * can omit them entirely.
    */
   async inviteDoctor(
     input: InviteDoctorInput

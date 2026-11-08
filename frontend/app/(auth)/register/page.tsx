@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
 import { Eye, EyeOff, LockKeyhole, Mail, Phone, UserRound } from "lucide-react";
@@ -17,30 +18,12 @@ import { Button } from "@/components/ui/button";
 
 type RegisterFormErrors = Partial<Record<keyof RegisterPayload, string>>;
 
-// Track options depend on the selected level.
-const TRACK_OPTIONS_BY_LEVEL: Record<
-  RegisterPayload["level"],
-  { value: RegisterPayload["track"]; label: string }[]
-> = {
-  SECONDARY_AZHARI: [
-    { value: "LITERARY", label: "أدبي" },
-    { value: "SCIENCE", label: "علمي" },
-  ],
-  SECONDARY_GENERAL: [
-    { value: "SCIENCE_MATH", label: "علمي رياضة" },
-    { value: "SCIENCE_SCIENCE", label: "علمي علوم" },
-    { value: "LITERARY", label: "أدبي" },
-  ],
-};
-
 const initialForm: RegisterPayload = {
   name: "",
   email: "",
   password: "",
   phone: "",
   gender: "MALE",
-  level: "SECONDARY_AZHARI",
-  track: TRACK_OPTIONS_BY_LEVEL.SECONDARY_AZHARI[0].value,
   parentPhone: "",
   country: "egypt",
 };
@@ -55,33 +38,18 @@ export default function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const trackOptions = TRACK_OPTIONS_BY_LEVEL[form.level];
-
   function update<K extends keyof RegisterPayload>(
     key: K,
     value: RegisterPayload[K],
   ) {
     setForm((prev) => {
-      const next = { ...prev, [key]: value };
-
-      // When the level changes, the previous track may no longer be valid
-      // for the new level — fall back to that level's first option.
-      if (key === "level") {
-        const validTracks =
-          TRACK_OPTIONS_BY_LEVEL[value as RegisterPayload["level"]];
-        if (!validTracks.some((t) => t.value === prev.track)) {
-          next.track = validTracks[0].value;
-        }
-      }
-
-      return next;
+      return { ...prev, [key]: value };
     });
 
     setFieldErrors((prev) => {
       if (!prev[key]) return prev;
       const next = { ...prev };
       delete next[key];
-      if (key === "level") delete next.track;
       return next;
     });
   }
@@ -119,31 +87,36 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <div className="flex w-full flex-1 items-center justify-center px-6 py-12">
-        <div className="w-full max-w-2xl rounded-lg border border-border p-4">
-          {/* logo */}
-          <div className="mb-8 flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground   text-lg font-semibold">
-              م
-            </div>
-            <span className="text-lg font-semibold text-foreground">
-              مُذاكرة
-            </span>
-          </div>
+    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <section className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 sm:p-8">
+        <Link
+          href="/"
+          className="mb-8 flex w-fit items-center gap-3"
+          aria-label="مُذاكرة - الصفحة الرئيسية"
+        >
+          <Image
+            src="/logo.png"
+            alt=""
+            width={44}
+            height={44}
+            priority
+            className="h-11 w-11 rounded-xl object-contain"
+          />
+          <span className="text-lg font-bold text-foreground">مُذاكرة</span>
+        </Link>
 
-          <h2 className="  text-2xl font-medium text-foreground text-center">
-            أنشئ حسابك
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground text-center border-b pb-3">
-            ابدأ في متابعة مذاكرتك من اليوم
-          </p>
+        <h1 className="text-center text-2xl font-bold text-foreground">
+          أنشئ حسابك
+        </h1>
+        <p className="mt-2 border-b border-border pb-4 text-center text-sm leading-6 text-muted-foreground">
+          ابدأ في متابعة مذاكرتك من اليوم
+        </p>
 
-          <form
-            onSubmit={handleSubmit}
-            noValidate
-            className="mt-8 flex flex-col gap-5"
-          >
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="mt-6 flex flex-col gap-4"
+        >
             <FormInput
               id="name"
               label="الاسم بالكامل"
@@ -254,66 +227,44 @@ export default function RegisterPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormCustomSelect
-                id="level"
-                label="المرحلة الدراسية"
-                value={form.level}
-                onChange={(value) => update("level", value)}
-                required
-                error={fieldErrors.level}
-                options={[
-                  { value: "SECONDARY_AZHARI", label: "الثانوية الأزهرية" },
-                  { value: "SECONDARY_GENERAL", label: "الثانوية العامة" },
-                ]}
-              />
-              <FormCustomSelect
-                id="track"
-                label="الشعبة"
-                value={form.track}
-                onChange={(value) => update("track", value)}
-                required
-                error={fieldErrors.track}
-                options={trackOptions}
-              />
-            </div>
-
-            {formError && (
-              <p className="rounded-[var(--radius-md)] border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
-                {formError}
-              </p>
-            )}
-
-            <MainButton
-              type="submit"
-              title="إنشاء الحساب"
-              loading={isLoading}
-              loadingTitle="جارٍ إنشاء الحساب..."
-              fullWidth
-              className="mt-2"
-            />
-          </form>
-
-          <p className="mt-8 text-center text-sm text-muted-foreground">
-            لديك حساب بالفعل؟{" "}
-            <Link
-              href="/login"
-              className="font-medium text-primary hover:underline"
+          {formError && (
+            <p
+              role="alert"
+              className="rounded-xl border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
             >
-              سجّل الدخول
-            </Link>
-          </p>
-          <p className="mt-3 text-center text-sm text-muted-foreground">
-            ولي أمر؟{" "}
-            <Link
-              href="/register/parent"
-              className="font-medium text-primary hover:underline"
-            >
-              إنشاء حساب ولي أمر
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+              {formError}
+            </p>
+          )}
+
+          <MainButton
+            type="submit"
+            title="إنشاء الحساب"
+            loading={isLoading}
+            loadingTitle="جارٍ إنشاء الحساب..."
+            fullWidth
+            className="mt-2"
+          />
+        </form>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          لديك حساب بالفعل؟{" "}
+          <Link
+            href="/login"
+            className="font-medium text-primary hover:underline"
+          >
+            سجّل الدخول
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-sm text-muted-foreground">
+          ولي أمر؟{" "}
+          <Link
+            href="/register/parent"
+            className="font-medium text-primary hover:underline"
+          >
+            إنشاء حساب ولي أمر
+          </Link>
+        </p>
+      </section>
+    </main>
   );
 }

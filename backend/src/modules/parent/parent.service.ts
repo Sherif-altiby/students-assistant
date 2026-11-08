@@ -66,7 +66,7 @@ export const parentService = {
         status: true,
         createdAt: true,
         student: {
-          select: { id: true, name: true, level: true, track: true },
+          select: { id: true, name: true },
         },
       },
     });
@@ -117,8 +117,6 @@ export const parentService = {
       select: {
         id: true,
         name: true,
-        level: true,
-        track: true,
         _count: {
           select: {
             taskHistories: true,
@@ -235,8 +233,6 @@ export const parentService = {
       student: {
         id: student.id,
         name: student.name,
-        level: student.level,
-        track: student.track,
       },
       summary: {
         taskCount: student.tasks.length,

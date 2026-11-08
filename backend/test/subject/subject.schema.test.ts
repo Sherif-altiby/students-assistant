@@ -7,6 +7,7 @@ import {
   reorderUnitsSchema,
   updateLessonSchema,
 } from '../../src/modules/subject/subject.schema';
+import { createUserSchema } from '../../src/modules/user/user.schema';
 
 const subjectId = 'c0a80123-4567-489a-8abc-123456789abc';
 const unitId = 'c0a80123-4567-489a-8abc-123456789abd';
@@ -25,12 +26,16 @@ test('subject creation accepts nested units and lessons with strict object field
   const parsed = createSubjectSchema.parse({
     body: {
       title: 'الرياضيات',
-      units: [{ title: 'الجبر', lessons: [{ title: 'المعادلات' }] }],
+      units: [{
+        title: 'الجبر',
+        lessons: [{ title: 'المعادلات' }, { title: 'المتباينات' }],
+      }],
     },
     query: {},
     params: {},
   });
   assert.equal(parsed.body.units?.[0]?.lessons?.[0]?.title, 'المعادلات');
+  assert.equal(parsed.body.units?.[0]?.lessons?.[1]?.title, 'المتباينات');
   assert.throws(() => createSubjectSchema.parse({
     body: { title: 'مادة', chapters: [] },
     query: {},
@@ -44,6 +49,23 @@ test('subject creation accepts nested units and lessons with strict object field
     query: {},
     params: {},
   }));
+});
+
+test('student registration no longer requires education level or track', () => {
+  const parsed = createUserSchema.parse({
+    body: {
+      name: 'طالب',
+      email: 'student@example.com',
+      password: 'password123',
+      gender: 'MALE',
+      parentPhone: '01012345678',
+      phone: '01012345679',
+      country: 'مصر',
+    },
+  });
+  assert.equal(parsed.body.name, 'طالب');
+  assert.equal('level' in parsed.body, false);
+  assert.equal('track' in parsed.body, false);
 });
 
 test('lesson moves accept unitId and reject legacy parentId', () => {

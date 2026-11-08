@@ -17,10 +17,9 @@ interface ProgressAggregate {
   late: number;
 }
 
-function getSubjectScope(subjectTitles: readonly string[] | undefined) {
-  if (subjectTitles === undefined) return Prisma.empty;
-  if (subjectTitles.length === 0) return Prisma.sql`AND false`;
-  return Prisma.sql`AND subject.title IN (${Prisma.join(subjectTitles)})`;
+function getSubjectScope(subjectOwnerId: string | undefined) {
+  if (subjectOwnerId === undefined) return Prisma.empty;
+  return Prisma.sql`AND (subject.owner_id IS NULL OR subject.owner_id = ${subjectOwnerId})`;
 }
 
 export const studyTableProgressService = {
@@ -35,7 +34,7 @@ export const studyTableProgressService = {
     if (!table) throw new NotFoundError('جدول المذاكرة غير موجود');
 
     const today = localDateKey(new Date(), userContext.timezone);
-    const subjectScope = getSubjectScope(userContext.subjectTitles);
+    const subjectScope = getSubjectScope(userContext.subjectOwnerId);
     const rows = await prisma.$queryRaw<ProgressAggregate[]>(Prisma.sql`
       SELECT
         session.subject_id AS "subjectId",

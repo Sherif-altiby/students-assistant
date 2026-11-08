@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, BookOpen, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { CreateStudySubjectDialog } from "./CreateStudySubjectDialog";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -13,8 +14,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { listStudySubjectsPage } from "@/lib/study-table";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function StudySubjectsPage() {
+  const user = useAuthStore((state) => state.user);
   const subjectsQuery = useQuery({
     queryKey: ["study-subjects", 1, 100],
     queryFn: () => listStudySubjectsPage({ page: 1, limit: 100 }),
@@ -26,6 +29,7 @@ export default function StudySubjectsPage() {
         title="المواد الدراسية"
         description="تابع تقدمك الدراسي وحالة إنجاز الدروس في كل مادة"
       />
+      {user?.role === "USER" && <CreateStudySubjectDialog />}
 
       {subjectsQuery.isLoading && (
         <div className="flex min-h-48 items-center justify-center text-muted-foreground">

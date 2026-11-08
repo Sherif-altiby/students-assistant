@@ -9,8 +9,20 @@ test('subject scope loads the full catalog for ALL and filters explicit subject 
   });
 });
 
-test('subject scope combines the requested IDs with the user track catalog', () => {
-  assert.deepEqual(getSubjectScopeWhere(['subject-a'], ['الفيزياء', 'الكيمياء']), {
-    AND: [{ id: { in: ['subject-a'] } }, { title: { in: ['الفيزياء', 'الكيمياء'] } }],
+test('subject scope combines selected IDs with shared and student-owned subjects', () => {
+  assert.deepEqual(getSubjectScopeWhere(['subject-a'], 'student-1'), {
+    AND: [
+      { id: { in: ['subject-a'] } },
+      { OR: [{ ownerId: null }, { ownerId: 'student-1' }] },
+    ],
+  });
+});
+
+test('ALL subject scope excludes other students’ private subjects', () => {
+  assert.deepEqual(getSubjectScopeWhere('ALL', 'student-1'), {
+    AND: [
+      {},
+      { OR: [{ ownerId: null }, { ownerId: 'student-1' }] },
+    ],
   });
 });

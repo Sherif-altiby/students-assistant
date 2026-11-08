@@ -142,9 +142,6 @@ export default function ParentHomePage() {
                       <h3 className="font-bold text-card-foreground">
                         {link.student.name}
                       </h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {link.student.level ?? "المرحلة غير محددة"}
-                      </p>
                     </div>
                   </div>
                   <Badge variant={link.status === "ACTIVE" ? "default" : "secondary"}>

@@ -8,6 +8,7 @@ import type {
   NotificationItem,
   StudySession,
   StudySubjectSummary,
+  CreateStudySubjectInput,
   StudySessionInput,
   StudySessionReplacement,
   StudySubjectDetails,
@@ -170,6 +171,16 @@ export async function listStudySubjectsPage(
     ApiEnvelope<{ data: StudySubjectSummary[] }>
   >("/subjects", { params });
   return response.data.data.data;
+}
+
+export async function createStudySubject(
+  payload: CreateStudySubjectInput,
+): Promise<StudySubjectDetails> {
+  const response = await api.post<ApiEnvelope<StudySubjectDetails>>(
+    "/subjects",
+    payload,
+  );
+  return response.data.data;
 }
 
 export async function listNotifications(

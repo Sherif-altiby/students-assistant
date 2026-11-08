@@ -27,7 +27,7 @@ router.get('/', validate(listSubjectsSchema), subjectController.list);
 router.get('/:id', validate(getSubjectSchema), subjectController.getById);
 
 const adminOnly = authorize(Role.ADMIN);
-router.post('/', adminOnly, validate(createSubjectSchema), subjectController.create);
+router.post('/', authorize(Role.ADMIN, Role.USER), validate(createSubjectSchema), subjectController.create);
 router.patch('/:id', adminOnly, validate(updateSubjectSchema), subjectController.update);
 router.delete('/:id', adminOnly, validate(deleteSubjectSchema), subjectController.delete);
 

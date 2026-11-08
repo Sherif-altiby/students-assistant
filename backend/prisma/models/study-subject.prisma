@@ -1,7 +1,10 @@
 model StudySubject {
   id String @id @default(uuid())
 
-  title String @unique
+  title String
+
+  ownerId String? @map("owner_id")
+  owner   User?   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   units StudyUnit[]
 
@@ -10,6 +13,8 @@ model StudySubject {
 
   createdAt DateTime @default(now())
 
+  @@unique([ownerId, title])
+  @@index([ownerId])
   @@map("study_subjects")
 }
 

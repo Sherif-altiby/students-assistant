@@ -1,7 +1,8 @@
+import { Role } from '@prisma/client';
 import { BadRequestError, ConflictError, NotFoundError } from '../../utils/AppError';
-import { subjectRepository } from './subject.repository';
-import { getSubjectTitlesForTrack } from './subject-tracks';
 import { prisma } from '../../config/prisma';
+import { getSubjectAccessWhere } from './subject-access';
+import { subjectRepository } from './subject.repository';
 import {
   CreateSubjectInput,
   CreateUnitInput,
@@ -23,13 +24,13 @@ function lessonNotFound(): never {
   throw new NotFoundError('الدرس غير موجود');
 }
 
-async function getVisibleSubjectTitles(userId: string) {
+async function getVisibleSubjectWhere(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true, track: true },
+    select: { role: true },
   });
   if (!user) throw new NotFoundError('المستخدم غير موجود');
-  return user.role === 'USER' ? getSubjectTitlesForTrack(user.track) : undefined;
+  return getSubjectAccessWhere(user.role === Role.ADMIN ? undefined : userId);
 }
 
 function mapSubjectGraph(
@@ -64,13 +65,13 @@ function mapSubjectGraph(
 
 export const subjectService = {
   async listSubjects({ page, limit }: ListSubjectsQuery, userId: string) {
-    const subjectTitles = await getVisibleSubjectTitles(userId);
-    return subjectRepository.findAllSubjects(page, limit, userId, subjectTitles);
+    const accessWhere = await getVisibleSubjectWhere(userId);
+    return subjectRepository.findAllSubjects(page, limit, userId, accessWhere);
   },
 
   async getSubject(id: string, userId: string) {
-    const subjectTitles = await getVisibleSubjectTitles(userId);
-    const subject = await subjectRepository.findSubjectGraph(id, subjectTitles);
+    const accessWhere = await getVisibleSubjectWhere(userId);
+    const subject = await subjectRepository.findSubjectGraph(id, accessWhere);
     if (!subject) subjectNotFound();
     const lessonIds = subject.units.flatMap((unit) => unit.lessons.map((lesson) => lesson.id));
     const completionRows = lessonIds.length
@@ -79,18 +80,22 @@ export const subjectService = {
     return mapSubjectGraph(subject, new Set(completionRows));
   },
 
-  async createSubject(input: CreateSubjectInput) {
-    if (await subjectRepository.findSubjectByTitle(input.title)) {
+  async createSubject(input: CreateSubjectInput, userId: string, role: Role) {
+    const ownerId = role === Role.USER ? userId : null;
+    if (await subjectRepository.findSubjectByTitle(input.title, ownerId)) {
       throw new ConflictError('توجد مادة بهذا الاسم بالفعل');
     }
-    const subject = await subjectRepository.createSubject(input.title, input.units ?? []);
+    const subject = await subjectRepository.createSubject(input.title, input.units ?? [], ownerId);
     return mapSubjectGraph(subject, new Set());
   },
 
   async updateSubject(id: string, input: UpdateSubjectInput) {
     const existing = await subjectRepository.findSubjectById(id);
     if (!existing) subjectNotFound();
-    if (existing.title !== input.title && await subjectRepository.findSubjectByTitle(input.title)) {
+    if (
+      existing.title !== input.title &&
+      await subjectRepository.findSubjectByTitle(input.title, existing.ownerId)
+    ) {
       throw new ConflictError('توجد مادة بهذا الاسم بالفعل');
     }
     return subjectRepository.updateSubject(id, input.title);

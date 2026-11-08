@@ -1,20 +1,6 @@
 import { z } from 'zod';
 
 export const genderEnum = z.enum(['MALE', 'FEMALE']);
-export const educationLevelEnum = z.enum(['SECONDARY_GENERAL', 'SECONDARY_AZHARI']);
-export const trackEnum = z.enum(['SCIENCE_MATH', 'SCIENCE_SCIENCE', 'SCIENCE', 'LITERARY']);
-
-const TRACKS_BY_LEVEL: Record<string, string[]> = {
-  SECONDARY_GENERAL: ['SCIENCE_MATH', 'SCIENCE_SCIENCE', 'LITERARY'],
-  SECONDARY_AZHARI: ['SCIENCE', 'LITERARY'],
-};
-
-const withLevelTrackRule = <T extends { level: string; track: string }>(schema: z.ZodType<T>) =>
-  schema.refine((data) => TRACKS_BY_LEVEL[data.level]?.includes(data.track), {
-    message: 'Selected track is not valid for the chosen education level',
-    path: ['track'],
-  });
-
 const phoneRegex = /^\+?[0-9]{8,15}$/;
 
 const baseUserFields = {
@@ -22,8 +8,6 @@ const baseUserFields = {
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   gender: genderEnum,
-  level: educationLevelEnum,
-  track: trackEnum,
   parentPhone: z
     .string()
     .min(8, 'Invalid parent phone number')
@@ -35,9 +19,9 @@ const baseUserFields = {
   country: z.string().min(2, 'Country is required'),
 };
 
-// --- Student self-signup (unchanged) ---
+// --- Student self-signup ---
 export const createUserSchema = z.object({
-  body: withLevelTrackRule(z.object(baseUserFields)),
+  body: z.object(baseUserFields),
   query: z.object({}).optional(),
   params: z.object({}).optional(),
 });
@@ -47,8 +31,6 @@ const updateBodySchema = z
     name: z.string().min(2).optional(),
     email: z.string().email().optional(),
     gender: genderEnum.optional(),
-    level: educationLevelEnum.optional(),
-    track: trackEnum.optional(),
     parentPhone: z
       .string()
       .regex(phoneRegex, 'Invalid parent phone number')
@@ -57,16 +39,7 @@ const updateBodySchema = z
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',
-  })
-  .refine(
-    (data) => {
-      if (data.level && data.track) {
-        return TRACKS_BY_LEVEL[data.level]?.includes(data.track);
-      }
-      return true;
-    },
-    { message: 'Selected track is not valid for the chosen education level', path: ['track'] }
-  );
+  });
 
 export const updateUserSchema = z.object({
   body: updateBodySchema,

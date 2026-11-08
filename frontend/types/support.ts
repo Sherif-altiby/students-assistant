@@ -117,8 +117,6 @@ export interface BookingUser {
   role: string;
   status: string;
   gender: string;
-  level: string;
-  track: string;
   parentPhone: string;
   country: string;
   createdAt: string;
@@ -154,8 +152,6 @@ export interface DoctorSummary {
   role: string;
   status: string;
   gender: string | null;
-  level: string | null;
-  track: string | null;
   parentPhone: string | null;
   country: string | null;
   createdAt: string;

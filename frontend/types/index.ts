@@ -1,6 +1,4 @@
 export type Gender = "MALE" | "FEMALE";
-export type Level = "SECONDARY_AZHARI" | "SECONDARY_GENERAL";
-export type Track = "SCIENCE" | "LITERARY" | "SCIENCE_MATH" | "SCIENCE_SCIENCE";
 
 export interface User {
   id: string;
@@ -9,8 +7,6 @@ export interface User {
   phone: string | null;
   gender: Gender | null;
   role: "USER" | "ADMIN" | "DOCTOR" | "PARENT";
-  level: Level | null;
-  track: Track | null;
   parentPhone: string | null;
   country: string | null;
   createdAt: string;
@@ -43,8 +39,6 @@ export interface RegisterPayload {
   password: string;
   phone: string;
   gender: Gender;
-  level: Level;
-  track: Track;
   parentPhone: string;
   country: string;
 }
