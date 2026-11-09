@@ -16,9 +16,12 @@ export const createApp = (): Application => {
   app.use(helmet());
 
   app.use(cors({
-    origin: true,
-    credentials: true
-  }));
+  origin: [
+    'http://localhost:3001',
+    'https://students-assistant-nsve.vercel.app',
+  ],
+  credentials: true,
+}));
 
   // Body/cookie parsing
   app.use(express.json({ limit: '10kb' }));
