@@ -2,117 +2,32 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  BookOpen,
-  CalendarClock,
-  CalendarDays,
-  Clock,
-  GraduationCap,
-  PencilLine,
-  Plus,
-  Sparkles,
-  Trash2,
-  User2,
-  X,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { CustomSelect } from "@/components/ui/CustomSelect";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ARABIC_DAYS_ORDERED } from "@/lib/day-mapping";
-import type { LessonDate } from "@/types/lesson-date";
+  formatDuration,
+  LessonDateForm,
+  LessonDateOverview,
+  LessonDateSchedule,
+  toMinutes,
+  type LessonDateFormValues,
+} from "@/components/dashboard/lesson-dates/lesson-date-components";
 import { useLessonDates } from "@/hooks/useLessonDates";
+import { ARABIC_DAYS_ORDERED } from "@/lib/day-mapping";
 import { listStudySubjects } from "@/lib/study-table";
+import type { LessonDate } from "@/types/lesson-date";
 
-const emptyForm = {
+const EMPTY_FORM: LessonDateFormValues = {
   subject: "",
   teacher: "",
-  dayNames: [] as string[],
+  dayNames: [],
   startTime: "",
   endTime: "",
 };
 
-const WEEK_TABLE_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
-
-const DAY_STYLES: Record<
-  string,
-  { dot: string; chip: string; chipActive: string; ring: string }
-> = {
-  الأحد: {
-    dot: "bg-sky-500",
-    chip: "bg-sky-50 text-sky-700 hover:bg-sky-100",
-    chipActive: "bg-sky-500 text-white hover:bg-sky-500",
-    ring: "ring-sky-500/30",
-  },
-  الإثنين: {
-    dot: "bg-violet-500",
-    chip: "bg-violet-50 text-violet-700 hover:bg-violet-100",
-    chipActive: "bg-violet-500 text-white hover:bg-violet-500",
-    ring: "ring-violet-500/30",
-  },
-  الثلاثاء: {
-    dot: "bg-amber-500",
-    chip: "bg-amber-50 text-amber-700 hover:bg-amber-100",
-    chipActive: "bg-amber-500 text-white hover:bg-amber-500",
-    ring: "ring-amber-500/30",
-  },
-  الأربعاء: {
-    dot: "bg-emerald-500",
-    chip: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-    chipActive: "bg-emerald-500 text-white hover:bg-emerald-500",
-    ring: "ring-emerald-500/30",
-  },
-  الخميس: {
-    dot: "bg-rose-500",
-    chip: "bg-rose-50 text-rose-700 hover:bg-rose-100",
-    chipActive: "bg-rose-500 text-white hover:bg-rose-500",
-    ring: "ring-rose-500/30",
-  },
-  الجمعة: {
-    dot: "bg-indigo-500",
-    chip: "bg-indigo-50 text-indigo-700 hover:bg-indigo-100",
-    chipActive: "bg-indigo-500 text-white hover:bg-indigo-500",
-    ring: "ring-indigo-500/30",
-  },
-  السبت: {
-    dot: "bg-teal-500",
-    chip: "bg-teal-50 text-teal-700 hover:bg-teal-100",
-    chipActive: "bg-teal-500 text-white hover:bg-teal-500",
-    ring: "ring-teal-500/30",
-  },
-};
-
-function toMinutes(time: string) {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string) {
-  return toMinutes(aStart) < toMinutes(bEnd) && toMinutes(bStart) < toMinutes(aEnd);
-}
-
-function formatDuration(startTime: string, endTime: string): string | null {
-  if (!startTime || !endTime) return null;
-  const diff = toMinutes(endTime) - toMinutes(startTime);
-  if (diff <= 0) return null;
-
-  const hours = Math.floor(diff / 60);
-  const minutes = diff % 60;
-  const parts: string[] = [];
-  if (hours > 0) parts.push(`${hours} ${hours === 1 ? "ساعة" : "ساعات"}`);
-  if (minutes > 0) parts.push(`${minutes} دقيقة`);
-  return parts.length ? parts.join(" و ") : null;
+function overlaps(startA: string, endA: string, startB: string, endB: string) {
+  return (
+    toMinutes(startA) < toMinutes(endB) && toMinutes(startB) < toMinutes(endA)
+  );
 }
 
 export default function LessonDatesPage() {
@@ -121,7 +36,6 @@ export default function LessonDatesPage() {
     queryFn: listStudySubjects,
   });
   const subjects = subjectsQuery.data ?? [];
-
   const {
     lessonDates,
     isLoading,
@@ -134,80 +48,73 @@ export default function LessonDatesPage() {
     downloadLessonDatesPdf,
   } = useLessonDates();
 
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
-
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
 
   const scheduleByDay = useMemo(() => {
-    const grouped = new Map<string, LessonDate[]>();
-    for (const day of ARABIC_DAYS_ORDERED) grouped.set(day, []);
-
-    for (const entry of lessonDates) {
-      const list = grouped.get(entry.dayName) ?? [];
-      list.push(entry);
-      grouped.set(entry.dayName, list);
+    const grouped = new Map<string, LessonDate[]>(
+      ARABIC_DAYS_ORDERED.map((day) => [day, [] as LessonDate[]]),
+    );
+    for (const lesson of lessonDates) grouped.get(lesson.dayName)?.push(lesson);
+    for (const lessons of grouped.values()) {
+      lessons.sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime));
     }
-
-    for (const list of grouped.values()) {
-      list.sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime));
-    }
-
     return grouped;
   }, [lessonDates]);
 
   const todayName = ARABIC_DAYS_ORDERED[new Date().getDay()];
-
   const nextLesson = useMemo(() => {
     if (lessonDates.length === 0) return null;
-
     const now = new Date();
     const todayIndex = now.getDay();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-    for (let offset = 0; offset < 7; offset++) {
-      const dayIndex = (todayIndex + offset) % 7;
-      const dayName = ARABIC_DAYS_ORDERED[dayIndex];
-      const items = (scheduleByDay.get(dayName) ?? []).filter((item) =>
-        offset === 0 ? toMinutes(item.startTime) > nowMinutes : true
+    for (let offset = 0; offset < 7; offset += 1) {
+      const dayName = ARABIC_DAYS_ORDERED[(todayIndex + offset) % 7];
+      const lessons = (scheduleByDay.get(dayName) ?? []).filter((lesson) =>
+        offset === 0 ? toMinutes(lesson.startTime) > nowMinutes : true,
       );
-      if (items.length > 0) {
-        return { ...items[0], dayName, isToday: offset === 0 };
-      }
+      if (lessons[0]) return { ...lessons[0], dayName, isToday: offset === 0 };
     }
     return null;
-  }, [lessonDates, scheduleByDay]);
+  }, [lessonDates.length, scheduleByDay]);
 
   const durationLabel = useMemo(
     () => formatDuration(form.startTime, form.endTime),
-    [form.startTime, form.endTime]
+    [form.startTime, form.endTime],
   );
+  const totalCount = lessonDates.length;
+  const activeDaysCount = useMemo(
+    () =>
+      [...scheduleByDay.values()].filter((lessons) => lessons.length > 0)
+        .length,
+    [scheduleByDay],
+  );
+  const todayCount = scheduleByDay.get(todayName)?.length ?? 0;
 
   function resetForm() {
-    setForm(emptyForm);
+    setForm(EMPTY_FORM);
     setEditingId(null);
     setFormError("");
   }
 
-  async function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const subject = form.subject.trim();
     const teacher = form.teacher.trim();
-    const dayNames = form.dayNames;
-    const { startTime, endTime } = form;
+    const { dayNames, startTime, endTime } = form;
 
     if (subjectsQuery.isError) {
       setFormError("تعذر تحميل المواد الدراسية. يرجى المحاولة مرة أخرى.");
       return;
     }
-
     if (!editingId && subjectsQuery.isLoading) {
       setFormError("جارٍ تحميل المواد الدراسية. يرجى الانتظار.");
       return;
     }
-
     if (
       !subject ||
       (!editingId && !subjects.some((item) => item.title === subject)) ||
@@ -219,46 +126,44 @@ export default function LessonDatesPage() {
       setFormError("الرجاء إدخال جميع الحقول (المادة، المعلم، اليوم، الوقت).");
       return;
     }
-
     if (toMinutes(endTime) <= toMinutes(startTime)) {
       setFormError("وقت النهاية يجب أن يكون بعد وقت البداية.");
       return;
     }
 
     const conflict = lessonDates.find(
-      (e) =>
-        dayNames.includes(e.dayName) &&
-        e.id !== editingId &&
-        overlaps(startTime, endTime, e.startTime, e.endTime)
+      (lesson) =>
+        dayNames.includes(lesson.dayName) &&
+        lesson.id !== editingId &&
+        overlaps(startTime, endTime, lesson.startTime, lesson.endTime),
     );
     if (conflict) {
       setFormError(
-        `يتعارض هذا الموعد يوم ${conflict.dayName} مع "${conflict.subject}" (${conflict.startTime} - ${conflict.endTime}).`
+        `يتعارض هذا الموعد يوم ${conflict.dayName} مع "${conflict.subject}" (${conflict.startTime} - ${conflict.endTime}).`,
       );
       return;
     }
 
     setFormError("");
-
     try {
       const payload = editingId
         ? { subject, teacher, dayName: dayNames[0], startTime, endTime }
         : { subject, teacher, dayNames, startTime, endTime };
-        await saveLessonDate(payload, editingId);
+      await saveLessonDate(payload, editingId);
       resetForm();
-    } catch (err) {
-      setFormError(extractErrorMessage(err, "حدث خطأ أثناء الحفظ."));
+    } catch (error) {
+      setFormError(extractErrorMessage(error, "حدث خطأ أثناء الحفظ."));
     }
   }
 
-  function handleEdit(item: LessonDate) {
-    setEditingId(item.id);
+  function handleEdit(lesson: LessonDate) {
+    setEditingId(lesson.id);
     setForm({
-      subject: item.subject,
-      teacher: item.teacher,
-      dayNames: [item.dayName],
-      startTime: item.startTime,
-      endTime: item.endTime,
+      subject: lesson.subject,
+      teacher: lesson.teacher,
+      dayNames: [lesson.dayName],
+      startTime: lesson.startTime,
+      endTime: lesson.endTime,
     });
     setFormError("");
   }
@@ -269,17 +174,10 @@ export default function LessonDatesPage() {
       await deleteLessonDate(id);
       if (editingId === id) resetForm();
       setPendingDeleteId(null);
-    } catch (err) {
-      setDeleteError(extractErrorMessage(err, "تعذر حذف الموعد."));
+    } catch (error) {
+      setDeleteError(extractErrorMessage(error, "تعذر حذف الموعد."));
     }
   }
-
-  const totalCount = lessonDates.length;
-  const activeDaysCount = useMemo(
-    () => Array.from(scheduleByDay.values()).filter((list) => list.length > 0).length,
-    [scheduleByDay]
-  );
-  const todayCount = (scheduleByDay.get(todayName) ?? []).length;
 
   return (
     <div className="space-y-6 p-4">
@@ -287,434 +185,48 @@ export default function LessonDatesPage() {
         title="مواعيد الدروس"
         description="تابع جدولك الأسبوعي، وأضف أو حدّث أو احذف مواعيدك بسهولة."
       />
-
-      {/* Action bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <GraduationCap className="h-4 w-4 text-primary" />
-          <span>
-            {totalCount > 0
-              ? `${totalCount} موعد موزّع على ${activeDaysCount} من الأيام`
-              : "ابدأ بإضافة مواعيدك الأسبوعية"}
-          </span>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="gap-2"
-          onClick={() => downloadLessonDatesPdf()}
-          disabled={isLoading || lessonDates.length === 0}
-        >
-          <CalendarDays className="h-4 w-4" />
-          تحميل PDF
-        </Button>
-      </div>
-
-      {/* Next lesson hero */}
-      {!isLoading && !loadError && nextLesson && (
-        <Card className="relative overflow-hidden border border-primary/20 bg-gradient-to-l from-primary/10 via-primary/5 to-transparent p-5">
-          <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
-          <div className="relative flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                {nextLesson.isToday
-                  ? "الحصة القادمة اليوم"
-                  : `الحصة القادمة — ${nextLesson.dayName}`}
-              </p>
-              <p className="mt-1 truncate text-lg font-bold text-foreground">
-                {nextLesson.subject}
-                <span className="ms-2 text-sm font-normal text-muted-foreground">
-                  مع {nextLesson.teacher}
-                </span>
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <span className="rounded-full bg-primary px-3 py-1.5 text-sm font-semibold tabular-nums text-primary-foreground shadow-sm">
-                {nextLesson.startTime}
-              </span>
-              {formatDuration(nextLesson.startTime, nextLesson.endTime) && (
-                <span className="text-[11px] text-muted-foreground">
-                  {formatDuration(nextLesson.startTime, nextLesson.endTime)}
-                </span>
-              )}
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Stats */}
-      {!isLoading && !loadError && totalCount > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          <Card className="flex items-center gap-3 border border-border bg-card p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <CalendarClock className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xl font-bold tabular-nums text-foreground">{totalCount}</p>
-              <p className="truncate text-xs text-muted-foreground">إجمالي المواعيد</p>
-            </div>
-          </Card>
-          <Card className="flex items-center gap-3 border border-border bg-card p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
-              <CalendarDays className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xl font-bold tabular-nums text-foreground">{activeDaysCount}</p>
-              <p className="truncate text-xs text-muted-foreground">أيام نشطة</p>
-            </div>
-          </Card>
-          <Card className="flex items-center gap-3 border border-border bg-card p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xl font-bold tabular-nums text-foreground">{todayCount}</p>
-              <p className="truncate text-xs text-muted-foreground">حصص اليوم</p>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Form */}
-      <Card className="border border-border bg-card p-5 shadow-sm">
-        <div className="mb-5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-                editingId ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary"
-              }`}
-            >
-              {editingId ? <PencilLine className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">
-                {editingId ? "تعديل الموعد" : "إضافة موعد جديد"}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {editingId
-                  ? "قم بتحديث بيانات الموعد ثم اضغط تحديث."
-                  : "املأ الحقول لإضافة موعد إلى جدولك."}
-              </p>
-            </div>
-          </div>
-          {editingId && (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/70"
-            >
-              <X className="h-3 w-3" />
-              إلغاء التعديل
-            </button>
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="lesson-date-subject" className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                المادة
-              </Label>
-              <CustomSelect
-                id="lesson-date-subject"
-                value={form.subject}
-                onChange={(subject) => setForm((current) => ({ ...current, subject }))}
-                disabled={subjectsQuery.isLoading || subjectsQuery.isError}
-                placeholder={
-                  subjectsQuery.isLoading
-                    ? "جارٍ تحميل المواد..."
-                    : subjectsQuery.isError
-                      ? "تعذر تحميل المواد"
-                      : subjects.length
-                        ? "اختر المادة"
-                        : "لا توجد مواد متاحة"
-                }
-                options={[
-                  ...(editingId && form.subject && !subjects.some((item) => item.title === form.subject)
-                    ? [{ value: form.subject, label: `${form.subject} (المادة الحالية)` }]
-                    : []),
-                  ...subjects.map((item) => ({ value: item.title, label: item.title })),
-                ]}
-              />
-              {subjectsQuery.isError && (
-                <p role="alert" className="text-xs text-destructive">
-                  تعذر تحميل موادك الدراسية. أعد المحاولة قبل إضافة موعد.
-                </p>
-              )}
-              {subjectsQuery.data && subjects.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  لا توجد مواد متاحة لحسابك حالياً.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                <User2 className="h-3.5 w-3.5 text-muted-foreground" />
-                المعلم
-              </Label>
-              <Input
-                value={form.teacher}
-                onChange={(e) => setForm((c) => ({ ...c, teacher: e.target.value }))}
-                placeholder="مثال: محمود"
-                maxLength={255}
-              />
-            </div>
-
-            {/* Day picker — chips */}
-            <div className="space-y-2 md:col-span-2">
-              <Label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                الأيام
-              </Label>
-              {!editingId && (
-                <p className="text-xs text-muted-foreground">
-                  يمكنك اختيار أكثر من يوم لتكرار هذا الموعد أسبوعياً.
-                </p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {ARABIC_DAYS_ORDERED.map((day) => {
-                  const style = DAY_STYLES[day];
-                  const active = form.dayNames.includes(day);
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => setForm((current) => ({
-                        ...current,
-                        dayNames: editingId
-                          ? [day]
-                          : active
-                            ? current.dayNames.filter((selected) => selected !== day)
-                            : [...current.dayNames, day],
-                      }))}
-                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
-                        active
-                          ? `${style.chipActive} shadow-sm ring-2 ${style.ring}`
-                          : `${style.chip} ring-1 ring-transparent`
-                      }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          active ? "bg-white" : style.dot
-                        }`}
-                      />
-                      {day}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Time range */}
-            <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/30 p-4 shadow-sm md:col-span-2">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Clock className="h-4 w-4" />
-                  </div>
-                  <span>الوقت</span>
-                </div>
-                {durationLabel && (
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                    {durationLabel}
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">من</Label>
-                  <Input
-                    type="time"
-                    value={form.startTime}
-                    onChange={(e) => setForm((c) => ({ ...c, startTime: e.target.value }))}
-                    className="tabular-nums"
-                  />
-                </div>
-
-                <div className="mb-3 flex flex-col items-center gap-1 text-muted-foreground">
-                  <ArrowLeft className="h-4 w-4" />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">إلى</Label>
-                  <Input
-                    type="time"
-                    value={form.endTime}
-                    onChange={(e) => setForm((c) => ({ ...c, endTime: e.target.value }))}
-                    className="tabular-nums"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {formError && (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-              {formError}
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" className="gap-2" disabled={isSaving}>
-              {editingId ? <PencilLine className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              {isSaving ? "جارِ الحفظ..." : editingId ? "تحديث الموعد" : "إضافة موعد"}
-            </Button>
-
-            {editingId && (
-              <Button type="button" variant="outline" onClick={resetForm} disabled={isSaving}>
-                إلغاء
-              </Button>
-            )}
-          </div>
-        </form>
-      </Card>
-
+      <LessonDateOverview
+        totalCount={totalCount}
+        activeDaysCount={activeDaysCount}
+        todayCount={todayCount}
+        nextLesson={!isLoading && !loadError ? nextLesson : null}
+        showStats={!isLoading && !loadError}
+        pdfDisabled={isLoading || totalCount === 0}
+        onDownloadPdf={() => downloadLessonDatesPdf()}
+      />
+      <LessonDateForm
+        form={form}
+        setForm={setForm}
+        editing={Boolean(editingId)}
+        onSubmit={handleSubmit}
+        onReset={resetForm}
+        isSaving={isSaving}
+        formError={formError}
+        subjects={subjects}
+        subjectsLoading={subjectsQuery.isLoading}
+        subjectsError={subjectsQuery.isError}
+        durationLabel={durationLabel}
+      />
       {deleteError && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600"
+        >
           {deleteError}
         </p>
       )}
-
-      {/* Schedule */}
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="h-36 animate-pulse border border-border bg-card" />
-          ))}
-        </div>
-      ) : loadError ? (
-        <Card className="flex flex-col items-center justify-center gap-2 border border-dashed border-red-200 bg-red-50/40 py-16 text-center">
-          <p className="text-base font-medium text-red-600">{loadError}</p>
-        </Card>
-      ) : totalCount === 0 ? (
-        <Card className="flex flex-col items-center justify-center gap-3 border border-dashed border-border bg-card py-16 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <CalendarDays className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <div>
-            <p className="text-base font-medium text-foreground">لا توجد مواعيد دروس بعد</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              أضف أول موعد دراسي من النموذج أعلاه.
-            </p>
-          </div>
-        </Card>
-      ) : (
-        <Card className="overflow-hidden p-0">
-          <Table className="min-w-[760px] text-right">
-            <TableHeader>
-              <TableRow className="bg-muted/70 hover:bg-muted/70">
-                <TableHead className="text-right">اليوم</TableHead>
-                <TableHead className="text-right">الوقت</TableHead>
-                <TableHead className="text-right">المادة</TableHead>
-                <TableHead className="text-right">المعلم</TableHead>
-                <TableHead className="text-right">الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {WEEK_TABLE_DAYS.map((day) => {
-                const items = scheduleByDay.get(day) ?? [];
-                const isToday = day === todayName;
-                const style = DAY_STYLES[day];
-                return (
-                  <TableRow key={day}>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-2 font-medium">
-                        <span className={`h-2 w-2 rounded-full ${style?.dot}`} />
-                        {day}
-                        {isToday && (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                            اليوم
-                          </span>
-                        )}
-                      </span>
-                    </TableCell>
-                    {(["time", "subject", "teacher"] as const).map((field) => (
-                      <TableCell key={field} className={field === "subject" ? "font-semibold" : ""}>
-                        {items.length ? (
-                          <div className="space-y-2">
-                            {items.map((item) => (
-                              <div key={item.id} className="min-h-7">
-                                {field === "time" ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-primary">
-                                    <Clock className="h-3 w-3" />
-                                    {item.startTime} - {item.endTime}
-                                  </span>
-                                ) : field === "subject" ? item.subject : (
-                                  <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                                    <User2 className="h-3.5 w-3.5" />
-                                    {item.teacher}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      {items.length ? (
-                        <div className="space-y-2">
-                          {items.map((item) => (
-                            <div key={item.id} className="flex min-h-7 items-center gap-1">
-                              {pendingDeleteId === item.id ? (
-                                <>
-                                  <span className="text-xs text-muted-foreground">تأكيد الحذف؟</span>
-                                  <Button type="button" variant="outline" size="sm" onClick={() => setPendingDeleteId(null)}>
-                                    إلغاء
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => confirmDelete(item.id)}
-                                    disabled={deletingId === item.id}
-                                  >
-                                    {deletingId === item.id ? "جارِ الحذف..." : "حذف"}
-                                  </Button>
-                                </>
-                              ) : (
-                                <>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEdit(item)}
-                                    className="gap-1.5 text-muted-foreground hover:text-foreground"
-                                  >
-                                    <PencilLine className="h-3.5 w-3.5" />
-                                    تعديل
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setPendingDeleteId(item.id)}
-                                    className="gap-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                    حذف
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+      <LessonDateSchedule
+        isLoading={isLoading}
+        loadError={loadError}
+        totalCount={totalCount}
+        scheduleByDay={scheduleByDay}
+        todayName={todayName}
+        pendingDeleteId={pendingDeleteId}
+        deletingId={deletingId}
+        onPendingDelete={setPendingDeleteId}
+        onEdit={handleEdit}
+        onDelete={(id) => void confirmDelete(id)}
+      />
     </div>
   );
 }
