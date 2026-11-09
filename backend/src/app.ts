@@ -16,7 +16,12 @@ export const createApp = (): Application => {
   app.use(helmet());
 
   // CORS
-  app.use(cors({ origin: env.corsOrigin, credentials: true }));
+  // app.use(cors({ origin: env.corsOrigin, credentials: true }));
+
+  app.use(cors({
+    origin: true,
+    credentials: true
+  }));
 
   // Body/cookie parsing
   app.use(express.json({ limit: '10kb' }));
