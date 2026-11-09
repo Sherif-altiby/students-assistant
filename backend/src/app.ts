@@ -15,9 +15,22 @@ export const createApp = (): Application => {
   // Security headers
   app.use(helmet());
 
-  console.log('DEPLOYED CORS ORIGIN:', env.corsOrigin);
+  const allowedOrigins = [
+    'http://localhost:3001',
+    'https://students-assistant-nsve.vercel.app',
+  ];
+
   app.use(cors({
-    origin: env.corsOrigin.split(',').map(origin => origin.trim()),
+    origin: (origin, callback) => {
+      console.log('REQUEST ORIGIN:', origin);
+      console.log('ALLOWED ORIGINS:', allowedOrigins);
+
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`Origin ${origin} not allowed`));
+    },
     credentials: true,
   }));
 
