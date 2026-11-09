@@ -3,7 +3,7 @@
   "buildCommand": "npm run build",
   "functions": {
     "src/app.ts": {
-      "includeFiles": "dist/modules/assets/fonts/**",
+      "includeFiles": "{dist/modules/assets/fonts/**,node_modules/.prisma/client/query_compiler_bg.wasm}",
       "maxDuration": 60
     }
   }

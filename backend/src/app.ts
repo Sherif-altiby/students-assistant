@@ -16,7 +16,8 @@ export const createApp = (): Application => {
   app.use(helmet());
 
   const allowedOrigins = [
-    'https://students-assistant-nsve.vercel.app'
+    'https://students-assistant-nsve.vercel.app',
+    'http://localhost:3001',
   ];
 
   app.use(cors({
