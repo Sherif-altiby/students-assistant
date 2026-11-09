@@ -11,6 +11,10 @@ cp .env.local.example .env.local   # then set NEXT_PUBLIC_API_URL
 npm run dev
 ```
 
+The backend runs on port `4000` by default. Set `NEXT_PUBLIC_API_URL` to
+`http://localhost:4000/api/v1` and `NEXT_PUBLIC_SOCKET_URL` to
+`http://localhost:4000` so the frontend can reach the API and Socket.IO server.
+
 ## Auth architecture (access + refresh tokens)
 
 - **Access token**: kept only in memory (Zustand store, `store/useAuthStore.ts`).

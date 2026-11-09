@@ -1,5 +1,6 @@
 export type StudyTableType = "WEEKLY" | "MONTHLY" | "CUSTOM" | "GLOBAL";
-export type StudySessionStatus = "UPCOMING" | "IN_PROGRESS" | "COMPLETED" | "LATE";
+export type StudySessionStatus =
+  "UPCOMING" | "IN_PROGRESS" | "COMPLETED" | "LATE";
 export type SubjectScope = "ALL" | string[];
 
 export interface StudyTableSubject {
@@ -19,6 +20,7 @@ export interface StudyTableSummary {
   year: number | null;
   monthName?: string;
   allSubjects: boolean;
+  selectedLessonIds: string[];
   subjects: StudyTableSubject[];
   userId: string;
   createdAt: string;
@@ -141,6 +143,7 @@ export interface WeeklyStudyTableInput {
   type: "WEEKLY";
   subjects: SubjectScope;
   startDate: string;
+  selectedLessonIds?: string[];
 }
 
 export interface DatedStudyTableInput {
@@ -149,6 +152,7 @@ export interface DatedStudyTableInput {
   subjects: SubjectScope;
   startDate: string;
   endDate: string;
+  selectedLessonIds?: string[];
 }
 
 export type StudyTableRangeInput = WeeklyStudyTableInput | DatedStudyTableInput;
@@ -159,6 +163,7 @@ export interface MonthlyStudyTableInput {
   subjects: SubjectScope;
   month: number | string;
   year?: number;
+  selectedLessonIds?: string[];
 }
 
 export type StudyTableInput = StudyTableRangeInput | MonthlyStudyTableInput;
@@ -225,10 +230,8 @@ interface StudySessionFields {
   order?: number;
 }
 
-export type StudySessionInput = StudySessionFields & (
-  | { dayId: string; date?: never }
-  | { date: string; dayId?: never }
-);
+export type StudySessionInput = StudySessionFields &
+  ({ dayId: string; date?: never } | { date: string; dayId?: never });
 
 export type StudySessionReplacement = StudySessionFields;
 
@@ -249,6 +252,7 @@ export interface StudyTableUpdateInput {
 export interface StudySubjectDetails {
   id: string;
   title: string;
+  isEditable: boolean;
   unitsCount: number;
   lessonsCount: number;
   completedLessonsCount: number;
@@ -269,6 +273,7 @@ export interface StudySubjectDetails {
 export interface StudySubjectSummary {
   id: string;
   title: string;
+  isEditable: boolean;
   unitsCount: number;
   lessonsCount: number;
   completedLessonsCount: number;

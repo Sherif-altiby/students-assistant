@@ -81,8 +81,15 @@ const MainButton = ({
           : [
               "group",
               "group/button inline-flex items-center justify-center gap-2 whitespace-nowrap",
-              "[&_svg]:size-4 [&_svg]:shrink-0",
+              "rounded-xl text-sm font-semibold tracking-tight",
+              "transition-all duration-200 ease-out",
+              "hover:-translate-y-0.5 hover:shadow-sm",
+              "active:translate-y-0 active:scale-[0.98]",
+              "disabled:cursor-not-allowed",
+              "motion-reduce:transform-none motion-reduce:transition-none",
+              "[&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:transition-transform [&_svg]:duration-200",
             ],
+        !iconOnly && variant !== "default" && "h-12 px-5",
         fullWidth && "w-full",
         !iconOnly &&
           !loading &&

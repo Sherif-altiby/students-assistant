@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { StudyTableType } from '@prisma/client';
 import {
+  filterCatalogByLessons,
   generateStudySessions,
   groupGlobalPlan,
 } from '../../src/modules/study-table/study-table.generator';
@@ -52,6 +53,38 @@ function basicInput(overrides: Partial<GeneratorInput> = {}): GeneratorInput {
     ...overrides,
   };
 }
+
+test('lesson scope keeps arbitrary lessons across subjects and units', () => {
+  const firstSubject = makeSubject('a', 0);
+  firstSubject.units = [
+    { id: 'a1', title: 'Unit 1', order: 1, lessons: [{ id: 'a1-1', title: 'A1', order: 1 }] },
+    {
+      id: 'a2',
+      title: 'Unit 2',
+      order: 2,
+      lessons: [
+        { id: 'a2-1', title: 'A2-1', order: 1 },
+        { id: 'a2-2', title: 'A2-2', order: 2 },
+      ],
+    },
+  ];
+  const secondSubject = makeSubject('b', 1);
+  const filtered = filterCatalogByLessons([firstSubject, secondSubject], ['a2-2', 'lesson-b-1']);
+
+  assert.deepEqual(
+    filtered.map((subject) => ({
+      id: subject.id,
+      units: subject.units.map((unit) => ({
+        id: unit.id,
+        lessons: unit.lessons.map((lesson) => lesson.id),
+      })),
+    })),
+    [
+      { id: 'a', units: [{ id: 'a2', lessons: ['a2-2'] }] },
+      { id: 'b', units: [{ id: 'unit-b', lessons: ['lesson-b-1'] }] },
+    ]
+  );
+});
 
 test('generator orders lessons by unit, then lesson order and id', () => {
   const subject = makeSubject('a', 1);

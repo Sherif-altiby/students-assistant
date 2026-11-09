@@ -55,64 +55,67 @@ export const studyTableCrudService = {
     const table = await prisma.studyTable.findFirst({
       where: { id: tableId, userId },
       select: {
-          id: true,
-          title: true,
-          type: true,
-          startDate: true,
-          endDate: true,
-          month: true,
-          year: true,
-          allSubjects: true,
-          studyWeekdays: true,
-          maxSessionsPerDay: true,
-          userId: true,
-          createdAt: true,
-          updatedAt: true,
-          subjects: {
-            where: userContext.subjectOwnerId === undefined
+        id: true,
+        title: true,
+        type: true,
+        startDate: true,
+        endDate: true,
+        month: true,
+        year: true,
+        allSubjects: true,
+        selectedLessonIds: true,
+        studyWeekdays: true,
+        maxSessionsPerDay: true,
+        userId: true,
+        createdAt: true,
+        updatedAt: true,
+        subjects: {
+          where:
+            userContext.subjectOwnerId === undefined
               ? {}
               : { subject: getSubjectAccessWhere(userContext.subjectOwnerId) },
-            select: {
-              id: true,
-              studyTableId: true,
-              subjectId: true,
-              createdAt: true,
-              subject: { select: { id: true, title: true, createdAt: true } },
-            },
+          select: {
+            id: true,
+            studyTableId: true,
+            subjectId: true,
+            createdAt: true,
+            subject: { select: { id: true, title: true, createdAt: true } },
           },
-          days: {
-            orderBy: { date: 'asc' },
-            select: {
-              id: true,
-              date: true,
-              studyTableId: true,
-              createdAt: true,
-              sessions: {
-                where: userContext.subjectOwnerId === undefined
+        },
+        days: {
+          orderBy: { date: 'asc' },
+          select: {
+            id: true,
+            date: true,
+            studyTableId: true,
+            createdAt: true,
+            sessions: {
+              where:
+                userContext.subjectOwnerId === undefined
                   ? {}
                   : { subject: getSubjectAccessWhere(userContext.subjectOwnerId) },
-                orderBy: [{ order: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
-                select: {
-                  id: true,
-                  order: true,
-                  dayId: true,
-                  studyTableId: true,
-                  subjectId: true,
-                  lessonId: true,
-                  completedAt: true,
-                  lateNotifiedAt: true,
-                  subject: { select: { id: true, title: true } },
-                  lesson: {
-                    select: {
-                      id: true,
-                      title: true,
-                      unit: { select: { id: true, title: true } },
-                    },
+              orderBy: [{ order: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+              select: {
+                id: true,
+                order: true,
+                dayId: true,
+                studyTableId: true,
+                subjectId: true,
+                lessonId: true,
+                completedAt: true,
+                lateNotifiedAt: true,
+                subject: { select: { id: true, title: true } },
+                lesson: {
+                  select: {
+                    id: true,
+                    title: true,
+                    unit: { select: { id: true, title: true } },
                   },
                 },
               },
             },
           },
+        },
       },
     });
     if (!table) throw new NotFoundError('جدول المذاكرة غير موجود');
@@ -156,9 +159,10 @@ export const studyTableCrudService = {
           select: {
             date: true,
             sessions: {
-              where: subjectOwnerId === undefined
-                ? {}
-                : { subject: getSubjectAccessWhere(subjectOwnerId) },
+              where:
+                subjectOwnerId === undefined
+                  ? {}
+                  : { subject: getSubjectAccessWhere(subjectOwnerId) },
               orderBy: [{ order: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
               select: {
                 order: true,

@@ -120,6 +120,7 @@ async function main() {
   await prisma.studyTableSubject.deleteMany();
   await prisma.studyLesson.deleteMany();
   await prisma.studyUnit.deleteMany();
+  // Keep the subject catalog empty; seed data intentionally creates no subjects.
   await prisma.studySubject.deleteMany();
   await prisma.studyDay.deleteMany();
   await prisma.studyTable.deleteMany();

@@ -183,6 +183,30 @@ export async function createStudySubject(
   return response.data.data;
 }
 
+export async function updateStudySubject(id: string, title: string): Promise<void> {
+  await api.patch(`/subjects/${id}`, { title });
+}
+
+export async function deleteStudySubject(id: string): Promise<void> {
+  await api.delete(`/subjects/${id}`);
+}
+
+export async function updateStudyUnit(id: string, title: string): Promise<void> {
+  await api.patch(`/subjects/units/${id}`, { title });
+}
+
+export async function deleteStudyUnit(id: string): Promise<void> {
+  await api.delete(`/subjects/units/${id}`);
+}
+
+export async function updateStudyLesson(id: string, title: string): Promise<void> {
+  await api.patch(`/subjects/lessons/${id}`, { title });
+}
+
+export async function deleteStudyLesson(id: string): Promise<void> {
+  await api.delete(`/subjects/lessons/${id}`);
+}
+
 export async function listNotifications(
   page = 1,
   limit = 20,

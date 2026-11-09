@@ -26,6 +26,25 @@ function compareOrder<T extends { order: number; id: string }>(a: T, b: T): numb
   return a.order - b.order || a.id.localeCompare(b.id);
 }
 
+export function filterCatalogByLessons(
+  subjects: GeneratorSubject[],
+  selectedLessonIds?: readonly string[]
+): GeneratorSubject[] {
+  if (!selectedLessonIds) return subjects;
+  const selectedIds = new Set(selectedLessonIds);
+  return subjects
+    .map((subject) => ({
+      ...subject,
+      units: subject.units
+        .map((unit) => ({
+          ...unit,
+          lessons: unit.lessons.filter((lesson) => selectedIds.has(lesson.id)),
+        }))
+        .filter((unit) => unit.lessons.length > 0),
+    }))
+    .filter((subject) => subject.units.length > 0);
+}
+
 /** Round-robin across subjects; each subject keeps its syllabus order. */
 function takeRoundRobin(
   queues: Array<{ subjectId: string; lessons: GeneratorLessonRef[] }>,

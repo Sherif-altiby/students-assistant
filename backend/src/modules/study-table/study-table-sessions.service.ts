@@ -24,7 +24,13 @@ export const studyTableSessionsService = {
       await acquireUserStudyLock(tx, userId);
       const table = await tx.studyTable.findFirst({
         where: { id: tableId, userId },
-        select: { id: true, startDate: true, endDate: true, allSubjects: true },
+        select: {
+          id: true,
+          startDate: true,
+          endDate: true,
+          allSubjects: true,
+          selectedLessonIds: true,
+        },
       });
       if (!table) throw new NotFoundError('جدول المذاكرة غير موجود');
       if (input.date && input.dayId) throw new BadRequestError('حدد اليوم أو التاريخ وليس كليهما');
@@ -38,7 +44,14 @@ export const studyTableSessionsService = {
             })
           : null;
       if (!day) throw new BadRequestError('يوم المذاكرة غير موجود في الجدول');
-      await assertSessionReferences(tx, table.id, table.allSubjects, [input], subjectOwnerId);
+      await assertSessionReferences(
+        tx,
+        table.id,
+        table.allSubjects,
+        table.selectedLessonIds,
+        [input],
+        subjectOwnerId
+      );
       const duplicate = await tx.studySession.findUnique({
         where: { studyTableId_lessonId: { studyTableId: tableId, lessonId: input.lessonId } },
       });
@@ -93,6 +106,7 @@ export const studyTableSessionsService = {
         tx,
         current.studyTableId,
         current.studyTable.allSubjects,
+        current.studyTable.selectedLessonIds,
         [{ subjectId, lessonId }],
         subjectOwnerId
       );
@@ -175,6 +189,7 @@ export const studyTableSessionsService = {
         tx,
         day.studyTableId,
         day.studyTable.allSubjects,
+        day.studyTable.selectedLessonIds,
         inputs,
         subjectOwnerId
       );

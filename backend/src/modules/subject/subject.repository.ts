@@ -64,6 +64,7 @@ export const subjectRepository = {
     limit: number,
     userId: string,
     accessWhere?: Prisma.StudySubjectWhereInput,
+    canEditAll = false,
   ) {
     const where: Prisma.StudySubjectWhereInput = accessWhere ?? {};
     const [subjects, totalItems] = await Promise.all([
@@ -95,12 +96,13 @@ export const subjectRepository = {
     }
     const totalPages = Math.ceil(totalItems / limit);
     return {
-      data: subjects.map(({ id, title, units }) => {
+      data: subjects.map(({ id, title, ownerId, units }) => {
         const lessonsCount = units.reduce((total, unit) => total + unit._count.lessons, 0);
         const completedLessonsCount = completedBySubject.get(id) ?? 0;
         return {
           id,
           title,
+          isEditable: canEditAll || ownerId === userId,
           unitsCount: units.length,
           lessonsCount,
           completedLessonsCount,

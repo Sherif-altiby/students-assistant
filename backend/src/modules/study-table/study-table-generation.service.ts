@@ -107,7 +107,8 @@ export const studyTableGenerationService = {
           tx,
           tableInput.subjects,
           userId,
-          subjectOwnerId
+          subjectOwnerId,
+          tableInput.selectedLessonIds
         );
         if (tableInput.subjects !== 'ALL' && subjects.length !== tableInput.subjects.length) {
           throw new BadRequestError('تتضمن المواد المحددة مادة غير موجودة');

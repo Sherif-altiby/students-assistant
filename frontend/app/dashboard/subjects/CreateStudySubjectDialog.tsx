@@ -363,7 +363,7 @@ export function CreateStudySubjectDialog() {
                         إضافة درس
                       </Button>
                       <span className="text-xs text-muted-foreground">
-                        اضغط Enter لإضافة درس تالٍ، أو الصق عدة أسطر دفعة واحدة.
+                        اضغط Enter لإضافة درس تالٍ 
                       </span>
                     </li>
                   </ol>
@@ -372,15 +372,13 @@ export function CreateStudySubjectDialog() {
             })}
           </ol>
 
-          <Button
+          <MainButton
             type="button"
-            variant="outline"
-            className="h-11 w-full gap-2 border-dashed text-muted-foreground hover:text-foreground"
             onClick={addUnit}
-          >
-            <Plus className="size-4" />
-            إضافة وحدة
-          </Button>
+            icon={<Plus className="size-4" />}
+            title="إضافة وحدة"
+            fullWidth
+          />
 
           {error && (
             <p
@@ -398,14 +396,14 @@ export function CreateStudySubjectDialog() {
             {lessonCount} {lessonCount === 1 ? "درس" : "دروس"}
           </p>
           <div className="flex items-center gap-3">
-            <Button
+            <MainButton
               type="button"
+              title="إلغاء"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
-            >
-              إلغاء
-            </Button>
+            />
+              
             <MainButton
               type="submit"
               title="إنشاء المادة"

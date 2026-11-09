@@ -6,10 +6,11 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  ChevronLeft,
   Minus,
   Plus,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import MainButton from "@/components/ui/MainButton";
@@ -30,7 +31,11 @@ import {
   STUDY_TABLE_TYPE_OPTIONS,
   STUDY_TABLE_WEEKDAYS,
 } from "@/constants";
-import { listAvailableStudyMonths, listStudySubjects } from "@/lib/study-table";
+import {
+  getStudySubject,
+  listAvailableStudyMonths,
+  listStudySubjects,
+} from "@/lib/study-table";
 import type {
   GenerateStudyTableInput,
   StudyTableGenerationResult,
@@ -78,7 +83,8 @@ function sessionRows(
   studyWeekdays: number[] = [],
 ) {
   const grouped = new Map<string, typeof sessions>();
-  for (const session of sessions) grouped.set(session.date, [...(grouped.get(session.date) ?? []), session]);
+  for (const session of sessions)
+    grouped.set(session.date, [...(grouped.get(session.date) ?? []), session]);
   const dates = new Set(grouped.keys());
   if (startDate && endDate) {
     const cursor = new Date(`${startDate}T00:00:00Z`);
@@ -95,8 +101,15 @@ function sessionRows(
     if (items.length === 0) {
       return (
         <tr key={date}>
-          <th scope="row" className={cn(td, "whitespace-nowrap text-start font-medium")}>{formatDate(date)}</th>
-          <td colSpan={2} className={cn(td, "text-muted-foreground")}>لا توجد جلسات</td>
+          <th
+            scope="row"
+            className={cn(td, "whitespace-nowrap text-start font-medium")}
+          >
+            {formatDate(date)}
+          </th>
+          <td colSpan={2} className={cn(td, "text-muted-foreground")}>
+            لا توجد جلسات
+          </td>
         </tr>
       );
     }
@@ -106,7 +119,10 @@ function sessionRows(
           <th
             scope="row"
             rowSpan={items.length}
-            className={cn(td, "whitespace-nowrap border-e bg-muted/30 text-start font-medium")}
+            className={cn(
+              td,
+              "whitespace-nowrap border-e bg-muted/30 text-start font-medium",
+            )}
           >
             {formatDate(date)}
           </th>
@@ -135,7 +151,9 @@ function Section({
       <header className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">{title}</h3>
-          {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+          {hint && (
+            <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
+          )}
         </div>
         {action}
       </header>
@@ -182,6 +200,33 @@ function Stat({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
+function HierarchyCheckbox({
+  checked,
+  onCheckedChange,
+  ariaLabel,
+}: {
+  checked: boolean | "indeterminate";
+  onCheckedChange: (checked: boolean) => void;
+  ariaLabel?: string;
+}) {
+  return (
+    <span className="relative inline-flex">
+      <Checkbox
+        checked={checked === true}
+        aria-checked={checked === "indeterminate" ? "mixed" : checked}
+        aria-label={ariaLabel}
+        onCheckedChange={onCheckedChange}
+      />
+      {checked === "indeterminate" && (
+        <Minus
+          aria-hidden
+          className="pointer-events-none absolute inset-0 m-auto size-3 text-primary"
+        />
+      )}
+    </span>
+  );
+}
+
 export function CreateStudyTableDialog({
   onCreate,
   onGenerate,
@@ -199,11 +244,16 @@ export function CreateStudyTableDialog({
   });
   const [selectedMonthKey, setSelectedMonthKey] = useState("");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([]);
+  const [expandedSubjects, setExpandedSubjects] = useState<string[]>([]);
   const [allSubjects, setAllSubjects] = useState(true);
   const [studyWeekdays, setStudyWeekdays] = useState([0, 1, 2, 3, 4, 5, 6]);
   const [maxSessionsPerDay, setMaxSessionsPerDay] = useState(3);
-  const [preview, setPreview] = useState<StudyTableGenerationResult | null>(null);
+  const [preview, setPreview] = useState<StudyTableGenerationResult | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
   const subjectsQuery = useQuery({
     queryKey: ["study-subject-catalog"],
     queryFn: listStudySubjects,
@@ -215,17 +265,44 @@ export function CreateStudyTableDialog({
     queryFn: () => listAvailableStudyMonths(),
     enabled: open && type === "MONTHLY",
   });
+  const subjectDetailsQueries = useQueries({
+    queries: expandedSubjects.map((id) => ({
+      queryKey: ["study-subject", id],
+      queryFn: () => getStudySubject(id),
+      enabled: open,
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+  const subjectDetails = new Map(
+    expandedSubjects.map((id, index) => [
+      id,
+      subjectDetailsQueries[index]?.data,
+    ]),
+  );
+  const subjectDetailsWithErrors = new Set(
+    expandedSubjects.filter(
+      (_, index) => subjectDetailsQueries[index]?.isError,
+    ),
+  );
   const availableMonths = availableMonthsQuery.data?.months ?? [];
-  const selectedMonth = availableMonths.find(
-    (option) => `${option.year}-${option.month}` === selectedMonthKey,
-  ) ?? availableMonths[0];
+  const selectedMonth =
+    availableMonths.find(
+      (option) => `${option.year}-${option.month}` === selectedMonthKey,
+    ) ?? availableMonths[0];
 
   function invalidatePreview() {
     setPreview(null);
   }
 
   function getTableInput(): StudyTableInput {
-    const subjects = type === "GLOBAL" ? selectedSubjects : allSubjects ? "ALL" : selectedSubjects;
+    const subjects =
+      type === "GLOBAL"
+        ? selectedSubjects
+        : allSubjects
+          ? "ALL"
+          : selectedSubjects;
+    const lessonSelection =
+      type === "GLOBAL" || !allSubjects ? { selectedLessonIds } : {};
     if (type === "MONTHLY") {
       if (!selectedMonth) throw new Error("لا توجد أشهر متاحة لإنشاء الجدول");
       return {
@@ -234,16 +311,37 @@ export function CreateStudyTableDialog({
         month: selectedMonth.month,
         year: selectedMonth.year,
         subjects,
+        ...lessonSelection,
       };
     }
     if (type === "WEEKLY") {
-      return { title: title.trim(), type, startDate, subjects };
+      return {
+        title: title.trim(),
+        type,
+        startDate,
+        subjects,
+        ...lessonSelection,
+      };
     }
-    return { title: title.trim(), type, startDate, endDate, subjects };
+    return {
+      title: title.trim(),
+      type,
+      startDate,
+      endDate,
+      subjects,
+      ...lessonSelection,
+    };
   }
 
   function getGenerationInput(): GenerateStudyTableInput {
-    const subjects = type === "GLOBAL" ? selectedSubjects : allSubjects ? "ALL" : selectedSubjects;
+    const subjects =
+      type === "GLOBAL"
+        ? selectedSubjects
+        : allSubjects
+          ? "ALL"
+          : selectedSubjects;
+    const lessonSelection =
+      type === "GLOBAL" || !allSubjects ? { selectedLessonIds } : {};
     const schedule = { studyWeekdays, maxSessionsPerDay };
     if (type === "MONTHLY") {
       if (!selectedMonth) throw new Error("لا توجد أشهر متاحة لإنشاء الجدول");
@@ -253,13 +351,29 @@ export function CreateStudyTableDialog({
         month: selectedMonth.month,
         year: selectedMonth.year,
         subjects,
+        ...lessonSelection,
         schedule,
       };
     }
     if (type === "WEEKLY") {
-      return { title: title.trim(), type, startDate, subjects, schedule };
+      return {
+        title: title.trim(),
+        type,
+        startDate,
+        subjects,
+        ...lessonSelection,
+        schedule,
+      };
     }
-    return { title: title.trim(), type, startDate, endDate, subjects, schedule };
+    return {
+      title: title.trim(),
+      type,
+      startDate,
+      endDate,
+      subjects,
+      ...lessonSelection,
+      schedule,
+    };
   }
 
   function validateForm() {
@@ -271,10 +385,16 @@ export function CreateStudyTableDialog({
       toast.error("اختر مادة واحدة على الأقل");
       return false;
     }
+    if ((type === "GLOBAL" || !allSubjects) && selectedLessonIds.length === 0) {
+      toast.error("اختر درساً واحداً على الأقل");
+      return false;
+    }
     if (type === "MONTHLY" && !selectedMonth) {
-      toast.error(availableMonthsQuery.isError
-        ? "تعذر تحميل الأشهر المتاحة"
-        : "لا توجد أشهر متاحة لإنشاء الجدول");
+      toast.error(
+        availableMonthsQuery.isError
+          ? "تعذر تحميل الأشهر المتاحة"
+          : "لا توجد أشهر متاحة لإنشاء الجدول",
+      );
       return false;
     }
     if (
@@ -324,17 +444,81 @@ export function CreateStudyTableDialog({
     }
   }
 
-  function toggleSubject(id: string) {
-    setSelectedSubjects((current) => current.includes(id)
-      ? current.filter((value) => value !== id)
-      : [...current, id]);
+  function getCheckState(ids: string[]): boolean | "indeterminate" {
+    const selectedCount = ids.filter((id) =>
+      selectedLessonIds.includes(id),
+    ).length;
+    if (selectedCount === 0) return false;
+    return selectedCount === ids.length ? true : "indeterminate";
+  }
+
+  function toggleLessons(
+    subjectId: string,
+    subjectLessonIds: string[],
+    targetIds: string[],
+  ) {
+    const shouldSelect = targetIds.some(
+      (id) => !selectedLessonIds.includes(id),
+    );
+    const next = new Set(selectedLessonIds);
+    for (const id of targetIds) {
+      if (shouldSelect) next.add(id);
+      else next.delete(id);
+    }
+    const selectedInSubject = subjectLessonIds.some((id) => next.has(id));
+    setSelectedLessonIds([...next]);
+    setSelectedSubjects((current) =>
+      selectedInSubject
+        ? current.includes(subjectId)
+          ? current
+          : [...current, subjectId]
+        : current.filter((id) => id !== subjectId),
+    );
     invalidatePreview();
   }
 
+  async function toggleSubjectExpansion(id: string) {
+    if (expandedSubjects.includes(id)) {
+      setExpandedSubjects((current) => current.filter((value) => value !== id));
+      return;
+    }
+    setExpandedSubjects((current) => [...current, id]);
+    try {
+      await queryClient.fetchQuery({
+        queryKey: ["study-subject", id],
+        queryFn: () => getStudySubject(id),
+        staleTime: 5 * 60 * 1000,
+      });
+    } catch {
+      toast.error("تعذر تحميل وحدات المادة ودروسها");
+    }
+  }
+
+  async function toggleWholeSubject(subjectId: string) {
+    try {
+      const detail = await queryClient.fetchQuery({
+        queryKey: ["study-subject", subjectId],
+        queryFn: () => getStudySubject(subjectId),
+        staleTime: 5 * 60 * 1000,
+      });
+      const ids = detail.units.flatMap((unit) =>
+        unit.lessons.map((lesson) => lesson.id),
+      );
+      toggleLessons(subjectId, ids, ids);
+      if (!expandedSubjects.includes(subjectId)) {
+        setExpandedSubjects((current) => [...current, subjectId]);
+      }
+    } catch {
+      toast.error("تعذر تحميل دروس المادة");
+    }
+  }
+
   function toggleWeekday(index: number) {
-    setStudyWeekdays((current) => current.includes(index)
-      ? current.filter((value) => value !== index)
-      : [...current, index].sort());
+    setStudyWeekdays((current) =>
+      current.includes(index)
+        ? current.filter((value) => value !== index)
+        : [...current, index].sort(),
+    );
     invalidatePreview();
   }
 
@@ -346,25 +530,38 @@ export function CreateStudyTableDialog({
   const loading = busy || isCreating;
   const submitDisabled =
     subjectsQuery.isError ||
-    (type === "MONTHLY" && (availableMonthsQuery.isLoading || availableMonthsQuery.isError)) ||
+    (type === "MONTHLY" &&
+      (availableMonthsQuery.isLoading || availableMonthsQuery.isError)) ||
     (mode === "generate" && studyWeekdays.length === 0);
   const showSubjectList = type === "GLOBAL" || !allSubjects;
 
-  const eligibleDays = preview && maxSessionsPerDay > 0 ? preview.capacity / maxSessionsPerDay : 0;
-  const averagePerDay = preview && eligibleDays > 0
-    ? (preview.scheduledCount / eligibleDays).toFixed(1)
-    : "0.0";
+  const eligibleDays =
+    preview && maxSessionsPerDay > 0 ? preview.capacity / maxSessionsPerDay : 0;
+  const averagePerDay =
+    preview && eligibleDays > 0
+      ? (preview.scheduledCount / eligibleDays).toFixed(1)
+      : "0.0";
 
   return (
-    <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setPreview(null); }}>
-      <DialogTrigger render={<MainButton icon={<Plus />} title="جدول مذاكرة جديد" />} />
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (!value) setPreview(null);
+      }}
+    >
+      <DialogTrigger
+        render={<MainButton icon={<Plus />} title="جدول مذاكرة جديد" />}
+      />
       <DialogContent
         dir="rtl"
         closeButtonClassName="right-auto left-2"
         className="max-h-[90vh] gap-0 overflow-y-auto sm:max-w-3xl"
       >
         <DialogHeader className="pb-4 text-start">
-          <DialogTitle className="text-xl font-bold">إنشاء جدول مذاكرة</DialogTitle>
+          <DialogTitle className="text-xl font-bold">
+            إنشاء جدول مذاكرة
+          </DialogTitle>
           <DialogDescription>
             حدّد الفترة والمواد وأيام المذاكرة، وراجع الخطة قبل حفظها.
           </DialogDescription>
@@ -412,12 +609,25 @@ export function CreateStudyTableDialog({
                   <span className="relative block">
                     <select
                       className={selectClass}
-                      value={selectedMonth ? `${selectedMonth.year}-${selectedMonth.month}` : ""}
-                      disabled={availableMonthsQuery.isLoading || availableMonthsQuery.isError}
-                      onChange={(event) => { setSelectedMonthKey(event.target.value); invalidatePreview(); }}
+                      value={
+                        selectedMonth
+                          ? `${selectedMonth.year}-${selectedMonth.month}`
+                          : ""
+                      }
+                      disabled={
+                        availableMonthsQuery.isLoading ||
+                        availableMonthsQuery.isError
+                      }
+                      onChange={(event) => {
+                        setSelectedMonthKey(event.target.value);
+                        invalidatePreview();
+                      }}
                     >
                       {availableMonths.map((option) => (
-                        <option key={`${option.year}-${option.month}`} value={`${option.year}-${option.month}`}>
+                        <option
+                          key={`${option.year}-${option.month}`}
+                          value={`${option.year}-${option.month}`}
+                        >
                           {option.label}
                         </option>
                       ))}
@@ -429,10 +639,14 @@ export function CreateStudyTableDialog({
                   </span>
                 </label>
                 {availableMonthsQuery.isLoading && (
-                  <p className="pb-3 text-sm text-muted-foreground">جارٍ تحميل الأشهر المتاحة...</p>
+                  <p className="pb-3 text-sm text-muted-foreground">
+                    جارٍ تحميل الأشهر المتاحة...
+                  </p>
                 )}
                 {availableMonthsQuery.isError && (
-                  <p role="alert" className="pb-3 text-sm text-destructive">تعذر تحميل الأشهر المتاحة</p>
+                  <p role="alert" className="pb-3 text-sm text-destructive">
+                    تعذر تحميل الأشهر المتاحة
+                  </p>
                 )}
                 {selectedMonth?.isCurrent && availableMonthsQuery.data && (
                   <p className="flex items-center gap-1.5 pb-3 text-sm text-muted-foreground">
@@ -442,7 +656,12 @@ export function CreateStudyTableDialog({
                 )}
               </div>
             ) : (
-              <div className={cn("grid gap-3", type === "WEEKLY" ? "sm:grid-cols-1" : "sm:grid-cols-2")}>
+              <div
+                className={cn(
+                  "grid gap-3",
+                  type === "WEEKLY" ? "sm:grid-cols-1" : "sm:grid-cols-2",
+                )}
+              >
                 <FormDatePicker
                   label="تاريخ البداية"
                   value={startDate}
@@ -471,36 +690,168 @@ export function CreateStudyTableDialog({
 
           <Section
             title="المواد"
-            hint={showSubjectList && selectedSubjects.length > 0
-              ? `${selectedSubjects.length} مادة مختارة`
-              : undefined}
-            action={type !== "GLOBAL" ? (
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <Checkbox
-                  checked={allSubjects}
-                  onCheckedChange={(checked) => { setAllSubjects(checked === true); invalidatePreview(); }}
-                />
-                جميع المواد
-              </label>
-            ) : undefined}
+            hint={
+              showSubjectList && selectedSubjects.length > 0
+                ? `${selectedSubjects.length} مادة مختارة`
+                : undefined
+            }
+            action={
+              type !== "GLOBAL" ? (
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <HierarchyCheckbox
+                    checked={allSubjects}
+                    onCheckedChange={(checked) => {
+                      setAllSubjects(checked === true);
+                      if (checked === true) {
+                        setSelectedSubjects([]);
+                        setSelectedLessonIds([]);
+                      }
+                      invalidatePreview();
+                    }}
+                  />
+                  جميع المواد
+                </label>
+              ) : undefined
+            }
           >
             {!showSubjectList ? (
-              <p className="text-sm text-muted-foreground">سيتم تضمين كل المواد في الجدول.</p>
+              <p className="text-sm text-muted-foreground">
+                سيتم تضمين كل المواد في الجدول.
+              </p>
             ) : subjectsQuery.isLoading ? (
-              <p className="text-sm text-muted-foreground">جارٍ تحميل المواد...</p>
+              <p className="text-sm text-muted-foreground">
+                جارٍ تحميل المواد...
+              </p>
             ) : subjectsQuery.isError ? (
-              <p role="alert" className="text-sm text-destructive">تعذر تحميل قائمة المواد</p>
+              <p role="alert" className="text-sm text-destructive">
+                تعذر تحميل قائمة المواد
+              </p>
             ) : (
-              <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto">
-                {(subjectsQuery.data ?? []).map((subject) => (
-                  <Chip
-                    key={subject.id}
-                    selected={selectedSubjects.includes(subject.id)}
-                    onClick={() => toggleSubject(subject.id)}
-                  >
-                    {subject.title}
-                  </Chip>
-                ))}
+              <div className="max-h-64 space-y-2 overflow-y-auto">
+                {(subjectsQuery.data ?? []).map((subject) => {
+                  const detail = subjectDetails.get(subject.id);
+                  const lessonIds =
+                    detail?.units.flatMap((unit) =>
+                      unit.lessons.map((lesson) => lesson.id),
+                    ) ?? [];
+                  return (
+                    <div
+                      key={subject.id}
+                      className="rounded-lg border bg-background"
+                    >
+                      <div className="flex items-center gap-2 p-2.5">
+                        <button
+                          type="button"
+                          aria-label={`فتح ${subject.title}`}
+                          aria-expanded={expandedSubjects.includes(subject.id)}
+                          onClick={() =>
+                            void toggleSubjectExpansion(subject.id)
+                          }
+                          className="grid size-7 shrink-0 place-items-center rounded hover:bg-muted"
+                        >
+                          <ChevronLeft
+                            className={cn(
+                              "size-4 transition-transform",
+                              expandedSubjects.includes(subject.id) &&
+                                "-rotate-90",
+                            )}
+                          />
+                        </button>
+                        <HierarchyCheckbox
+                          checked={
+                            detail
+                              ? getCheckState(lessonIds)
+                              : selectedSubjects.includes(subject.id)
+                          }
+                          ariaLabel={`تحديد جميع دروس ${subject.title}`}
+                          onCheckedChange={() =>
+                            void toggleWholeSubject(subject.id)
+                          }
+                        />
+                        <span className="text-sm font-medium">
+                          {subject.title}
+                        </span>
+                      </div>
+                      {expandedSubjects.includes(subject.id) && (
+                        <div className="space-y-2 border-t px-4 py-3">
+                          {subjectDetailsWithErrors.has(subject.id) ? (
+                            <p
+                              role="alert"
+                              className="text-xs text-destructive"
+                            >
+                              تعذر تحميل وحدات المادة ودروسها.{" "}
+                              <button
+                                type="button"
+                                className="underline underline-offset-2"
+                                onClick={() =>
+                                  void queryClient.refetchQueries({
+                                    queryKey: ["study-subject", subject.id],
+                                    exact: true,
+                                  })
+                                }
+                              >
+                                إعادة المحاولة
+                              </button>
+                            </p>
+                          ) : !detail ? (
+                            <p className="text-xs text-muted-foreground">
+                              جارٍ تحميل الوحدات والدروس...
+                            </p>
+                          ) : detail.units.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                              لا توجد دروس في هذه المادة.
+                            </p>
+                          ) : (
+                            detail.units.map((unit) => {
+                              const unitLessonIds = unit.lessons.map(
+                                (lesson) => lesson.id,
+                              );
+                              return (
+                                <div key={unit.id} className="space-y-2">
+                                  <label className="flex items-center gap-2 text-sm font-medium">
+                                    <HierarchyCheckbox
+                                      checked={getCheckState(unitLessonIds)}
+                                      onCheckedChange={() =>
+                                        toggleLessons(
+                                          subject.id,
+                                          lessonIds,
+                                          unitLessonIds,
+                                        )
+                                      }
+                                    />
+                                    {unit.title}
+                                  </label>
+                                  <div className="ms-6 space-y-2 border-s-2 ps-3">
+                                    {unit.lessons.map((lesson) => (
+                                      <label
+                                        key={lesson.id}
+                                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                                      >
+                                        <Checkbox
+                                          checked={selectedLessonIds.includes(
+                                            lesson.id,
+                                          )}
+                                          onCheckedChange={() =>
+                                            toggleLessons(
+                                              subject.id,
+                                              lessonIds,
+                                              [lesson.id],
+                                            )
+                                          }
+                                        />
+                                        {lesson.title}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </Section>
@@ -511,20 +862,30 @@ export function CreateStudyTableDialog({
                 <legend className="text-sm font-medium">أيام المذاكرة</legend>
                 <div className="flex flex-wrap gap-2">
                   {STUDY_TABLE_WEEKDAYS.map((day, index) => (
-                    <Chip key={day} selected={studyWeekdays.includes(index)} onClick={() => toggleWeekday(index)}>
+                    <Chip
+                      key={day}
+                      selected={studyWeekdays.includes(index)}
+                      onClick={() => toggleWeekday(index)}
+                    >
                       {day}
                     </Chip>
                   ))}
                 </div>
                 {studyWeekdays.length === 0 && (
-                  <p role="alert" className="text-xs text-destructive">اختر يوماً واحداً على الأقل.</p>
+                  <p role="alert" className="text-xs text-destructive">
+                    اختر يوماً واحداً على الأقل.
+                  </p>
                 )}
               </fieldset>
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
                 <div>
-                  <p id="sessions-label" className="text-sm font-medium">الحد الأقصى للجلسات يومياً</p>
-                  <p className="text-xs text-muted-foreground">من 1 إلى 6 جلسة</p>
+                  <p id="sessions-label" className="text-sm font-medium">
+                    الحد الأقصى للجلسات يومياً
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    من 1 إلى 6 جلسة
+                  </p>
                 </div>
                 <div
                   role="group"
@@ -546,7 +907,9 @@ export function CreateStudyTableDialog({
                     min={1}
                     max={50}
                     value={maxSessionsPerDay}
-                    onChange={(event) => changeSessions(Number(event.target.value))}
+                    onChange={(event) =>
+                      changeSessions(Number(event.target.value))
+                    }
                     className="h-full w-14 bg-transparent text-center text-sm font-semibold tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
                   <button
@@ -566,17 +929,25 @@ export function CreateStudyTableDialog({
           {preview && (
             <Section title="معاينة الخطة">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Stat label="دروس مجدولة" value={`${preview.scheduledCount} / ${preview.totalLessons}`} />
+                <Stat
+                  label="دروس مجدولة"
+                  value={`${preview.scheduledCount} / ${preview.totalLessons}`}
+                />
                 <Stat label="أيام المذاكرة" value={eligibleDays} />
                 <Stat label="المتوسط اليومي" value={averagePerDay} />
                 <Stat label="السعة" value={preview.capacity} />
               </div>
 
-              {(preview.skippedCompletedCount > 0 || preview.unscheduledLessonsCount > 0) && (
+              {(preview.skippedCompletedCount > 0 ||
+                preview.unscheduledLessonsCount > 0) && (
                 <p className="text-sm text-muted-foreground">
-                  {preview.skippedCompletedCount > 0 && `${preview.skippedCompletedCount} درس مكتمل تم تخطيه`}
-                  {preview.skippedCompletedCount > 0 && preview.unscheduledLessonsCount > 0 && " — "}
-                  {preview.unscheduledLessonsCount > 0 && `${preview.unscheduledLessonsCount} درس غير مجدول`}
+                  {preview.skippedCompletedCount > 0 &&
+                    `${preview.skippedCompletedCount} درس مكتمل تم تخطيه`}
+                  {preview.skippedCompletedCount > 0 &&
+                    preview.unscheduledLessonsCount > 0 &&
+                    " — "}
+                  {preview.unscheduledLessonsCount > 0 &&
+                    `${preview.unscheduledLessonsCount} درس غير مجدول`}
                 </p>
               )}
 
@@ -585,7 +956,10 @@ export function CreateStudyTableDialog({
                   role="status"
                   className="flex gap-2.5 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
                 >
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  <AlertTriangle
+                    className="mt-0.5 size-4 shrink-0"
+                    aria-hidden
+                  />
                   <ul className="space-y-1">
                     {preview.suggestions.map((suggestion) => (
                       <li key={suggestion.code}>{suggestion.message}</li>
@@ -616,15 +990,31 @@ export function CreateStudyTableDialog({
                       <tbody>
                         {plannedMonth.weeks.map((week) => (
                           <tr key={week.week}>
-                            <th scope="row" className={cn(td, "whitespace-nowrap text-start font-medium")}>
+                            <th
+                              scope="row"
+                              className={cn(
+                                td,
+                                "whitespace-nowrap text-start font-medium",
+                              )}
+                            >
                               الأسبوع {week.week}
                             </th>
-                            <td className={td}>{week.days.map((day) => formatDate(day.date)).join("، ")}</td>
                             <td className={td}>
-                              {week.days.flatMap((day) => day.sessions).map((session) => session.subject?.title ?? "—").join("، ")}
+                              {week.days
+                                .map((day) => formatDate(day.date))
+                                .join("، ")}
                             </td>
                             <td className={td}>
-                              {week.days.flatMap((day) => day.sessions).map((session) => session.lesson?.title ?? "—").join("، ")}
+                              {week.days
+                                .flatMap((day) => day.sessions)
+                                .map((session) => session.subject?.title ?? "—")
+                                .join("، ")}
+                            </td>
+                            <td className={td}>
+                              {week.days
+                                .flatMap((day) => day.sessions)
+                                .map((session) => session.lesson?.title ?? "—")
+                                .join("، ")}
                             </td>
                           </tr>
                         ))}
@@ -663,9 +1053,15 @@ export function CreateStudyTableDialog({
               type="submit"
               fullWidth
               loading={loading}
-              loadingTitle={mode === "generate" && !preview ? "جارٍ إعداد المعاينة…" : "جارٍ الحفظ…"}
+              loadingTitle={
+                mode === "generate" && !preview
+                  ? "جارٍ إعداد المعاينة…"
+                  : "جارٍ الحفظ…"
+              }
               disabled={submitDisabled}
-              title={mode === "generate" && !preview ? "معاينة الخطة" : "حفظ الجدول"}
+              title={
+                mode === "generate" && !preview ? "معاينة الخطة" : "حفظ الجدول"
+              }
             />
           </div>
         </form>

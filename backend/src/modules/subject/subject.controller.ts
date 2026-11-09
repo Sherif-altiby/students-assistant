@@ -28,52 +28,99 @@ export const subjectController = {
   }),
 
   update: asyncHandler(async (req: Request, res: Response) => {
-    const subject = await subjectService.updateSubject(req.params.id as string, req.body);
+    const subject = await subjectService.updateSubject(
+      req.params.id as string,
+      req.body,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.OK).json({ status: 'success', data: subject });
   }),
 
   delete: asyncHandler(async (req: Request, res: Response) => {
-    const result = await subjectService.deleteSubject(req.params.id as string);
+    const result = await subjectService.deleteSubject(
+      req.params.id as string,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.OK).json({ status: 'success', data: result });
   }),
 
   createUnit: asyncHandler(async (req: Request, res: Response) => {
-    const unit = await subjectService.createUnit(req.params.id as string, req.body);
+    const unit = await subjectService.createUnit(
+      req.params.id as string,
+      req.body,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.CREATED).json({ status: 'success', data: unit });
   }),
 
   updateUnit: asyncHandler(async (req: Request, res: Response) => {
-    const unit = await subjectService.updateUnit(req.params.id as string, req.body);
+    const unit = await subjectService.updateUnit(
+      req.params.id as string,
+      req.body,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.OK).json({ status: 'success', data: unit });
   }),
 
   deleteUnit: asyncHandler(async (req: Request, res: Response) => {
-    const result = await subjectService.deleteUnit(req.params.id as string);
+    const result = await subjectService.deleteUnit(
+      req.params.id as string,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.OK).json({ status: 'success', data: result });
   }),
 
   reorderUnits: asyncHandler(async (req: Request, res: Response) => {
-    const result = await subjectService.reorderUnits(req.params.id as string, req.body.unitIds);
+    const result = await subjectService.reorderUnits(
+      req.params.id as string,
+      req.body.unitIds,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.OK).json({ status: 'success', data: result });
   }),
 
   createLesson: asyncHandler(async (req: Request, res: Response) => {
-    const lesson = await subjectService.createLesson(req.params.id as string, req.body.title);
+    const lesson = await subjectService.createLesson(
+      req.params.id as string,
+      req.body.title,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.CREATED).json({ status: 'success', data: lesson });
   }),
 
   updateLesson: asyncHandler(async (req: Request, res: Response) => {
-    const lesson = await subjectService.updateLesson(req.params.id as string, req.body);
+    const lesson = await subjectService.updateLesson(
+      req.params.id as string,
+      req.body,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.OK).json({ status: 'success', data: lesson });
   }),
 
   deleteLesson: asyncHandler(async (req: Request, res: Response) => {
-    const result = await subjectService.deleteLesson(req.params.id as string);
+    const result = await subjectService.deleteLesson(
+      req.params.id as string,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.OK).json({ status: 'success', data: result });
   }),
 
   reorderLessons: asyncHandler(async (req: Request, res: Response) => {
-    const result = await subjectService.reorderLessons(req.params.id as string, req.body.lessonIds);
+    const result = await subjectService.reorderLessons(
+      req.params.id as string,
+      req.body.lessonIds,
+      req.user!.id,
+      req.user!.role as Role,
+    );
     res.status(StatusCodes.OK).json({ status: 'success', data: result });
   }),
 };

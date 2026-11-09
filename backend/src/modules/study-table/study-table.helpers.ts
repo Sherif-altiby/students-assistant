@@ -13,6 +13,7 @@ import {
 } from './date-time';
 import { getSubjectScopeWhere } from './study-table.scope';
 import { getStudySessionStatus } from './study-table.status';
+import { filterCatalogByLessons } from './study-table.generator';
 export { forgetLessonCompletions } from './study-table.completion';
 export { reorderDay, reindexDay, updateSessionAssignments } from './study-table.ordering';
 import {
@@ -211,6 +212,7 @@ export async function assertSessionReferences(
   tx: Transaction,
   tableId: string,
   allSubjects: boolean,
+  selectedLessonIds: readonly string[],
   sessions: readonly { subjectId: string; lessonId: string }[],
   subjectOwnerId?: string
 ): Promise<void> {
@@ -254,6 +256,9 @@ export async function assertSessionReferences(
   for (const { subjectId, lessonId } of sessions) {
     if (lessonSubjectById.get(lessonId) !== subjectId) {
       throw new BadRequestError('الدرس لا يتبع المادة المحددة');
+    }
+    if (selectedLessonIds.length && !selectedLessonIds.includes(lessonId)) {
+      throw new BadRequestError('الدرس خارج نطاق هذا الجدول');
     }
   }
 }
@@ -347,7 +352,8 @@ export async function listCatalog(
   tx: Transaction,
   scope: StudyTableInput['subjects'],
   userId: string,
-  subjectOwnerId?: string
+  subjectOwnerId?: string,
+  selectedLessonIds?: readonly string[]
 ): Promise<{ subjects: GeneratorSubject[]; completed: Set<string> }> {
   const [subjects, completionRows] = await Promise.all([
     tx.studySubject.findMany({
@@ -365,23 +371,52 @@ export async function listCatalog(
       select: { lessonId: true },
     }),
   ]);
-  return {
-    subjects: subjects.map((subject) => ({
-      id: subject.id,
-      title: subject.title,
-      units: subject.units.map((unit) => ({
-        id: unit.id,
-        title: unit.title,
-        order: unit.order,
-        lessons: unit.lessons.map((lesson) => ({
-          id: lesson.id,
-          title: lesson.title,
-          order: lesson.order,
-        })),
+  const allAvailableLessonIds = new Set(
+    subjects.flatMap((subject) => subject.units.flatMap((unit) => unit.lessons.map(({ id }) => id)))
+  );
+  if (
+    selectedLessonIds &&
+    selectedLessonIds.some((lessonId) => !allAvailableLessonIds.has(lessonId))
+  ) {
+    throw new BadRequestError('تتضمن الدروس المحددة درساً غير متاح');
+  }
+  const catalog = subjects.map((subject) => ({
+    id: subject.id,
+    title: subject.title,
+    units: subject.units.map((unit) => ({
+      id: unit.id,
+      title: unit.title,
+      order: unit.order,
+      lessons: unit.lessons.map((lesson) => ({
+        id: lesson.id,
+        title: lesson.title,
+        order: lesson.order,
       })),
     })),
+  }));
+  return {
+    subjects: filterCatalogByLessons(catalog, selectedLessonIds),
     completed: new Set(completionRows.map(({ lessonId }) => lessonId)),
   };
+}
+
+async function assertSelectedLessonsInScope(
+  tx: Transaction,
+  scope: StudyTableInput['subjects'],
+  selectedLessonIds: readonly string[] | undefined,
+  subjectOwnerId?: string
+) {
+  if (!selectedLessonIds) return;
+  const subjects = await tx.studySubject.findMany({
+    where: getSubjectScopeWhere(scope, subjectOwnerId),
+    select: { units: { select: { lessons: { select: { id: true } } } } },
+  });
+  const availableLessonIds = new Set(
+    subjects.flatMap((subject) => subject.units.flatMap((unit) => unit.lessons.map(({ id }) => id)))
+  );
+  if (selectedLessonIds.some((lessonId) => !availableLessonIds.has(lessonId))) {
+    throw new BadRequestError('تتضمن الدروس المحددة درساً غير متاح');
+  }
 }
 
 export async function createTableRecord(
@@ -393,6 +428,7 @@ export async function createTableRecord(
   subjectOwnerId?: string
 ) {
   const allSubjects = input.subjects === 'ALL';
+  await assertSelectedLessonsInScope(tx, input.subjects, input.selectedLessonIds, subjectOwnerId);
   const table = await tx.studyTable.create({
     data: {
       title: input.title,
@@ -402,6 +438,7 @@ export async function createTableRecord(
       month: range.month,
       year: range.year,
       allSubjects,
+      selectedLessonIds: input.selectedLessonIds ?? [],
       userId,
       ...(schedule
         ? {

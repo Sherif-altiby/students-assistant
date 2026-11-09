@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, BookOpen, CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StudyItemActions } from "../StudyItemActions";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -47,10 +48,20 @@ export default function StudySubjectDetailPage() {
 
       {subject && (
         <>
-          <PageHeader
-            title={subject.title}
-            description={`تمت دراسة ${subject.completedLessonsCount} من ${subject.lessonsCount} درس`}
-          />
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <PageHeader
+              title={subject.title}
+              description={`تمت دراسة ${subject.completedLessonsCount} من ${subject.lessonsCount} درس`}
+            />
+            {subject.isEditable && (
+              <StudyItemActions
+                type="subject"
+                id={subject.id}
+                title={subject.title}
+                subjectId={subject.id}
+              />
+            )}
+          </div>
           <section className="space-y-2 rounded-lg border p-4">
             <div className="flex justify-between text-sm font-medium">
               <span>التقدم في المادة</span>
@@ -85,6 +96,14 @@ export default function StudySubjectDetailPage() {
                       <span className="text-sm text-muted-foreground">
                         {completedCount} / {unit.lessons.length} دروس
                       </span>
+                      {subject.isEditable && (
+                        <StudyItemActions
+                          type="unit"
+                          id={unit.id}
+                          title={unit.title}
+                          subjectId={subject.id}
+                        />
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -100,6 +119,14 @@ export default function StudySubjectDetailPage() {
                             : "text-sm text-muted-foreground"}>
                             {lesson.isCompleted ? "تمت دراسته" : "لم تتم دراسته"}
                           </span>
+                          {subject.isEditable && (
+                            <StudyItemActions
+                              type="lesson"
+                              id={lesson.id}
+                              title={lesson.title}
+                              subjectId={subject.id}
+                            />
+                          )}
                         </li>
                       ))}
                     </ul>

@@ -21,6 +21,11 @@ const globalSubjectScope = z
   .array(id)
   .min(1)
   .refine((ids) => new Set(ids).size === ids.length, 'يجب عدم تكرار المواد');
+const selectedLessonScope = z
+  .array(id)
+  .min(1)
+  .refine((ids) => new Set(ids).size === ids.length, 'يجب عدم تكرار الدروس');
+const lessonSelection = { selectedLessonIds: selectedLessonScope.optional() };
 
 const monthNames = [
   ['january', 'jan', 'يناير'],
@@ -63,6 +68,7 @@ const weeklyTableSchema = z
     type: z.literal('WEEKLY'),
     startDate: dateOnly,
     subjects: subjectScope,
+    ...lessonSelection,
   })
   .strict();
 const monthlyTableSchema = z
@@ -72,6 +78,7 @@ const monthlyTableSchema = z
     month,
     year: year.optional(),
     subjects: subjectScope,
+    ...lessonSelection,
   })
   .strict();
 const customTableSchema = z
@@ -81,6 +88,7 @@ const customTableSchema = z
     startDate: dateOnly,
     endDate: dateOnly,
     subjects: subjectScope,
+    ...lessonSelection,
   })
   .strict()
   .refine(
@@ -97,6 +105,7 @@ const globalTableSchema = z
     startDate: dateOnly,
     endDate: dateOnly,
     subjects: globalSubjectScope,
+    ...lessonSelection,
   })
   .strict()
   .refine(

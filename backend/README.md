@@ -87,7 +87,7 @@ This keeps business logic testable and decoupled from both HTTP and the database
    npm run dev
    ```
 
-   Server runs on `http://localhost:3000` by default. Health check: `GET /health`.
+   Server runs on `http://localhost:4000` by default. Health check: `GET /health`.
 
 ## Scripts
 
@@ -119,9 +119,11 @@ All responses follow the shape `{ status: 'success' | 'error', data?, message?, 
 
 ### Subject catalog
 
-The shared catalog follows `Subject -> Unit -> Lesson`. Only administrators can
-change catalog data; authenticated users can read it. List responses are
-paginated and subject detail returns ordered units and lessons.
+The catalog follows `Subject -> Unit -> Lesson`. Administrators manage shared
+subjects, while authenticated students can create, edit, and delete their own
+subjects, units, and lessons. Students can also read the shared catalog, but
+cannot modify another user's subjects. List responses are paginated and subject
+detail returns ordered units and lessons.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -196,7 +198,16 @@ Study-session dates use `YYYY-MM-DD`; sessions have no start/end times.
 | PUT | `/study-table/days/:dayId/sessions` | Replace and reorder a day's sessions |
 | POST / DELETE | `/study-table/sessions/:id/complete` | Complete or uncomplete a session |
 
-Weekly inputs need only `startDate`; monthly inputs use `month` (English or Arabic month name, or 1–12) and optional `year`; custom and global inputs use `startDate` and `endDate`. Generated plans accept `schedule: { "studyWeekdays": [0, 1, 2, 3, 4, 5, 6], "maxSessionsPerDay": 3 }`.
+Weekly inputs need only `startDate`; monthly inputs use `month` (English or Arabic
+month name, or 1–12) and optional `year`; custom and global inputs use
+`startDate` and `endDate`. Generated plans accept
+`schedule: { "studyWeekdays": [0, 1, 2, 3, 4, 5, 6], "maxSessionsPerDay": 3 }`.
+
+Create and generate requests may include `selectedLessonIds` to limit the table to
+specific lessons across the selected subjects. Omit it to include every lesson
+within the subject scope. The subject-selection UI sends lesson IDs for selected
+subjects, units, and individual lessons; saved tables also enforce that scope
+when sessions are added or replaced.
 
 ### Notifications
 
