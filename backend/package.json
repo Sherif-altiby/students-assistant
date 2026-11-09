@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "dist/server.js",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "predev": "npm run prisma:generate",
     "dev": "tsx watch src/server.ts",
@@ -26,6 +29,7 @@
     "deepmerge-ts": "^8.0.0"
   },
   "dependencies": {
+    "@sparticuz/chromium": "153.0.0",
     "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "6.19.3",
     "@types/socket.io": "^3.0.1",
@@ -44,7 +48,8 @@
     "pdf-lib": "^1.17.1",
     "pdfmake": "^0.3.11",
     "pg": "^8.22.0",
-    "puppeteer": "^25.10.0",
+    "puppeteer": "25.11.0",
+    "puppeteer-core": "25.11.0",
     "socket.io": "^4.8.3",
     "zod": "^4.4.3"
   },

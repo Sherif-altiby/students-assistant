@@ -53,7 +53,8 @@ This keeps business logic testable and decoupled from both HTTP and the database
    npx puppeteer browsers install chrome
    ```
 
-   Run this after installing dependencies in each environment that generates PDFs.
+   Run this after installing dependencies in each local environment that generates
+   PDFs. Vercel uses the matching serverless Chromium binary automatically.
 
 3. **Configure environment**
 
@@ -88,6 +89,27 @@ This keeps business logic testable and decoupled from both HTTP and the database
    ```
 
    Server runs on `http://localhost:4000` by default. Health check: `GET /health`.
+
+## Deploying the backend to Vercel
+
+Set the Vercel project's Root Directory to `backend`. The project is configured
+for Node.js 24 and builds with `npm run build`; set all variables from
+`.env.example` in the Vercel project's Environment Variables instead of deploying
+the local `.env` file. Deploy with:
+
+```bash
+npx vercel
+npx vercel --prod
+```
+
+Vercel serves the compiled Express application from `src/index.cjs`. The PDF services use
+Puppeteer Core with the Chromium 153 serverless binary, and `vercel.json` includes
+the compiled Arabic font files in the function bundle.
+
+The long-running `src/server.ts` process remains the local/server deployment
+entrypoint. Vercel does not run its in-process late-study interval or initialize
+its Socket.IO server; those features require separate Vercel Cron/WebSocket
+configuration if they are to run on Vercel.
 
 ## Scripts
 

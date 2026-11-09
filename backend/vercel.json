@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "functions": {
+    "src/index.cjs": {
+      "includeFiles": "dist/modules/assets/fonts/**",
+      "maxDuration": 60
+    }
+  }
+}

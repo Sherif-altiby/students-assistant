@@ -1,10 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { PDFDocument } from 'pdf-lib';
-import puppeteer, { Browser } from 'puppeteer';
 import { StudyTableType } from '@prisma/client';
+import { launchPdfBrowser } from '../../utils/pdf-browser';
 import type { PlannedMonth } from './study-table.types';
 
+type Browser = Awaited<ReturnType<typeof launchPdfBrowser>>;
 type PdfDate = Date | string;
 
 interface PdfSession {
@@ -302,16 +303,7 @@ function releasePdfSlot(): void {
 
 function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
-    browserPromise = puppeteer
-      .launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-gpu',
-          '--disable-dev-shm-usage',
-        ],
-      })
+    browserPromise = launchPdfBrowser()
       .then((browser) => {
         browser.once('disconnected', () => {
           browserPromise = undefined;

@@ -1,7 +1,7 @@
 // src/modules/lesson-date/lesson-date-pdf.service.ts
 import * as fs from 'fs';
 import * as path from 'path';
-import puppeteer from 'puppeteer';
+import { launchPdfBrowser } from '../../utils/pdf-browser';
 
 // ------------------------------------------------------------------
 // Fonts
@@ -14,16 +14,10 @@ const FONT_REGULAR_PATH = path.join(FONTS_DIR, 'NotoNaskhArabic-Regular.ttf');
 const FONT_BOLD_PATH = path.join(FONTS_DIR, 'NotoNaskhArabic-Bold.ttf');
 
 function loadFontBase64(fontPath: string): string {
-  try {
-    if (!fs.existsSync(fontPath)) {
-      console.error(`❌ Font not found: ${fontPath}`);
-      return '';
-    }
-    return fs.readFileSync(fontPath).toString('base64');
-  } catch (error) {
-    console.error(`Error loading font ${fontPath}:`, error);
-    return '';
+  if (!fs.existsSync(fontPath)) {
+    throw new Error(`Arabic PDF font is missing: ${fontPath}`);
   }
+  return fs.readFileSync(fontPath).toString('base64');
 }
 
 function buildFontFaceCss(): string {
@@ -579,16 +573,7 @@ function buildHtml(entries: LessonDatePdfItem[]): string {
 // ------------------------------------------------------------------
 export const lessonDatePdfService = {
   async generateLessonDatesPdf(entries: LessonDatePdfItem[]): Promise<Buffer> {
-    console.log('[pdf] launching browser...');
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-gpu',
-        '--disable-dev-shm-usage',
-      ],
-    });
+    const browser = await launchPdfBrowser();
 
     try {
       const page = await browser.newPage();
