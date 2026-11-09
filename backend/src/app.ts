@@ -15,10 +15,12 @@ export const createApp = (): Application => {
   // Security headers
   app.use(helmet());
 
+  console.log('DEPLOYED CORS ORIGIN:', env.corsOrigin);
   app.use(cors({
-  origin: env.corsOrigin.split(',').map(origin => origin.trim()),
-  credentials: true,
-}));
+    origin: env.corsOrigin.split(',').map(origin => origin.trim()),
+    credentials: true,
+  }));
+
 
   // Body/cookie parsing
   app.use(express.json({ limit: '10kb' }));
