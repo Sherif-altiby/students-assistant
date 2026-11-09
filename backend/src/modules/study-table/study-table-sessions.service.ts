@@ -52,8 +52,9 @@ export const studyTableSessionsService = {
         [input],
         subjectOwnerId
       );
-      const duplicate = await tx.studySession.findUnique({
-        where: { studyTableId_lessonId: { studyTableId: tableId, lessonId: input.lessonId } },
+      const duplicate = await tx.studySession.findFirst({
+        where: { studyTableId: tableId, lessonId: input.lessonId },
+        select: { id: true },
       });
       if (duplicate) throw new ConflictError('لا يمكن إضافة الدرس نفسه أكثر من مرة إلى الجدول');
       const count = await tx.studySession.count({ where: { dayId: day.id } });

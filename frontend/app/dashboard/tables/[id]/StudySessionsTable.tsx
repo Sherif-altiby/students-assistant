@@ -72,16 +72,18 @@ function DayCell({
       scope="rowgroup"
       className={cn(
         "w-52 min-w-44 whitespace-normal border-e border-border/60 px-4 py-4 text-start align-top",
-        isToday ? "border-s-4 border-s-primary bg-primary/[0.05]" : "bg-muted/20",
+        isToday
+          ? "border-s-4 border-s-primary bg-primary/[0.05]"
+          : "bg-muted/20",
       )}
     >
       <div className="flex items-start gap-3">
         <div
           aria-hidden
           className={cn(
-            "flex size-11 shrink-0 flex-col items-center justify-center rounded-xl border leading-none",
+            "flex size-11 shrink-0 flex-col items-center justify-center rounded-xl border leading-none transition-colors",
             isToday
-              ? "border-primary bg-primary text-primary-foreground"
+              ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/25"
               : "border-border/70 bg-background text-foreground",
           )}
         >
@@ -108,16 +110,22 @@ function DayCell({
           <p
             className={cn(
               "text-xs font-normal",
-              allDone ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground",
+              allDone
+                ? "text-emerald-700 dark:text-emerald-400"
+                : "text-muted-foreground",
             )}
           >
-            {total === 0 ? "لا توجد جلسات" : allDone ? "اكتمل اليوم" : `${completed} من ${total} مكتملة`}
+            {total === 0
+              ? "لا توجد جلسات"
+              : allDone
+                ? "اكتمل اليوم"
+                : `${completed} من ${total} مكتملة`}
           </p>
           <Button
             size="sm"
             variant="ghost"
             aria-label={`تعديل جلسات ${dateLabel(day.date)}`}
-            className="-ms-2 h-7 gap-1.5 rounded-lg px-2 text-xs font-normal text-muted-foreground hover:bg-primary/10 hover:text-primary"
+            className="-ms-2 h-7 gap-1.5 rounded-lg px-2 text-xs font-normal text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
             onClick={() => onEditDay(day.date)}
           >
             <Pencil className="size-3" />
@@ -148,12 +156,12 @@ function StatusCell({
         onCheckedChange={(checked) => onComplete(session.id, checked === true)}
       />
       {done ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-          <Check className="size-3" />
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-500/15 dark:text-emerald-400">
+          <Check className="size-3" aria-hidden />
           مكتمل
         </span>
       ) : overdue ? (
-        <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+        <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-500/15 dark:text-amber-400">
           متأخر
         </span>
       ) : (
@@ -195,7 +203,10 @@ function StudySessionsTable({ days, onComplete, onDelete, onEditDay }: SessionTa
 
               if (!sessions.length) {
                 rows.push(
-                  <TableRow key={`${day.date}-empty`} className="border-t-2 border-border/70 hover:bg-transparent">
+                  <TableRow
+                    key={`${day.date}-empty`}
+                    className="group/empty border-t-2 border-border/70 hover:bg-transparent"
+                  >
                     <DayCell
                       day={day}
                       rowSpan={1}
@@ -210,7 +221,9 @@ function StudySessionsTable({ days, onComplete, onDelete, onEditDay }: SessionTa
                         onClick={() => onEditDay(day.date)}
                         className="flex h-full min-h-16 w-full items-center gap-2 px-4 text-sm text-muted-foreground transition-colors hover:bg-primary/[0.04] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                       >
-                        <CalendarPlus className="size-4" />
+                        <span className="grid size-7 place-items-center rounded-md bg-muted text-muted-foreground transition-colors group-hover/empty:bg-primary/10 group-hover/empty:text-primary">
+                          <CalendarPlus className="size-3.5" aria-hidden />
+                        </span>
                         إضافة درس لهذا اليوم
                       </button>
                     </TableCell>
@@ -225,7 +238,7 @@ function StudySessionsTable({ days, onComplete, onDelete, onEditDay }: SessionTa
                   <TableRow
                     key={session.id}
                     className={cn(
-                      "border-border/60 transition-colors hover:bg-primary/[0.03]",
+                      "group/row border-border/60 transition-colors hover:bg-primary/[0.03]",
                       index === 0 && "border-t-2 border-t-border/70",
                       isToday && "bg-primary/[0.025]",
                     )}
@@ -256,7 +269,11 @@ function StudySessionsTable({ days, onComplete, onDelete, onEditDay }: SessionTa
                       {session.lesson.title}
                     </TableCell>
                     <TableCell className="py-3.5">
-                      <StatusCell session={session} overdue={isPast && !done} onComplete={onComplete} />
+                      <StatusCell
+                        session={session}
+                        overdue={isPast && !done}
+                        onComplete={onComplete}
+                      />
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <ConfirmDialog
@@ -266,7 +283,7 @@ function StudySessionsTable({ days, onComplete, onDelete, onEditDay }: SessionTa
                             variant="ghost"
                             aria-label={`حذف ${session.lesson.title}`}
                             title="حذف الجلسة"
-                            className="rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            className="rounded-lg text-muted-foreground opacity-60 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover/row:opacity-100 focus-visible:opacity-100"
                           >
                             <Trash2 className="size-4" />
                           </Button>
@@ -310,22 +327,33 @@ export function StudySessionsView({
 
   return (
     <div className="space-y-6">
-      {weeks.map((week) => (
-        <section key={week.week} className="space-y-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-            <h2 className="font-semibold text-foreground">الأسبوع {week.week}</h2>
-            <p className="text-sm text-muted-foreground">
-              {dateLabel(week.startDate)} — {dateLabel(week.endDate)}
-            </p>
-          </div>
-          <StudySessionsTable
-            days={week.days}
-            onComplete={onComplete}
-            onDelete={onDelete}
-            onEditDay={onEditDay}
-          />
-        </section>
-      ))}
+      {weeks.map((week) => {
+        const allSessions = week.days.flatMap((day) => day.sessions);
+        const done = allSessions.filter((s) => s.completedAt).length;
+        return (
+          <section key={week.week} className="space-y-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-foreground">الأسبوع {week.week}</h2>
+                {allSessions.length > 0 && (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
+                    {done}/{allSessions.length}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {dateLabel(week.startDate)} — {dateLabel(week.endDate)}
+              </p>
+            </div>
+            <StudySessionsTable
+              days={week.days}
+              onComplete={onComplete}
+              onDelete={onDelete}
+              onEditDay={onEditDay}
+            />
+          </section>
+        );
+      })}
     </div>
   );
 }

@@ -5,7 +5,7 @@ ALTER TABLE "users"
 DROP TYPE "EducationLevel";
 DROP TYPE "Track";
 
-DROP INDEX "study_subjects_title_key";
+DROP INDEX IF EXISTS "study_subjects_title_key";
 
 ALTER TABLE "study_subjects"
   ADD COLUMN "owner_id" TEXT;

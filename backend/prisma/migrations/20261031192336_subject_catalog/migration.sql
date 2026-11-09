@@ -70,8 +70,6 @@ CREATE UNIQUE INDEX "study_lesson_completions_user_id_lesson_id_key" ON "study_l
 CREATE INDEX "study_lessons_parent_id_idx" ON "study_lessons"("parent_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "study_subjects_title_key" ON "study_subjects"("title");
-
 -- AddForeignKey
 ALTER TABLE "study_day_subjects" ADD CONSTRAINT "study_day_subjects_day_id_fkey" FOREIGN KEY ("day_id") REFERENCES "study_days"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

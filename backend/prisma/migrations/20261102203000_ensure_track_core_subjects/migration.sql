@@ -8,4 +8,8 @@ FROM (
     ('اللغة العربية'),
     ('اللغة الإنجليزية')
 ) AS subject(title)
-ON CONFLICT ("title") DO NOTHING;
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM "study_subjects" AS existing
+  WHERE existing."title" = subject.title
+);

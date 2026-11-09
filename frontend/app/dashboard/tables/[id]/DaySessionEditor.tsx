@@ -2,11 +2,20 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarDays,
+  ListPlus,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
+import MainButton from "@/components/ui/MainButton";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -14,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getStudySubject, listStudySubjects } from "@/lib/study-table";
+import { cn } from "@/lib/utils";
 import type {
   StudySessionReplacement,
   StudyTableDay,
@@ -57,45 +67,50 @@ function DaySessionEditorRow({
   );
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+    <div className="group/row rounded-xl border border-border/70 bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold text-foreground">الجلسة {index + 1}</span>
-        <div className="flex items-center gap-0.5">
-          <Button
+        <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
+          <span className="grid size-6 place-items-center rounded-md bg-primary/10 text-[11px] font-bold tabular-nums text-primary">
+            {index + 1}
+          </span>
+          الجلسة {index + 1}
+        </span>
+        <div className="flex items-center gap-0.5 opacity-60 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
+          <MainButton
             type="button"
+            title="نقل لأعلى"
+            icon={<ArrowUp />}
+            iconOnly
             size="icon-sm"
             variant="ghost"
             aria-label="نقل لأعلى"
-            title="نقل لأعلى"
             disabled={index === 0}
             className="rounded-lg text-muted-foreground"
             onClick={() => onMove(-1)}
-          >
-            <ArrowUp className="size-4" />
-          </Button>
-          <Button
+          />
+          <MainButton
             type="button"
+            title="نقل لأسفل"
+            icon={<ArrowDown />}
+            iconOnly
             size="icon-sm"
             variant="ghost"
             aria-label="نقل لأسفل"
-            title="نقل لأسفل"
             disabled={index === count - 1}
             className="rounded-lg text-muted-foreground"
             onClick={() => onMove(1)}
-          >
-            <ArrowDown className="size-4" />
-          </Button>
-          <Button
+          />
+          <MainButton
             type="button"
+            title={`حذف الجلسة ${index + 1}`}
+            icon={<Trash2 />}
+            iconOnly
             size="icon-sm"
             variant="ghost"
             aria-label={`حذف الجلسة ${index + 1}`}
-            title="حذف من اليوم"
             className="rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             onClick={onRemove}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          />
         </div>
       </div>
 
@@ -245,18 +260,52 @@ export function DaySessionEditor({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         dir="rtl"
-        className="flex max-h-[88vh] flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-2xl"
+        showCloseButton={false}
+        className="flex max-h-[88vh] flex-col gap-0 overflow-hidden rounded-3xl border border-border/70 bg-card p-0 shadow-2xl sm:max-w-2xl"
       >
-        <DialogHeader className="border-b border-border/60 px-6 py-5 text-start">
-          <DialogTitle className="text-xl">تعديل جلسات اليوم</DialogTitle>
-          <DialogDescription>
-            {dateLabel(day.date)} — رتّب الدروس بالترتيب الذي ستذاكرها به.
-          </DialogDescription>
+        <DialogClose
+          render={
+            <MainButton
+              title="إغلاق"
+              icon={<X />}
+              iconOnly
+              variant="ghost"
+              size="icon"
+              className="absolute left-4 top-4 z-10 rounded-xl text-muted-foreground"
+            />
+          }
+        />
+
+        <DialogHeader className="gap-4 border-b border-border/60 bg-gradient-to-br from-primary/[0.07] via-card to-card px-6 py-6 pe-16 text-start sm:px-7 sm:py-7 sm:pe-20">
+          <div className="flex items-start gap-4">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
+              <CalendarDays className="size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <DialogTitle className="text-xl font-bold tracking-tight sm:text-2xl">
+                  تعديل جلسات اليوم
+                </DialogTitle>
+                <span className="rounded-full border border-primary/15 bg-primary/5 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-primary">
+                  {sessions.length} جلسة
+                </span>
+              </div>
+              <DialogDescription className="leading-relaxed">
+                رتّب الدروس بالترتيب الذي ستذاكرها به، ويمكنك إضافة درس أو حذفه.
+              </DialogDescription>
+              <span className="inline-flex items-center rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                {dateLabel(day.date)}
+              </span>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="flex-1 space-y-3 overflow-y-auto bg-muted/20 px-6 py-5">
+        <div className="flex-1 space-y-3 overflow-y-auto bg-muted/20 px-4 py-5 sm:px-6">
           {allSubjects && subjectListQuery.isError && (
-            <p role="alert" className="text-sm text-destructive">
+            <p
+              role="alert"
+              className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+            >
               تعذر تحميل المواد
             </p>
           )}
@@ -282,46 +331,64 @@ export function DaySessionEditor({
           ))}
 
           {!sessions.length && (
-            <p className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
-              لا توجد جلسات لهذا اليوم. أضف درساً للبدء.
-            </p>
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-card px-6 py-10 text-center">
+              <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+                <ListPlus className="size-5" aria-hidden />
+              </span>
+              <p className="text-sm font-medium text-foreground">لا توجد جلسات لهذا اليوم</p>
+              <p className="max-w-xs text-xs text-muted-foreground">
+                ابدأ بإضافة أول درس لمتابعة تقدمك في هذا اليوم.
+              </p>
+            </div>
           )}
 
-          <Button
+          <MainButton
             type="button"
+            title="إضافة درس"
+            icon={<Plus />}
             variant="outline"
-            className="w-full gap-2 rounded-xl border-dashed bg-card"
+            className="h-12 w-full rounded-xl border-dashed bg-card text-sm transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
             disabled={!subjects.length || isLoadingSubjects}
             onClick={addSession}
-          >
-            <Plus className="size-4" />
-            إضافة درس
-          </Button>
+          />
         </div>
 
-        <DialogFooter className="flex-col-reverse gap-3 border-t border-border/60 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <DialogFooter className="flex-col-reverse gap-3 border-t border-border/60 bg-card px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p
             aria-live="polite"
-            className={
+            className={cn(
+              "inline-flex items-center gap-1.5 text-xs",
               isValid
-                ? "text-xs text-muted-foreground"
-                : "text-xs font-medium text-amber-700 dark:text-amber-400"
-            }
+                ? "text-muted-foreground"
+                : "font-medium text-amber-700 dark:text-amber-400",
+            )}
           >
+            <span
+              aria-hidden
+              className={cn(
+                "size-1.5 rounded-full",
+                isValid ? "bg-emerald-500" : "bg-amber-500",
+              )}
+            />
             {hint}
           </p>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" className="flex-1 rounded-xl sm:flex-none" onClick={onClose}>
-              إلغاء
-            </Button>
-            <Button
+          <div className="flex w-full gap-2 sm:w-auto">
+            <MainButton
               type="button"
-              className="flex-1 rounded-xl sm:flex-none"
+              title="إلغاء"
+              variant="outline"
+              className="h-11 flex-1 rounded-xl sm:flex-none"
+              onClick={onClose}
+            />
+            <MainButton
+              type="button"
+              title="حفظ جلسات اليوم"
+              loading={isSaving}
+              loadingTitle="جارٍ الحفظ..."
+              className="h-11 flex-1 rounded-xl sm:flex-none"
               disabled={isSaving || isLoadingSubjects || !isValid}
               onClick={() => void save()}
-            >
-              {isSaving ? "جارٍ الحفظ..." : "حفظ جلسات اليوم"}
-            </Button>
+            />
           </div>
         </DialogFooter>
       </DialogContent>

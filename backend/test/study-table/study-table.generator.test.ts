@@ -147,6 +147,7 @@ test('review fill reuses lessons to cover eligible days', () => {
   assert.equal(result.scheduledCount, 5);
   assert.equal(result.reviewCount, 3);
   assert.equal(new Set(result.sessions.map(({ date }) => date)).size, 5);
+  assert.equal(new Set(result.sessions.map(({ lessonId }) => lessonId)).size, 2);
 });
 
 test('empty catalogs report a NO_LESSONS suggestion and summary metadata', () => {

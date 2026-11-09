@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { CalendarPlus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import MainButton from "@/components/ui/MainButton";
 import {
@@ -336,18 +336,25 @@ export function CreateStudyTableDialog({
       <DialogContent
         dir="rtl"
         closeButtonClassName="right-auto left-2"
-        className="max-h-[90vh] gap-0 overflow-y-auto sm:max-w-3xl"
+        className="max-h-[90vh] gap-0 overflow-x-hidden overflow-y-auto rounded-2xl border-border/60 shadow-2xl shadow-primary/5 ring-1 ring-black/5 sm:max-w-3xl"
       >
-        <DialogHeader className="pb-4 text-start">
-          <DialogTitle className="text-xl font-bold">
-            إنشاء جدول مذاكرة
-          </DialogTitle>
-          <DialogDescription>
-            حدّد الفترة والمواد وأيام المذاكرة، وراجع الخطة قبل حفظها.
-          </DialogDescription>
+        <DialogHeader className=" mb-4  px-6 pb-3 pt-6 text-start backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+              <CalendarPlus className="size-[18px]" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <DialogTitle className="text-lg font-bold tracking-tight">
+                إنشاء جدول مذاكرة
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                حدّد الفترة والمواد وأيام المذاكرة، وراجع الخطة قبل حفظها.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="min-w-0 space-y-3">
           <StudyTableBasicsFields
             title={title}
             type={type}
@@ -439,7 +446,13 @@ export function CreateStudyTableDialog({
               averagePerDay={averagePerDay}
             />
           )}
-          <div className="sticky bottom-0 -mx-1 border-t bg-background/95 px-1 pb-1 pt-3 backdrop-blur">
+          <div className="sticky bottom-0 -mx-4 mt-2 border-t bg-background/95 px-4 py-3 backdrop-blur-md">
+            {preview && (
+              <p className="mb-2 text-center text-xs text-muted-foreground">
+                {preview.scheduledCount} درس مجدول · {eligibleDays} يوم · بمعدل{" "}
+                {averagePerDay}/يوم
+              </p>
+            )}
             <MainButton
               type="submit"
               fullWidth

@@ -1,7 +1,17 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Check, CalendarDays, ChevronDown, Minus, Plus } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarRange,
+  Check,
+  ChevronDown,
+  Clock,
+  FileText,
+  Minus,
+  Plus,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { FormCustomSelect } from "@/components/FormCustomSelect";
 import { FormDatePicker } from "@/components/FormDatePicker";
 import { FormInput } from "@/components/FormInput";
@@ -19,22 +29,31 @@ const selectClass =
 export function Section({
   title,
   hint,
+  icon: Icon,
   action,
   children,
 }: {
   title: string;
   hint?: string;
+  icon?: LucideIcon;
   action?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-[var(--radius-lg,0.75rem)] border bg-muted/20 p-4">
+    <section className="group space-y-3.5 rounded-xl border border-border/70 bg-card p-4 shadow-sm transition-shadow hover:shadow-md hover:shadow-primary/[0.03]">
       <header className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold">{title}</h3>
-          {hint && (
-            <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
+        <div className="flex items-start gap-2.5">
+          {Icon && (
+            <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+              <Icon className="size-3.5" aria-hidden />
+            </span>
           )}
+          <div>
+            <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+            {hint && (
+              <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
+            )}
+          </div>
         </div>
         {action}
       </header>
@@ -58,14 +77,21 @@ export function Chip({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm transition-colors",
+        "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium",
+        "transition-all duration-150 active:scale-95",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         selected
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-input bg-background text-foreground hover:bg-muted",
+          ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+          : "border-border bg-background text-foreground hover:border-primary/40 hover:bg-primary/5",
       )}
     >
-      {selected && <Check className="size-3.5" aria-hidden />}
+      <Check
+        className={cn(
+          "size-3.5 transition-all duration-150",
+          selected ? "w-3.5 scale-100 opacity-100" : "w-0 scale-0 opacity-0",
+        )}
+        aria-hidden
+      />
       {children}
     </button>
   );
@@ -87,7 +113,7 @@ export function StudyTableBasicsFields({
   onModeChange: (value: "generate" | "empty") => void;
 }) {
   return (
-    <Section title="الأساسيات">
+    <Section title="الأساسيات" icon={FileText}>
       <div className="grid gap-3 sm:grid-cols-3">
         <FormInput
           label="عنوان الجدول"
@@ -141,14 +167,18 @@ export function StudyTablePeriodFields({
   onMonthChange: (value: string) => void;
 }) {
   return (
-    <Section title="الفترة">
+    <Section title="الفترة" icon={CalendarRange}>
       {type === "MONTHLY" ? (
         <div className="grid items-end gap-3 sm:grid-cols-2">
           <label className="space-y-2 text-sm font-medium">
             الشهر
             <span className="relative block">
+              <CalendarDays
+                aria-hidden
+                className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              />
               <select
-                className={selectClass}
+                className={cn(selectClass, "ps-10")}
                 value={
                   selectedMonth
                     ? `${selectedMonth.year}-${selectedMonth.month}`
@@ -163,6 +193,7 @@ export function StudyTablePeriodFields({
                     value={`${option.year}-${option.month}`}
                   >
                     {option.label}
+                    {option.isCurrent ? " (الحالي)" : ""}
                   </option>
                 ))}
               </select>
@@ -173,9 +204,9 @@ export function StudyTablePeriodFields({
             </span>
           </label>
           {monthsLoading && (
-            <p className="pb-3 text-sm text-muted-foreground">
-              جارٍ تحميل الأشهر المتاحة...
-            </p>
+            <div className="space-y-2 pb-3">
+              <div className="h-11 animate-pulse rounded-[var(--radius-md)] bg-muted" />
+            </div>
           )}
           {monthsError && (
             <p role="alert" className="pb-3 text-sm text-destructive">
@@ -229,9 +260,9 @@ export function StudyTableScheduleFields({
   onMaxSessionsChange: (value: number) => void;
 }) {
   return (
-    <Section title="جدولة المذاكرة">
+    <Section title="جدولة المذاكرة" icon={Clock}>
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">أيام المذاكرة</legend>
+        <legend className="mb-2 text-sm font-medium">أيام المذاكرة</legend>
         <div className="flex flex-wrap gap-2">
           {STUDY_TABLE_WEEKDAYS.map((day, index) => (
             <Chip
@@ -249,24 +280,34 @@ export function StudyTableScheduleFields({
           </p>
         )}
       </fieldset>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-4">
         <div>
           <p id="sessions-label" className="text-sm font-medium">
             الحد الأقصى للجلسات يومياً
           </p>
-          <p className="text-xs text-muted-foreground">من 1 إلى 6 جلسة</p>
+          <div className="mt-2 flex gap-1" role="presentation">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "h-1.5 w-6 rounded-full transition-colors",
+                  i < maxSessionsPerDay ? "bg-primary" : "bg-muted",
+                )}
+              />
+            ))}
+          </div>
         </div>
         <div
           role="group"
           aria-labelledby="sessions-label"
-          className="flex h-11 items-center rounded-[var(--radius-md)] border bg-background"
+          className="flex h-11 items-center rounded-xl border bg-background shadow-sm"
         >
           <button
             type="button"
             aria-label="تقليل"
             disabled={maxSessionsPerDay <= 1}
             onClick={() => onMaxSessionsChange(maxSessionsPerDay - 1)}
-            className="grid size-11 place-items-center rounded-s-[var(--radius-md)] text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+            className="grid size-11 place-items-center rounded-s-xl text-muted-foreground transition-colors hover:bg-muted active:scale-95 disabled:opacity-40"
           >
             <Minus className="size-4" aria-hidden />
           </button>
@@ -279,14 +320,14 @@ export function StudyTableScheduleFields({
             onChange={(event) =>
               onMaxSessionsChange(Number(event.target.value))
             }
-            className="h-full w-14 bg-transparent text-center text-sm font-semibold tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="h-full w-14 bg-transparent text-center text-sm font-bold tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           <button
             type="button"
             aria-label="زيادة"
             disabled={maxSessionsPerDay >= 50}
             onClick={() => onMaxSessionsChange(maxSessionsPerDay + 1)}
-            className="grid size-11 place-items-center rounded-e-[var(--radius-md)] text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+            className="grid size-11 place-items-center rounded-e-xl text-muted-foreground transition-colors hover:bg-muted active:scale-95 disabled:opacity-40"
           >
             <Plus className="size-4" aria-hidden />
           </button>

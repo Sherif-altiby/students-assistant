@@ -27,6 +27,8 @@ export function useChat() {
   const queryClient = useQueryClient();
   const currentUserId = useAuthStore((s) => s.user?.id);
   const currentUser = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isBootstrapping = useAuthStore((s) => s.isBootstrapping);
 
   const [isConnected, setIsConnected] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -45,6 +47,11 @@ export function useChat() {
 
   // --- socket lifecycle -----------------------------------------------
   useEffect(() => {
+    if (isBootstrapping || !accessToken) {
+      setIsConnected(false);
+      return;
+    }
+
     const socket = connectSocket();
 
     const handleConnect = () => setIsConnected(true);
@@ -104,10 +111,7 @@ export function useChat() {
     socket.on(CHAT_EVENTS.MESSAGE_NEW, handleNewMessage);
     socket.on(CHAT_EVENTS.REACTION_UPDATED, handleReactionUpdated);
     socket.on("connect_error", handleConnectError);
-    // chat.socket.ts, top of registerChatHandlers
-    socket.onAny((event, ...args) => {
-      console.log("Server received event:", event, args);
-    });
+    setIsConnected(socket.connected);
 
     return () => {
       socket.off("connect", handleConnect);
@@ -118,7 +122,7 @@ export function useChat() {
       disconnectSocket();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [accessToken, isBootstrapping]);
 
   useEffect(() => {
     if (!isLoading) scrollToBottom("auto");
