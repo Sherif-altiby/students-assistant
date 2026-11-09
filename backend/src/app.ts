@@ -15,9 +15,6 @@ export const createApp = (): Application => {
   // Security headers
   app.use(helmet());
 
-  // CORS
-  // app.use(cors({ origin: env.corsOrigin, credentials: true }));
-
   app.use(cors({
     origin: true,
     credentials: true
