@@ -19,7 +19,7 @@ const setRefreshCookie = (res: Response, token: string): void => {
   res.cookie(REFRESH_COOKIE_NAME, token, {
     httpOnly: true,
     secure: env.isProduction,
-    sameSite: 'lax',
+    sameSite: env.isProduction ? 'none' : 'lax',
     maxAge: env.cookies.refreshMaxAgeMs,
     path: '/',  
   });
@@ -59,7 +59,7 @@ export const authController = {
     res.clearCookie(REFRESH_COOKIE_NAME, {
       path: '/',
       secure: env.isProduction,
-      sameSite: 'lax',
+      sameSite: env.isProduction ? 'none' : 'lax',
       httpOnly: true,
     });
     res.status(StatusCodes.NO_CONTENT).send();

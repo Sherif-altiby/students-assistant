@@ -42,6 +42,10 @@ export const env = {
   port: parsed.data.PORT,
   databaseUrl: parsed.data.DATABASE_URL,
   corsOrigin: parsed.data.CORS_ORIGIN,
+  corsOrigins: parsed.data.CORS_ORIGIN === '*'
+    ? []
+    : parsed.data.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean),
+  frontendOrigin: new URL(parsed.data.FRONTEND_URL).origin,
   isProduction: parsed.data.NODE_ENV === 'production',
   isDevelopment: parsed.data.NODE_ENV === 'development',
   jwt: {

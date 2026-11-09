@@ -15,21 +15,19 @@ export const createApp = (): Application => {
   // Security headers
   app.use(helmet());
 
-  const allowedOrigins = [
-    'https://students-assistant-nsve.vercel.app',
-    'http://localhost:3001',
-  ];
+  const allowedOrigins = new Set([
+    env.frontendOrigin,
+    ...env.corsOrigins,
+    ...(env.isDevelopment ? ['http://localhost:3001'] : []),
+  ]);
 
   app.use(cors({
     origin: (origin, callback) => {
-      console.log('REQUEST ORIGIN:', origin);
-      console.log('ALLOWED ORIGINS:', allowedOrigins);
-
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.has(origin)) {
         return callback(null, true);
       }
 
-      return callback(new Error(`Origin ${origin} not allowed`));
+      return callback(new Error('Request origin is not allowed by CORS'));
     },
     credentials: true,
   }));
