@@ -1,4 +1,4 @@
-// middleware.ts
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtDecode } from "jwt-decode";
@@ -27,73 +27,119 @@ const PATH_ROLE: Record<string, UserRole> = {
   "/parent": "PARENT",
 };
 
-const PUBLIC_ROUTES = ["/login", "/register", "/accept-invitation"];
+const PUBLIC_ROUTES = [
+  "/login",
+  "/register",
+  "/accept-invitation",
+];
+
+const VALID_ROLES: UserRole[] = [
+  "USER",
+  "ADMIN",
+  "DOCTOR",
+  "PARENT",
+];
 
 function decodeRole(token: string): UserRole | null {
   try {
     const decoded = jwtDecode<RefreshTokenPayload>(token);
-    const expired = decoded.exp * 1000 < Date.now();
-    console.log("[middleware] decoded refreshToken:", {
+
+    console.log("[middleware] JWT details:", {
       role: decoded.role,
-      exp: new Date(decoded.exp * 1000).toISOString(),
-      expired,
+      exp: decoded.exp,
+      hasExpiration: typeof decoded.exp === "number",
+      isExpired:
+        typeof decoded.exp === "number"
+          ? decoded.exp * 1000 <= Date.now()
+          : true,
     });
-    if (expired) return null;
-    return decoded.role ?? null;
-  } catch (err) {
-    console.log("[middleware] failed to decode refreshToken:", err);
+
+    if (
+      !decoded.exp ||
+      decoded.exp * 1000 <= Date.now()
+    ) {
+      console.log("[middleware] Invalid or expired token");
+      return null;
+    }
+
+    if (!VALID_ROLES.includes(decoded.role)) {
+      console.log("[middleware] Invalid role:", decoded.role);
+      return null;
+    }
+
+    return decoded.role;
+  } catch (error) {
+    console.error("[middleware] JWT decoding failed:", error);
     return null;
   }
 }
 
 function ownerRoleOf(pathname: string): UserRole | null {
-  const prefix = Object.keys(PATH_ROLE).find((p) => pathname.startsWith(p));
+  const prefix = Object.keys(PATH_ROLE).find(
+    (path) =>
+      pathname === path || pathname.startsWith(`${path}/`)
+  );
+
   return prefix ? PATH_ROLE[prefix] : null;
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+  const isPublicRoute = PUBLIC_ROUTES.some(
+    (route) =>
+      pathname === route || pathname.startsWith(`${route}/`)
+  );
+
   const routeOwnerRole = ownerRoleOf(pathname);
   const isProtectedRoute = routeOwnerRole !== null;
 
-  const refreshToken = request.cookies.get("refreshToken")?.value;
+  const refreshToken =
+    request.cookies.get("refreshToken")?.value;
 
   console.log("[middleware] ----- incoming request -----");
   console.log("[middleware] pathname:", pathname);
-  console.log("[middleware] all cookies:", request.cookies.getAll().map((c) => c.name));
-  console.log("[middleware] refreshToken present:", !!refreshToken);
+  console.log(
+    "[middleware] cookie names:",
+    request.cookies.getAll().map((cookie) => cookie.name)
+  );
+  console.log(
+    "[middleware] refreshToken present:",
+    Boolean(refreshToken)
+  );
 
   const role = refreshToken ? decodeRole(refreshToken) : null;
+
   console.log("[middleware] resolved role:", role);
-  console.log("[middleware] routeOwnerRole:", routeOwnerRole, "| isProtectedRoute:", isProtectedRoute);
+  console.log("[middleware] expected role:", routeOwnerRole);
 
   if (isPublicRoute && role) {
-    console.log("[middleware] -> logged in on public route, redirecting to", ROLE_HOME[role]);
-    return NextResponse.redirect(new URL(ROLE_HOME[role], request.url));
+    return NextResponse.redirect(
+      new URL(ROLE_HOME[role], request.url)
+    );
   }
 
   if (!isProtectedRoute) {
-    console.log("[middleware] -> not a protected route, passing through");
     return NextResponse.next();
   }
 
   if (!role) {
-    console.log("[middleware] -> no valid role/session, redirecting to /login");
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("from", pathname);
+
+    console.log("[middleware] Redirecting to login");
+
     return NextResponse.redirect(loginUrl);
   }
 
   if (routeOwnerRole !== role) {
-    console.log(
-      `[middleware] -> role mismatch (user is ${role}, route is for ${routeOwnerRole}), redirecting to ${ROLE_HOME[role]}`
+    return NextResponse.redirect(
+      new URL(ROLE_HOME[role], request.url)
     );
-    return NextResponse.redirect(new URL(ROLE_HOME[role], request.url));
   }
 
-  console.log("[middleware] -> access granted");
+  console.log("[middleware] Access granted");
+
   return NextResponse.next();
 }
 
@@ -105,7 +151,6 @@ export const config = {
     "/parent/:path*",
     "/register/:path*",
     "/login",
-    "/register",
     "/accept-invitation",
   ],
 };
