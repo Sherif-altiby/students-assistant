@@ -16,13 +16,13 @@ async function proxy(
   context: RouteContext
 ): Promise<Response> {
   try {
-    const backendBaseUrl = process.env.BACKEND_API_URL;
+    const backendBaseUrl = process.env.API_URL;
 
     if (!backendBaseUrl) {
       return Response.json(
         {
           status: "error",
-          message: "BACKEND_API_URL is not configured",
+          message: "API_URL is not configured",
         },
         { status: 500 }
       );
