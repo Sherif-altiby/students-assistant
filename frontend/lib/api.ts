@@ -10,38 +10,35 @@ import { authApi } from "@/lib/auth-api";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
 
-/**
- * Main API client for normal application requests.
- * Keeps your existing accessToken Authorization behavior.
- */
+// Main API client for normal application requests.
 export const api = axios.create({
   baseURL,
   withCredentials: true,
 });
 
-// Attach the current access token to every outgoing request.
+// Attach accessToken to normal API requests.
 api.interceptors.request.use((config) => {
   const { accessToken } = useAuthStore.getState();
 
   if (accessToken) {
-    config.headers.set("Authorization", `Bearer ${accessToken}`);
+    config.headers.set(
+      "Authorization",
+      `Bearer ${accessToken}`
+    );
   }
 
   return config;
 });
 
-/**
- * Refresh through the Next.js same-origin proxy.
- * Do not use the backend URL directly here.
- */
+// Prevent multiple simultaneous refresh requests.
 let refreshPromise: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
     refreshPromise = authApi
       .post<RefreshResponse>("/refresh")
-      .then((res) => {
-        const token = res.data.data.accessToken;
+      .then((response) => {
+        const token = response.data.data.accessToken;
 
         useAuthStore.getState().setAccessToken(token);
 
