@@ -21,10 +21,7 @@ api.interceptors.request.use((config) => {
   const { accessToken } = useAuthStore.getState();
 
   if (accessToken) {
-    config.headers.set(
-      "Authorization",
-      `Bearer ${accessToken}`
-    );
+    config.headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
   return config;
@@ -70,7 +67,8 @@ api.interceptors.response.use(
 
     const isAuthCall =
       originalRequest?.url?.includes("/auth/login") ||
-      originalRequest?.url?.includes("/auth/register");
+      originalRequest?.url?.includes("/auth/register") ||
+      originalRequest?.url?.includes("/auth/register-parent");
 
     if (
       status === 401 &&

@@ -1,4 +1,7 @@
+
 import { api, refreshAccessToken } from "@/lib/api";
+import { authApi } from "@/lib/auth-api";
+
 import type {
   AuthResponse,
   LoginPayload,
@@ -8,12 +11,12 @@ import type {
 } from "@/types";
 
 export async function login(payload: LoginPayload) {
-  const res = await api.post<AuthResponse>("/auth/login", payload);
+  const res = await authApi.post<AuthResponse>("/login", payload);
   return res.data.data;
 }
 
 export async function register(payload: RegisterPayload) {
-  const res = await api.post<AuthResponse>("/auth/register", payload);
+  const res = await authApi.post<AuthResponse>("/register", payload);
   return res.data.data;
 }
 
@@ -25,7 +28,7 @@ export interface ParentRegisterPayload {
 }
 
 export async function registerParent(payload: ParentRegisterPayload) {
-  const res = await api.post<AuthResponse>("/auth/register-parent", payload);
+  const res = await authApi.post<AuthResponse>("/register-parent", payload);
   return res.data.data;
 }
 
@@ -35,13 +38,12 @@ export async function fetchMe(): Promise<User> {
 }
 
 export async function logout() {
-  await api.post("/auth/logout");
+  await authApi.post("/logout");
 }
 
 /**
- * Called once on app load. The refreshToken httpOnly cookie (if present and
- * valid) lets us mint a fresh access token and re-hydrate the user without
- * asking them to log in again.
+ * Called once on app load.
+ * The refreshToken httpOnly cookie is sent through the Next.js proxy.
  */
 export async function restoreSession(): Promise<{
   accessToken: string;
@@ -50,6 +52,7 @@ export async function restoreSession(): Promise<{
   try {
     const accessToken = await refreshAccessToken();
     const user = await fetchMe();
+
     return { accessToken, user };
   } catch {
     return null;
