@@ -26,9 +26,43 @@ enum StudyTableType {
 enum NotificationType {
   LATE_STUDY
   DATE_CONFLICT
+  BOOK_READY
+  BOOK_FAILED
 }
 
 enum TaskFrequency {
   TODAY
   EVERY_DAY
+}
+
+enum BookVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum BookModerationStatus {
+  ACTIVE
+  HIDDEN
+}
+
+enum BookProcessingStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum AiMessageRole {
+  USER
+  ASSISTANT
+}
+
+enum AiOperation {
+  QUESTION
+  EXPLAIN_PAGE
+  SUMMARIZE
+  GENERATE_QUESTIONS
+  FLASHCARDS
+  CHECK_ANSWER
+  FOLLOW_UP
 }
