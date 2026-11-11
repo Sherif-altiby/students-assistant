@@ -1,3 +1,5 @@
+// authenticate.ts
+
 import { NextFunction, Request, Response } from 'express';
 import { UnauthorizedError } from '../utils/AppError';
 import { jwtService } from '../utils/Jwt';

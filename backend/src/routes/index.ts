@@ -11,6 +11,7 @@ import { subjectRouter } from '../modules/subject/subject.routes';
 import { notificationRouter } from '../modules/notification/notification.routes';
 import { parentRouter, studentParentLinkRouter } from '../modules/parent/parent.routes';
 import { suggestionRouter } from '../modules/suggestion/suggestion.routes';
+import { bookRouter } from '../modules/books/book.routes';
  
 const router = Router(); 
 
@@ -28,5 +29,6 @@ router.use('/notifications', notificationRouter);
 router.use('/parent', parentRouter);
 router.use('/parent-links', studentParentLinkRouter);
 router.use('/suggestions', suggestionRouter);
+router.use('/books', bookRouter);
 
 export { router as apiRouter };
