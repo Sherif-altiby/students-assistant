@@ -1,0 +1,75 @@
+enum UserStatus {
+  PENDING // created by admin, invite email sent, password not set yet
+  ACTIVE // normal signup, or invite accepted
+}
+
+model User {
+  id       String     @id @default(uuid())
+  name     String
+  email    String     @unique
+  phone    String?    @unique
+  password String? // nullable: doctors have no password until they accept the invite
+  role     Role       @default(USER)
+  status   UserStatus @default(ACTIVE)
+  gender   Gender?
+
+  level       EducationLevel?
+  track       Track?
+  parentPhone String?         @map("parent_phone")
+  country     String?
+  timezone    String          @default("Africa/Cairo")
+
+  invitationToken          String?   @unique @map("invitation_token")
+  invitationTokenExpiresAt DateTime? @map("invitation_token_expires_at")
+
+  habits Habit[]
+  tasks  Task[]
+
+  studyTables       StudyTable[]
+  lessonCompletions StudyLessonCompletion[]
+  studySessions     StudySession[]
+  notifications     Notification[]
+
+  completedHabits CompletedHabit[]
+
+  taskHistories TaskHistory[]
+
+  lessonDates LessonDate[]
+
+  parentLinks  ParentStudentLink[] @relation("ParentLinks")
+  studentLinks ParentStudentLink[] @relation("StudentLinks")
+
+  messages  Message[]
+  reactions Reaction[]
+
+  doctorAvailabilityRules DoctorAvailabilityRule[] @relation("DoctorAvailabilityRules")
+  doctorSlots             AvailabilitySlot[]       @relation("DoctorSlots")
+  bookings                SessionBooking[]         @relation("UserBookings")
+  ratingsGiven            SessionRating[]          @relation("UserRatings")
+  suggestions             Suggestion[]
+
+  books           Book[]           @relation("BookOwner")
+  aiConversations AiConversation[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model ParentStudentLink {
+  id        String                  @id @default(uuid())
+  parentId  String                  @map("parent_id")
+  studentId String                  @map("student_id")
+  status    ParentStudentLinkStatus @default(PENDING)
+  createdAt DateTime                @default(now()) @map("created_at")
+  updatedAt DateTime                @updatedAt @map("updated_at")
+
+  parent  User @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
+  student User @relation("StudentLinks", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@index([parentId, status])
+  @@index([studentId, status])
+  @@map("parent_student_links")
+}

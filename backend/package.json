@@ -29,9 +29,10 @@
     "deepmerge-ts": "^8.0.0"
   },
   "dependencies": {
-    "@sparticuz/chromium": "153.0.0",
+    "@google/genai": "^3.1.0",
     "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "6.19.3",
+    "@sparticuz/chromium": "153.0.0",
     "@types/socket.io": "^3.0.1",
     "arabic-reshaper": "^1.1.0",
     "bcryptjs": "^3.0.3",
@@ -46,6 +47,7 @@
     "morgan": "^1.11.0",
     "nodemailer": "10.3.1",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.5.438",
     "pdfmake": "^0.3.11",
     "pg": "^8.22.0",
     "puppeteer": "25.11.0",
@@ -61,6 +63,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
+    "@types/node": "^26.6.6",
     "@types/pdfkit": "^0.17.6",
     "@types/pdfmake": "^0.3.3",
     "@types/pg": "^8.20.0",

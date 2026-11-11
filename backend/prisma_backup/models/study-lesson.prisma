@@ -1,0 +1,39 @@
+// prisma/models/study-lesson.prisma
+model StudyLesson {
+  id String @id @default(uuid())
+
+  title String
+
+  // Position inside the unit (syllabus order matters).
+  order Int @default(1)
+
+  unitId String    @map("unit_id")
+  unit   StudyUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  completions StudyLessonCompletion[]
+  sessions    StudySession[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([unitId, order])
+  @@index([unitId])
+  @@map("study_lessons")
+}
+
+model StudyLessonCompletion {
+  id String @id @default(uuid())
+
+  completedAt DateTime @default(now())
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lessonId String      @map("lesson_id")
+  lesson   StudyLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  // Lessons are now shared across users, so uniqueness is per user + lesson.
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@map("study_lesson_completions")
+}

@@ -1,0 +1,33 @@
+// prisma/models/lesson-date.prisma
+//
+// A recurring weekly lesson slot the student adds to their schedule
+// (e.g. "Math with Mahmoud, Saturday 14:00-15:00").
+// Reuses the DayOfWeek enum already defined in availability.prisma.
+
+model LessonDate {
+  id String @id @default(uuid())
+
+  subject String
+  teacher String
+
+  dayOfWeek DayOfWeek @map("day_of_week")
+
+  // Stored as zero-padded 24h "HH:mm" strings (e.g. "14:00"), same
+  // convention as DoctorAvailabilityRule.startTime/endTime. Because the
+  // strings are zero-padded, plain lexicographic comparison in SQL
+  // ("lt"/"gt") sorts and range-compares them correctly, which is what
+  // the conflict-detection query in the repository relies on.
+  startTime String @map("start_time")
+  endTime   String @map("end_time")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Speeds up both "list my lessons" and the per-day conflict check.
+  @@index([userId])
+  @@index([userId, dayOfWeek])
+  @@map("lesson_dates")
+}

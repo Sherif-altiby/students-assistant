@@ -1,0 +1,49 @@
+// prisma/models/ai-chat.prisma
+
+model AiConversation {
+  id String @id @default(uuid())
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // If the book is deleted, the conversation stays (parents can still read it)
+  bookId String? @map("book_id")
+  book   Book?   @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  bookTitle String  @map("book_title") // snapshot of the book title
+  title     String?
+
+  archivedAt DateTime? @map("archived_at")
+
+  messages AiMessage[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, updatedAt])
+  @@index([bookId])
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id String @id @default(uuid())
+
+  conversationId String         @map("conversation_id")
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role      AiMessageRole
+  operation AiOperation?
+  content   String
+
+  citedPages Int[] @default([]) @map("cited_pages")
+  startPage  Int?  @map("start_page")
+  endPage    Int?  @map("end_page")
+
+  inputTokens  Int? @map("input_tokens")
+  outputTokens Int? @map("output_tokens")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("ai_messages")
+}

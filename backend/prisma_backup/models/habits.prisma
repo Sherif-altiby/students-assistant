@@ -1,0 +1,34 @@
+model Habit {
+  id    String @id @default(uuid())
+  title String
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  completions CompletedHabit[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("habits")
+}
+
+model CompletedHabit {
+  id String @id @default(uuid())
+
+  date DateTime @db.Date
+
+  completedAt DateTime @default(now()) @map("completed_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  habitId String @map("habit_id")
+  habit   Habit  @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([userId])
+  @@index([habitId])
+  @@map("completed_habits")
+}
