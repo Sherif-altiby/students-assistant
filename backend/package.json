@@ -29,6 +29,8 @@
     "deepmerge-ts": "^8.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1166.0",
+    "@aws-sdk/s3-request-presigner": "^3.1166.0",
     "@google/genai": "^3.1.0",
     "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "6.19.3",

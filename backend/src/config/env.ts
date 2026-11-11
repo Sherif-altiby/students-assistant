@@ -27,6 +27,12 @@ const envSchema = z.object({
 
   // --- Used to build links sent in emails (e.g. doctor invitation) ---
   FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL'),
+
+  // --- Cloudflare R2 (book storage) ---
+  R2_ACCOUNT_ID: z.string().min(1, 'R2_ACCOUNT_ID is required'),
+  R2_ACCESS_KEY_ID: z.string().min(1, 'R2_ACCESS_KEY_ID is required'),
+  R2_SECRET_ACCESS_KEY: z.string().min(1, 'R2_SECRET_ACCESS_KEY is required'),
+  R2_BUCKET: z.string().min(1, 'R2_BUCKET is required'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -65,4 +71,10 @@ export const env = {
     from: parsed.data.MAIL_FROM,
   },
   frontendUrl: parsed.data.FRONTEND_URL,
+  r2: {
+    accountId: parsed.data.R2_ACCOUNT_ID,
+    accessKeyId: parsed.data.R2_ACCESS_KEY_ID,
+    secretAccessKey: parsed.data.R2_SECRET_ACCESS_KEY,
+    bucket: parsed.data.R2_BUCKET,
+  },
 } as const;

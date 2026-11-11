@@ -6,10 +6,17 @@ import { logger } from './utils/logger';
 import { initSocket } from './socket';
 import { runLateStudyScan } from './modules/study-table/study-lateness.cron';
 import { pdfService } from './modules/study-table/pdf.service';
+import { bookService } from './modules/books/book.service';
 
 const start = async (): Promise<void> => {
   await prisma.$connect();
   logger.info('Database connected');
+
+  // Books left in PROCESSING by a previous run can never finish:
+  // mark them FAILED so the owner can retry with POST /books/:id/complete
+  await bookService
+    .recoverInterruptedBooks()
+    .catch((error) => logger.error('Book recovery failed', error));
 
   const app = createApp();
   const httpServer = http.createServer(app);

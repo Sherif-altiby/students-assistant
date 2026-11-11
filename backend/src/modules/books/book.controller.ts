@@ -9,6 +9,7 @@ import {
   chatSchema,
   conversationMessagesSchema,
   listBooksSchema,
+  requestUploadSchema,
 } from './book.validation';
 
 export const bookController = {
@@ -22,6 +23,24 @@ export const bookController = {
     const { params } = getValidatedRequest(req, bookIdSchema);
     const data = await bookService.getOne(req.user!.id, params.id);
     res.status(StatusCodes.OK).json({ status: 'success', data });
+  }),
+
+  requestUpload: asyncHandler(async (req: Request, res: Response) => {
+    const { body } = getValidatedRequest(req, requestUploadSchema);
+    const data = await bookService.requestUpload(req.user!.id, body);
+    res.status(StatusCodes.CREATED).json({ status: 'success', data });
+  }),
+
+  completeUpload: asyncHandler(async (req: Request, res: Response) => {
+    const { params } = getValidatedRequest(req, bookIdSchema);
+    const data = await bookService.completeUpload(req.user!.id, params.id);
+    res.status(StatusCodes.ACCEPTED).json({ status: 'success', data });
+  }),
+
+  remove: asyncHandler(async (req: Request, res: Response) => {
+    const { params } = getValidatedRequest(req, bookIdSchema);
+    await bookService.remove(req.user!.id, params.id);
+    res.status(StatusCodes.NO_CONTENT).send();
   }),
 
   chat: asyncHandler(async (req: Request, res: Response) => {
