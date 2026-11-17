@@ -1,5 +1,8 @@
 import { api } from "@/lib/api";
+ 
 import type {
+  BookStatus,
+  BookSummary,
   CompleteUploadResult,
   UploadBookMeta,
   UploadTarget,
@@ -94,4 +97,54 @@ export async function uploadBook(
 
   await putFileToStorage(file, target, onProgress);
   return completeBookUpload(target.bookId);
+}
+
+
+export interface BookStatusInfo {
+  id: string;
+  status: BookStatus;
+  progress: number;
+  failureReason: string | null;
+}
+
+export async function getBookStatus(bookId: string): Promise<BookStatusInfo> {
+  const res = await api.get(`/books/${bookId}`);
+  const body = res.data?.data ?? res.data;
+  const book = body.book ?? body;
+
+  return {
+    id: book.id ?? bookId,
+    status: book.status,
+    progress: book.progress ?? 0,
+    failureReason: book.failureReason ?? null,
+  };
+}
+
+type RawBook = Partial<BookSummary>;
+
+function toBookSummary(raw: RawBook): BookSummary {
+  return {
+    id: raw.id as string,
+    title: raw.title ?? "بدون عنوان",
+    status: raw.status as BookStatus,
+    progress: raw.progress ?? 0,
+    pageCount: raw.pageCount ?? null,
+    language: raw.language ?? null,
+    visibility: raw.visibility ?? "PRIVATE",
+    createdAt: raw.createdAt ?? null,
+  };
+}
+
+export async function listBooks(): Promise<BookSummary[]> {
+  const res = await api.get("/books");
+  const body = res.data?.data ?? res.data;
+  // handles: [..]  or  { books: [..] }  or  { items: [..] }
+  const rows: RawBook[] = Array.isArray(body)
+    ? body
+    : (body?.books ?? body?.items ?? []);
+  return rows.map(toBookSummary);
+}
+
+export async function deleteBook(bookId: string): Promise<void> {
+  await api.delete(`/books/${bookId}`);
 }

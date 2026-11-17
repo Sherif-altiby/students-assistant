@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { CheckCircle2, FileText, Loader2, UploadCloud, X } from "lucide-react";
 import MainButton from "@/components/ui/MainButton";
@@ -193,6 +193,15 @@ export function BookUploadCard() {
             ? "الكتاب جاهز، تقدر تسأله دلوقتي"
             : "تم رفع الكتاب، وبيتم تجهيزه"}
         </p>
+      )}
+
+      {result?.status === "READY" && (
+        <Link
+          href={`/dashboard/ai-chat/${result.id}`}
+          className="inline-flex items-center rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          ابدأ المحادثة مع الكتاب
+        </Link>
       )}
 
       <MainButton

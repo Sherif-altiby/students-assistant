@@ -6,6 +6,7 @@ import { ragService, type ChatInput } from '../ai/rag/rag.service';
 import { bookRepository } from './book.repository';
 import { storageService } from './storage.service';
 import { MAX_BOOK_SIZE_BYTES } from './book.validation';
+import { notifyBookOutcome } from './book-notifications';
 
 // ---- limits (change here) ----
 const MAX_BOOKS_PER_USER = 20;
@@ -54,6 +55,7 @@ async function processBook(book: { id: string; fileKey: string }): Promise<void>
     );
   } finally {
     releaseSlot();
+    await notifyBookOutcome(book.id);
   }
 }
 

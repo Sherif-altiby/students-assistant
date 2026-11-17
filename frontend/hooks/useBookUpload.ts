@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import axios from "axios";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { uploadBook } from "@/lib/books";
-import type { UploadBookMeta } from "@/types/book";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getBookStatus, uploadBook } from "@/lib/books";
+import type { CompleteUploadResult, UploadBookMeta } from "@/types/book";
 
 export type UploadPhase = "idle" | "uploading" | "processing";
+
+const POLL_INTERVAL_MS = 3000;
+
+const isFinal = (status?: string) => status === "READY" || status === "FAILED";
 
 function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
@@ -19,29 +23,66 @@ function getErrorMessage(error: unknown): string {
 export function useBookUpload() {
   const queryClient = useQueryClient();
   const [progress, setProgress] = useState(0);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: ({ file, meta }: { file: File; meta: UploadBookMeta }) => {
       setProgress(0);
       return uploadBook(file, meta, setProgress);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["books"] }),
+    onSuccess: (data) => {
+      // If the server is still processing, keep checking until it finishes
+      setProcessingId(isFinal(data.status) ? null : data.id);
+      queryClient.invalidateQueries({ queryKey: ["books"] });
+    },
   });
 
-  // The file bytes go to R2 first (0 to 100%), then the server reads the book
-  const phase: UploadPhase = !mutation.isPending
-    ? "idle"
-    : progress < 100
+  const statusQuery = useQuery({
+    queryKey: ["book-status", processingId],
+    queryFn: () => getBookStatus(processingId as string),
+    enabled: processingId !== null,
+    refetchInterval: (query) =>
+      isFinal(query.state.data?.status) ? false : POLL_INTERVAL_MS,
+  });
+
+  const polled = statusQuery.data;
+  const isProcessing = processingId !== null && !isFinal(polled?.status);
+
+  // Latest known state of the book: upload response, updated by polling
+  const result: CompleteUploadResult | null = mutation.data
+    ? {
+        ...mutation.data,
+        status: polled?.status ?? mutation.data.status,
+        progress: polled?.progress ?? mutation.data.progress,
+      }
+    : null;
+
+  const phase: UploadPhase = mutation.isPending
+    ? progress < 100
       ? "uploading"
-      : "processing";
+      : "processing"
+    : isProcessing
+      ? "processing"
+      : "idle";
+
+  const error = mutation.isError
+    ? getErrorMessage(mutation.error)
+    : polled?.status === "FAILED"
+      ? `فشل تجهيز الكتاب${polled.failureReason ? `: ${polled.failureReason}` : ""}`
+      : statusQuery.isError
+        ? "تعذر متابعة حالة الكتاب"
+        : null;
 
   return {
     upload: mutation.mutate,
     phase,
     progress,
-    isPending: mutation.isPending,
-    result: mutation.data ?? null,
-    error: mutation.isError ? getErrorMessage(mutation.error) : null,
-    reset: mutation.reset,
+    isPending: mutation.isPending || isProcessing,
+    result,
+    error,
+    reset: () => {
+      mutation.reset();
+      setProcessingId(null);
+    },
   };
 }

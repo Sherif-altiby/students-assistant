@@ -18,3 +18,14 @@ export interface UploadBookMeta {
   title: string;
   language?: string;
 }
+
+export interface BookSummary {
+  id: string;
+  title: string;
+  status: BookStatus;
+  progress: number;
+  pageCount: number | null;
+  language: string | null;
+  visibility: "PRIVATE" | "PUBLIC";
+  createdAt: string | null;
+}
