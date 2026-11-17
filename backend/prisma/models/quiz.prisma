@@ -1,0 +1,87 @@
+// prisma/models/quiz.prisma
+
+enum QuizQuestionType {
+  MCQ
+  TRUE_FALSE
+  FILL_BLANK
+}
+
+model Quiz {
+  id String @id @default(uuid())
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // If the book is deleted the quiz stays (the student can still review it)
+  bookId String? @map("book_id")
+  book   Book?   @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  bookTitle String @map("book_title") // snapshot of the book title
+  title     String
+  language  String // "ar" | "en"
+  startPage Int    @map("start_page")
+  endPage   Int    @map("end_page")
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, createdAt])
+  @@index([bookId])
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id String @id @default(uuid())
+
+  quizId String @map("quiz_id")
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  position Int
+  type     QuizQuestionType
+  prompt   String
+
+  // MCQ only: the 4 choices
+  options String[] @default([])
+
+  // MCQ: index of the right option as text ("0".."3")
+  // TRUE_FALSE: "true" | "false"
+  // FILL_BLANK: the expected word or phrase
+  correctAnswer   String   @map("correct_answer")
+  acceptedAnswers String[] @default([]) @map("accepted_answers") // FILL_BLANK alternatives
+
+  explanation String
+  pageNumber  Int?    @map("page_number")
+  topic       String?
+
+  @@unique([quizId, position])
+  @@map("quiz_questions")
+}
+
+model QuizAttempt {
+  id String @id @default(uuid())
+
+  quizId String @map("quiz_id")
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // { "<questionId>": "<answer>" }
+  answers Json
+
+  score Int
+  total Int
+
+  // [{ "topic": "...", "pageNumber": 12, "wrong": 2, "total": 3 }]
+  weakPoints Json    @map("weak_points")
+  advice     String? // short study advice written by the AI
+
+  submittedAt DateTime @default(now()) @map("submitted_at")
+
+  @@index([quizId])
+  @@index([userId, submittedAt])
+  @@map("quiz_attempts")
+}

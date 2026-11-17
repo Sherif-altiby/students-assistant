@@ -12,6 +12,7 @@ import { notificationRouter } from '../modules/notification/notification.routes'
 import { parentRouter, studentParentLinkRouter } from '../modules/parent/parent.routes';
 import { suggestionRouter } from '../modules/suggestion/suggestion.routes';
 import { bookRouter } from '../modules/books/book.routes';
+import { quizRouter } from '../modules/quiz/quiz.routes';
  
 const router = Router(); 
 
@@ -30,5 +31,6 @@ router.use('/parent', parentRouter);
 router.use('/parent-links', studentParentLinkRouter);
 router.use('/suggestions', suggestionRouter);
 router.use('/books', bookRouter);
+router.use('/quizzes', quizRouter);
 
 export { router as apiRouter };
