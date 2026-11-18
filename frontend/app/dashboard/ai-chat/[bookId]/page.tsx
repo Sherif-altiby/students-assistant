@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { ArrowRight, Bot } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ChatWindow } from "@/components/dashboard/ai-chat/ChatWindow";
-
+import { CreateQuizCard } from "@/components/dashboard/quiz/CreateQuizCard";
 export default function BookChatPage() {
   const { bookId } = useParams<{ bookId: string }>();
 
@@ -27,6 +27,7 @@ export default function BookChatPage() {
       />
 
       <ChatWindow key={bookId} bookId={bookId} />
+      <CreateQuizCard bookId={bookId} />
     </div>
   );
 }

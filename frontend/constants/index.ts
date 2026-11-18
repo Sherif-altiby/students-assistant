@@ -215,3 +215,23 @@ export const STUDY_TABLE_WEEKDAYS = [
   "الجمعة",
   "السبت",
 ] as const;
+
+
+export const QUIZ_MESSAGE_MIN = 3;
+export const QUIZ_MESSAGE_MAX = 500;
+export const QUIZ_LIST_PAGE_SIZE = 10;
+
+// Clickable examples under the request box (Arabic and English)
+export const QUIZ_EXAMPLES = [
+  "اعملي كويز على أول 10 صفحات",
+  "كويز من صفحة 20 إلى 35، 15 سؤال",
+  "اسألني 8 أسئلة من صفحة 5 إلى 12",
+  "quiz on pages 20 to 35, 15 questions",
+];
+
+// Shown one after another while the server is generating the quiz
+export const QUIZ_PROGRESS_STEPS = [
+  "جارٍ قراءة الصفحات...",
+  "جارٍ كتابة الأسئلة...",
+  "جارٍ مراجعة الأسئلة...",
+];

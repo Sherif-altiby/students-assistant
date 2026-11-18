@@ -18,6 +18,8 @@ import {
   CalendarDays,
   BookOpen,
   ChevronDown,
+  Library,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -39,13 +41,12 @@ const STUDENT_NAV_ITEMS: SidebarItem[] = [
   { href: "/dashboard/habits", label: "العادات", icon: Repeat },
   { href: "/dashboard/tables", label: "الجداول", icon: Table },
   { href: "/dashboard/subjects", label: "المواد الدراسية", icon: BookOpen },
-  {
-    href: "/dashboard/lesson-dates",
-    label: "مواعيد الدروس",
-    icon: CalendarDays,
-  },
+  { href: "/dashboard/lesson-dates", label: "مواعيد الدروس", icon: CalendarDays, },
   { href: "/dashboard/support", label: "الدعم النفسي", icon: HeartHandshake },
   { href: "/dashboard/chat", label: "الدردشات", icon: MessageCircleCode },
+  { href: "/dashboard/subjects", label: "المواد الدراسية", icon: BookOpen },
+  { href: "/dashboard/ai-chat", label: "كتبي", icon: Library },
+  { href: "/dashboard/quizzes", label: "الكويزات", icon: ClipboardList },
   // { href: "/dashboard/consultations", label: "الاستشارات", icon: MessageCircleQuestion,},
 ];
 
@@ -172,139 +173,139 @@ export function Sidebar({
       >
         {showSkeleton
           ? items.map((item) => (
-              <div
-                key={item.href}
-                aria-hidden="true"
-                className="flex h-10 items-center justify-center gap-3 rounded-xl px-0 md:justify-start md:px-3"
-              >
-                <Skeleton className="size-5 shrink-0 rounded-md" />
-                <Skeleton className="hidden h-4 w-28 md:block" />
-              </div>
-            ))
+            <div
+              key={item.href}
+              aria-hidden="true"
+              className="flex h-10 items-center justify-center gap-3 rounded-xl px-0 md:justify-start md:px-3"
+            >
+              <Skeleton className="size-5 shrink-0 rounded-md" />
+              <Skeleton className="hidden h-4 w-28 md:block" />
+            </div>
+          ))
           : items.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.exact
-                ? pathname === item.href
-                : pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
-              const hasActiveChild = item.children?.some((child) =>
-                child.exact
-                  ? pathname === child.href
-                  : pathname === child.href ||
-                    pathname.startsWith(`${child.href}/`),
-              );
-              const isExpanded =
-                expandedItems[item.href] ?? hasActiveChild ?? false;
-              const showChildren = item.collapsible
-                ? isExpanded
-                : !collapsed || Boolean(hasActiveChild);
-              return (
-                <div key={item.href}>
-                  {item.collapsible ? (
-                    <button
-                      type="button"
-                      title={collapsed ? item.label : undefined}
-                      aria-expanded={isExpanded}
-                      onClick={() =>
-                        setExpandedItems((current) => ({
-                          ...current,
-                          [item.href]: !isExpanded,
-                        }))
-                      }
-                      className={cn(
-                        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                        collapsed && "justify-center px-0",
-                        "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                      )}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && (
-                        <>
-                          <span className="flex-1 truncate text-start">
-                            {item.label}
-                          </span>
-                          <ChevronDown
-                            aria-hidden="true"
-                            className={cn(
-                              "h-4 w-4 shrink-0 transition-transform",
-                              isExpanded && "rotate-180",
-                            )}
-                          />
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      title={collapsed ? item.label : undefined}
-                      className={cn(
-                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                        collapsed && "justify-center px-0",
-                        isActive || hasActiveChild
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                      )}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && (
-                        <span className="truncate">{item.label}</span>
-                      )}
-                    </Link>
-                  )}
-                  {item.children && (
-                    <div
-                      aria-hidden={!showChildren}
-                      inert={!showChildren}
-                      className={cn(
-                        "grid transition-[grid-template-rows,opacity] duration-300 ease-in-out motion-reduce:transition-none",
-                        showChildren
-                          ? "grid-rows-[1fr] opacity-100"
-                          : "pointer-events-none grid-rows-[0fr] opacity-0",
-                      )}
-                    >
-                      <div className="min-h-0 overflow-hidden">
-                        <div
+            const Icon = item.icon;
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname === item.href ||
+              pathname.startsWith(`${item.href}/`);
+            const hasActiveChild = item.children?.some((child) =>
+              child.exact
+                ? pathname === child.href
+                : pathname === child.href ||
+                pathname.startsWith(`${child.href}/`),
+            );
+            const isExpanded =
+              expandedItems[item.href] ?? hasActiveChild ?? false;
+            const showChildren = item.collapsible
+              ? isExpanded
+              : !collapsed || Boolean(hasActiveChild);
+            return (
+              <div key={item.href}>
+                {item.collapsible ? (
+                  <button
+                    type="button"
+                    title={collapsed ? item.label : undefined}
+                    aria-expanded={isExpanded}
+                    onClick={() =>
+                      setExpandedItems((current) => ({
+                        ...current,
+                        [item.href]: !isExpanded,
+                      }))
+                    }
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                      collapsed && "justify-center px-0",
+                      "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 truncate text-start">
+                          {item.label}
+                        </span>
+                        <ChevronDown
+                          aria-hidden="true"
                           className={cn(
-                            "mt-1 flex flex-col gap-1 border-s border-border",
-                            collapsed ? "items-center ps-1" : "ms-5 ps-2",
+                            "h-4 w-4 shrink-0 transition-transform",
+                            isExpanded && "rotate-180",
                           )}
-                        >
-                          {item.children.map((child) => {
-                            const ChildIcon = child.icon;
-                            const childActive = child.exact
-                              ? pathname === child.href
-                              : pathname === child.href ||
-                                pathname.startsWith(`${child.href}/`);
-                            return (
-                              <Link
-                                key={child.href}
-                                href={child.href}
-                                aria-current={childActive ? "page" : undefined}
-                                title={collapsed ? child.label : undefined}
-                                className={cn(
-                                  "flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium transition-colors",
-                                  collapsed && "w-9 justify-center px-0",
-                                  childActive
-                                    ? "bg-accent text-accent-foreground"
-                                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                                )}
-                              >
-                                <ChildIcon className="h-3.5 w-3.5 shrink-0" />
-                                {!collapsed && (
-                                  <span className="truncate">
-                                    {child.label}
-                                  </span>
-                                )}
-                              </Link>
-                            );
-                          })}
-                        </div>
+                        />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href}
+                    title={collapsed ? item.label : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                      collapsed && "justify-center px-0",
+                      isActive || hasActiveChild
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {!collapsed && (
+                      <span className="truncate">{item.label}</span>
+                    )}
+                  </Link>
+                )}
+                {item.children && (
+                  <div
+                    aria-hidden={!showChildren}
+                    inert={!showChildren}
+                    className={cn(
+                      "grid transition-[grid-template-rows,opacity] duration-300 ease-in-out motion-reduce:transition-none",
+                      showChildren
+                        ? "grid-rows-[1fr] opacity-100"
+                        : "pointer-events-none grid-rows-[0fr] opacity-0",
+                    )}
+                  >
+                    <div className="min-h-0 overflow-hidden">
+                      <div
+                        className={cn(
+                          "mt-1 flex flex-col gap-1 border-s border-border",
+                          collapsed ? "items-center ps-1" : "ms-5 ps-2",
+                        )}
+                      >
+                        {item.children.map((child) => {
+                          const ChildIcon = child.icon;
+                          const childActive = child.exact
+                            ? pathname === child.href
+                            : pathname === child.href ||
+                            pathname.startsWith(`${child.href}/`);
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              aria-current={childActive ? "page" : undefined}
+                              title={collapsed ? child.label : undefined}
+                              className={cn(
+                                "flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium transition-colors",
+                                collapsed && "w-9 justify-center px-0",
+                                childActive
+                                  ? "bg-accent text-accent-foreground"
+                                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                              )}
+                            >
+                              <ChildIcon className="h-3.5 w-3.5 shrink-0" />
+                              {!collapsed && (
+                                <span className="truncate">
+                                  {child.label}
+                                </span>
+                              )}
+                            </Link>
+                          );
+                        })}
                       </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
       </nav>
     </aside>
   );
