@@ -1,19 +1,27 @@
-import { MessageCircle } from "lucide-react";
+// components/chat/ChatHeader.tsx
+"use client";
+
+import type { ReactNode } from "react";
 
 interface ChatHeaderProps {
+  title: string;
+  subtitle: string;
+  icon: ReactNode;
   isConnected: boolean;
 }
 
-export function ChatHeader({ isConnected }: ChatHeaderProps) {
+export function ChatHeader({ title, subtitle, icon, isConnected }: ChatHeaderProps) {
   return (
-    <header className="flex items-center justify-between border-b border-border bg-card px-5 py-3.5">
+    <header className="flex shrink-0 items-center justify-between border-b border-border bg-card px-5 py-3.5">
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <MessageCircle size={18} />
+          {icon}
         </div>
         <div>
-          <h1 className="text-sm font-semibold leading-tight text-foreground">Study Room</h1>
-          <p className="text-xs text-muted-foreground">One room for everyone, in real time</p>
+          <h1 className="text-sm font-semibold leading-tight text-foreground">
+            {title}
+          </h1>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
         </div>
       </div>
 
@@ -29,7 +37,7 @@ export function ChatHeader({ isConnected }: ChatHeaderProps) {
           />
         </span>
         <span className="text-xs font-medium text-muted-foreground">
-          {isConnected ? "Live" : "Connecting"}
+          {isConnected ? "متصل" : "جارٍ الاتصال..."}
         </span>
       </div>
     </header>

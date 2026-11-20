@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { registerChatHandlers } from '../modules/chat/chat.socket';
+import { registerDoctorChatHandlers } from '../modules/doctor-chat/doctor-chat.socket';
 
 interface AccessTokenPayload {
   userId: string;
@@ -42,6 +43,7 @@ io.use((socket: Socket, next) => {
     logger.info(`Socket connected: ${socket.id} (user ${socket.data.userId})`);
 
     registerChatHandlers(io as Server, socket);
+    registerDoctorChatHandlers(io as Server, socket);
 
     socket.on('disconnect', (reason) => {
       logger.info(`Socket disconnected: ${socket.id} (${reason})`);

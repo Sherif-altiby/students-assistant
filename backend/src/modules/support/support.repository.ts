@@ -162,4 +162,45 @@ export const supportRepository = {
       take: limit,
     });
   },
+
+  // support.repository.ts — inside supportRepository
+  findAcceptedDoctorsForUser(userId: string) {
+    return prisma.sessionBooking.findMany({
+      where: {
+        userId,
+        status: { in: ['ACCEPTED', 'COMPLETED'] },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        status: true,
+        slot: {
+          select: {
+            doctorId: true,
+            doctor: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  },
+
+
+  findAcceptedStudentsForDoctor(doctorId: string) {
+    return prisma.sessionBooking.findMany({
+      where: {
+        slot: { doctorId },
+        status: { in: ['ACCEPTED', 'COMPLETED'] },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        status: true,
+        user: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  },
+
+
 };

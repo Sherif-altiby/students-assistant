@@ -8,6 +8,7 @@ import {
   ConflictError,
   BadRequestError,
 } from '../../utils/AppError';
+import { doctorChatRepository } from '../doctor-chat/doctor-chat.repository';
 
 const DAY_INDEX: Record<DayOfWeek, number> = {
   SUNDAY: 0,
@@ -280,5 +281,89 @@ export const supportService = {
   // --- Upcoming sessions ---
   async getUpcomingSessions(doctorId: string, limit = 3) {
     return supportRepository.findUpcomingBookingsForDoctor(doctorId, limit);
+  },
+
+
+
+  async listAcceptedDoctorsForUser(userId: string) {
+    const rows = await supportRepository.findAcceptedDoctorsForUser(userId);
+
+    // Dedupe by doctor, keeping the newest booking and OR-ing the writable flag.
+    const byDoctor = new Map<
+      string,
+      {
+        doctorId: string;
+        doctorName: string;
+        lastBookingAt: Date;
+        canSend: boolean;
+      }
+    >();
+
+    for (const row of rows) {
+      const { doctorId, doctor } = row.slot;
+      const existing = byDoctor.get(doctorId);
+
+      if (!existing) {
+        byDoctor.set(doctorId, {
+          doctorId,
+          doctorName: doctor.name,
+          lastBookingAt: row.createdAt,
+          canSend: row.status === 'ACCEPTED',
+        });
+        continue;
+      }
+
+      // Rows are newest-first, so existing.lastBookingAt >= row.createdAt already.
+      if (row.status === 'ACCEPTED') existing.canSend = true;
+    }
+
+    // Attach a chatId via the existing atomic get-or-create.
+    return Promise.all(
+      [...byDoctor.values()].map(async (d) => {
+        const chat = await doctorChatRepository.upsertChat(d.doctorId, userId);
+        return { ...d, chatId: chat.id };
+      })
+    );
+  },
+
+
+  async listAcceptedStudentsForDoctor(doctorId: string) {
+    const rows = await supportRepository.findAcceptedStudentsForDoctor(doctorId);
+
+    const byStudent = new Map<
+      string,
+      {
+        studentId: string;
+        studentName: string;
+        lastBookingAt: Date;
+        canSend: boolean;
+      }
+    >();
+
+    for (const row of rows) {
+      const student = row.user;
+      const existing = byStudent.get(student.id);
+
+      if (!existing) {
+        byStudent.set(student.id, {
+          studentId: student.id,
+          studentName: student.name,
+          lastBookingAt: row.createdAt,
+          canSend: row.status === 'ACCEPTED',
+        });
+        continue;
+      }
+
+      // Rows are newest-first; OR-in the writable flag if any ACCEPTED exists.
+      if (row.status === 'ACCEPTED') existing.canSend = true;
+    }
+
+    // Attach a chatId via the existing atomic get-or-create.
+    return Promise.all(
+      [...byStudent.values()].map(async (s) => {
+        const chat = await doctorChatRepository.upsertChat(doctorId, s.studentId);
+        return { ...s, chatId: chat.id };
+      })
+    );
   },
 };

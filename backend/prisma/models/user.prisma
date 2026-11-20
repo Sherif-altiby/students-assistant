@@ -47,11 +47,17 @@ model User {
   ratingsGiven            SessionRating[]          @relation("UserRatings")
   suggestions             Suggestion[]
 
+  doctorChatsAsDoctor  DoctorChat[]        @relation("DoctorChatsAsDoctor")
+  doctorChatsAsStudent DoctorChat[]        @relation("DoctorChatsAsStudent")
+  doctorChatMessages   DoctorChatMessage[] @relation("DoctorChatMessagesSent")
+
   books           Book[]           @relation("BookOwner")
   aiConversations AiConversation[]
 
   quizzes      Quiz[]
   quizAttempts QuizAttempt[]
+
+  doctorChatReactions DoctorChatReaction[] @relation("DoctorChatReactions")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

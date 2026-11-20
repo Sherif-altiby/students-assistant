@@ -21,8 +21,11 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import { useDoctorSlots } from "@/hooks/useSupport";
+import { openDoctorChatFromBooking } from "@/lib/doctor-chat";
 import type { Slot } from "@/lib/support";
+import { useRouter } from "next/navigation";
 import {
   CalendarX2,
   Clock,
@@ -32,6 +35,7 @@ import {
   ArrowLeft,
   Loader2,
   ShieldCheck,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -105,9 +109,26 @@ export function SlotPicker({ doctorId }: { doctorId: string }) {
   const { slots, isLoading, isError, bookSlot, isBooking } =
     useDoctorSlots(doctorId);
 
+  const router = useRouter();
+  const [chatId, setChatId] = useState<string | null>(null);
+
   const openSlots = slots.filter((slot) => slot.status === "OPEN");
   const grouped = groupByDay(openSlots);
   const days = Object.keys(grouped).sort();
+
+  const handleBookSlot = async (id: string) => {
+    try {
+      const booking = await bookSlot.mutateAsync(id);
+      // Open/create the doctor chat for this booking
+      const { chatId: newChatId } = await openDoctorChatFromBooking(
+        booking.id
+      );
+      setChatId(newChatId);
+      router.push(`/dashboard/doctor-chat/${newChatId}`);
+    } catch {
+      // Error handled by react-query / toast
+    }
+  };
 
   return (
     <Card className="overflow-hidden border-border/60 bg-background shadow-sm">
@@ -168,7 +189,7 @@ export function SlotPicker({ doctorId }: { doctorId: string }) {
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="h-px flex-1" />
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                   {Array.from({ length: count }).map((_, i) => (
                     <Skeleton key={i} className="h-36 w-full rounded-xl" />
                   ))}
@@ -230,7 +251,7 @@ export function SlotPicker({ doctorId }: { doctorId: string }) {
               </div>
 
               {/* Slots Grid */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 {grouped[day].map((slot, slotIdx) => (
                   <Card
                     key={slot.id}
@@ -339,7 +360,7 @@ export function SlotPicker({ doctorId }: { doctorId: string }) {
                               <AlertDialogFooter className="mt-6 flex-row-reverse gap-2 sm:flex-row-reverse">
                                 <AlertDialogAction
                                   disabled={isBooking}
-                                  onClick={() => bookSlot(slot.id)}
+                                  onClick={() => handleBookSlot(slot.id)}
                                   className="min-w-[130px] gap-2 font-semibold"
                                 >
                                   {isBooking ? (

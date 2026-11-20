@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BookOpen, FileText, Loader2, MessageSquare, Trash2 } from "lucide-react";
 import { useBooks } from "@/hooks/useBooks";
 import type { BookStatus } from "@/types/book";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const STATUS_LABEL: Record<BookStatus, string> = {
   READY: "جاهز",
@@ -32,11 +33,7 @@ export function BookList() {
   const { books, isLoading, isError, deleteBook, deletingId, deleteError } =
     useBooks();
 
-  function handleDelete(id: string, title: string) {
-    if (window.confirm(`هتمسح كتاب "${title}" ومحادثاته نهائيًا. متأكد؟`)) {
-      deleteBook(id);
-    }
-  }
+  // No-op: delete confirmation is handled by ConfirmDialog wrapping the button
 
   return (
     <section className="space-y-3">
@@ -121,19 +118,28 @@ export function BookList() {
                 </Link>
               )}
 
-              <button
-                type="button"
-                onClick={() => handleDelete(book.id, book.title)}
-                disabled={deletingId === book.id}
-                aria-label={`حذف ${book.title}`}
-                className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-              >
-                {deletingId === book.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-              </button>
+              <ConfirmDialog
+                trigger={
+                  <button
+                    type="button"
+                    disabled={deletingId === book.id}
+                    aria-label={`حذف ${book.title}`}
+                    className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                  >
+                    {deletingId === book.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
+                }
+                title="حذف الكتاب؟"
+                description={`هتمسح كتاب "${book.title}" ومحادثاته نهائيًا. متأكد؟`}
+                confirmLabel="حذف"
+                cancelLabel="إلغاء"
+                onConfirm={() => deleteBook(book.id)}
+                destructive
+              />
             </div>
           </div>
         ))

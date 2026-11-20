@@ -1,3 +1,4 @@
+// src/components/chat/MessageInput.tsx
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
@@ -10,7 +11,11 @@ import type { ChatMessage } from "@/types/chat";
 interface MessageInputProps {
   replyTo: ChatMessage | null;
   onCancelReply: () => void;
-  onSend: (content: string) => void;
+  /**
+   * Return a promise so the input can clear only after send succeeds.
+   * Existing void call sites still work — they just clear eagerly.
+   */
+  onSend: (content: string) => void | Promise<void | boolean>;
   isSending: boolean;
   disabled?: boolean;
 }
@@ -26,6 +31,7 @@ export function MessageInput({
 }: MessageInputProps) {
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
+  const [localSending, setLocalSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -35,25 +41,36 @@ export function MessageInput({
     el.style.height = `${el.scrollHeight}px`;
   }, [value]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const trimmed = value.trim();
-    if (!trimmed || disabled || isSending) return;
-    onSend(trimmed);
+    if (!trimmed || disabled || isSending || localSending) return;
+
+    const snapshot = value;
     setValue("");
+    setLocalSending(true);
+
+    try {
+      const result = await onSend(trimmed);
+      if (result === false) setValue(snapshot);
+    } catch {
+      setValue(snapshot);
+    } finally {
+      setLocalSending(false);
+    }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   };
 
-  const canSend = !disabled && !isSending && value.trim().length > 0;
+  const canSend = !disabled && !isSending && !localSending && value.trim().length > 0;
   const isNearLimit = value.length > MAX_LENGTH - 200;
 
   return (
-    <div className=" sticky rounded-lg px-4 py-3  bottom-4">
+    <div className="sticky bottom-4 rounded-lg px-4 py-3">
       <div
         className={cn(
           "rounded-2xl border bg-background transition-colors",
@@ -72,10 +89,10 @@ export function MessageInput({
               <div className="flex items-center gap-2 border-b border-border px-3.5 py-2">
                 <Reply size={13} className="shrink-0 text-primary" />
                 <div className="min-w-0 flex-1">
-                  <p className="  font-medium text-foreground">
+                  <p className="font-medium text-foreground">
                     Replying to {replyTo.user.name}
                   </p>
-                  <p className="truncate   text-muted-foreground">{replyTo.content}</p>
+                  <p className="truncate text-muted-foreground">{replyTo.content}</p>
                 </div>
                 <Button
                   type="button"
@@ -88,11 +105,11 @@ export function MessageInput({
                   <X size={13} />
                 </Button>
               </div>
-            )} 
+            )}
           </div>
         </div>
 
-        <div className="flex items-center  gap-2 p-2">
+        <div className="flex items-center gap-2 p-2">
           <div className="relative h-full flex-1">
             <Textarea
               ref={textareaRef}
@@ -102,9 +119,9 @@ export function MessageInput({
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               placeholder={disabled ? "جاري الاتصال..." : "اكتب رسالة..."}
-              disabled={disabled || isSending}
+              disabled={disabled || isSending || localSending}
               rows={1}
-              className="min-h-[40px] text-[15px] resize-none border-0 bg-transparent p-2   leading-relaxed shadow-none focus-visible:ring-0"
+              className="min-h-[40px] resize-none border-0 bg-transparent p-2 text-[15px] leading-relaxed shadow-none focus-visible:ring-0"
               style={{ maxHeight: "140px" }}
             />
             {isNearLimit && (
@@ -130,7 +147,7 @@ export function MessageInput({
             )}
             aria-label="Send message"
           >
-            {isSending ? (
+            {isSending || localSending ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (
               <Send size={16} />

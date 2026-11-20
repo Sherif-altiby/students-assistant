@@ -1,3 +1,4 @@
+// src/components/chat/MessageBubble.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -13,6 +14,7 @@ import {
 
 import { Avatar } from "./Avatar";
 import { ReactionChips } from "./ReactionChips";
+import { MessageStatus } from "./MessageStatus";
 import type { ChatMessage, ReactionType } from "@/types/chat";
 import { cn } from "@/lib/utils";
 
@@ -20,12 +22,13 @@ interface MessageBubbleProps {
   message: ChatMessage;
   isOwn: boolean;
   currentUserId?: string;
-  /**
-   * True for the first message of a run from the same sender.
-   * Only that message gets the avatar, sender name and bubble tail,
-   * like WhatsApp. Defaults to true so existing usage keeps working.
-   */
+  /** Only the first message of a run from the same sender gets the avatar/tail. */
   isFirstInGroup?: boolean;
+  /**
+   * Show the sender name + avatar on incoming messages.
+   * Default true (group chats). Pass false for 1:1 chats.
+   */
+  showSender?: boolean;
   onReact: (messageId: string, type: ReactionType) => void;
   onReply: (message: ChatMessage) => void;
 }
@@ -40,8 +43,6 @@ const REACTION_OPTIONS: {
   { type: "SUPPORT", emoji: "🙌", label: "Support" },
 ];
 
-/* Each sender gets a stable accent color, like in WhatsApp groups.
-   Classes are written out in full so Tailwind can see them. */
 const SENDER_COLORS = [
   { text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500" },
   { text: "text-sky-600 dark:text-sky-400", border: "border-sky-500" },
@@ -68,8 +69,6 @@ function formatTime(iso: string) {
   });
 }
 
-/* The little corner "tail" of a WhatsApp bubble.
-   Colored with currentColor so it always matches the bubble. */
 const TAIL_INCOMING =
   "M1.533 3.568 8 12.193V1H2.812C1.042 1 .474 2.156 1.533 3.568z";
 const TAIL_OUTGOING =
@@ -89,7 +88,6 @@ function BubbleTail({ isOwn }: { isOwn: boolean }) {
         isOwn ? "-right-2 text-primary" : "-left-2 text-card",
       )}
     >
-      {/* soft shadow, same as the bubble's */}
       <path d={d} fill="#0b141a" opacity=".13" transform="translate(0 .5)" />
       <path d={d} />
     </svg>
@@ -101,6 +99,7 @@ export function MessageBubble({
   isOwn,
   currentUserId,
   isFirstInGroup = true,
+  showSender = true,
   onReact,
   onReply,
 }: MessageBubbleProps) {
@@ -112,11 +111,9 @@ export function MessageBubble({
       LOVE: 0,
       SUPPORT: 0,
     };
-
     for (const reaction of message.reactions) {
       counts[reaction.type]++;
     }
-
     return counts;
   }, [message.reactions]);
 
@@ -130,7 +127,9 @@ export function MessageBubble({
   const time = formatTime(message.createdAt);
   const hasReactions = message.reactions.length > 0;
   const showTail = isFirstInGroup;
-  const showSenderName = !isOwn && isFirstInGroup;
+  // Only for group chats + incoming + first in group
+  const showSenderName = showSender && !isOwn && isFirstInGroup;
+  const showAvatar = showSender && !isOwn;
   const senderColor = getSenderColor(message.user.name);
   const replyColor = message.replyTo
     ? getSenderColor(message.replyTo.user.name)
@@ -145,9 +144,8 @@ export function MessageBubble({
         isFirstInGroup ? "mt-2" : "mt-0.5",
       )}
     >
-      {/* Avatar column (incoming only). Consecutive messages keep the
-          same indent through an empty spacer the size of the avatar. */}
-      {!isOwn &&
+      {/* Avatar column (incoming only, hidden in private chats) */}
+      {showAvatar &&
         (isFirstInGroup ? (
           <div className="shrink-0">
             <Avatar userId={message.userId} name={message.user.name} />
@@ -175,7 +173,7 @@ export function MessageBubble({
         >
           {showTail && <BubbleTail isOwn={isOwn} />}
 
-          {/* Hover chevron, tucked into the bubble's top-right corner */}
+          {/* Hover chevron */}
           <div
             className={cn(
               "absolute right-1 top-1 z-10 flex items-center pl-6",
@@ -198,7 +196,7 @@ export function MessageBubble({
             />
           </div>
 
-          {/* Sender name, colored per user */}
+          {/* Sender name (group chats only) */}
           {showSenderName && (
             <p
               className={cn(
@@ -228,7 +226,6 @@ export function MessageBubble({
               >
                 {message.replyTo.user.name}
               </p>
-
               <p
                 className={cn(
                   "line-clamp-2 text-[13px] leading-snug",
@@ -242,7 +239,6 @@ export function MessageBubble({
             </div>
           )}
 
-       
           <p className="whitespace-pre-wrap break-words leading-[1.35] md:text-lg">
             {message.content}
             <span
@@ -253,18 +249,26 @@ export function MessageBubble({
             </span>
           </p>
 
-          <time
-            dateTime={message.createdAt}
+          {/* Timestamp + ticks */}
+          <span
             className={cn(
-              "absolute bottom-1.5 right-2.5 select-none whitespace-nowrap text-[11px] leading-none",
+              "absolute bottom-1.5 right-2.5 flex select-none items-center gap-1 whitespace-nowrap text-[11px] leading-none",
               isOwn ? "text-primary-foreground/70" : "text-muted-foreground",
             )}
           >
-            {time}
-          </time>
+            <time dateTime={message.createdAt}>{time}</time>
+            {isOwn && (
+              <MessageStatus
+                isOwn={isOwn}
+                deliveredAt={message.deliveredAt}
+                readAt={message.readAt}
+                isOptimistic={message.id.startsWith("tmp-")}
+              />
+            )}
+          </span>
         </div>
 
-        {/* Reactions, overlapping the bubble's bottom edge */}
+        {/* Reactions */}
         <div
           className={cn(
             "relative z-10 px-1.5",

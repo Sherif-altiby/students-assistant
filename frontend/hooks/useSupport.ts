@@ -124,7 +124,7 @@ export function useDoctorSlots(doctorId: string | undefined) {
     isError: slotsQuery.isError,
     refetch: slotsQuery.refetch,
 
-    bookSlot: bookMutation.mutate,
+    bookSlot: bookMutation, // full mutation object — callers may use mutateAsync
     isBooking: bookMutation.isPending,
     isBookingError: bookMutation.isError,
   };

@@ -13,8 +13,9 @@ import { parentRouter, studentParentLinkRouter } from '../modules/parent/parent.
 import { suggestionRouter } from '../modules/suggestion/suggestion.routes';
 import { bookRouter } from '../modules/books/book.routes';
 import { quizRouter } from '../modules/quiz/quiz.routes';
- 
-const router = Router(); 
+import { doctorChatRouter } from '../modules/doctor-chat/doctor-chat.routes';
+
+const router = Router();
 
 
 router.use('/auth', authRouter);
@@ -32,5 +33,6 @@ router.use('/parent-links', studentParentLinkRouter);
 router.use('/suggestions', suggestionRouter);
 router.use('/books', bookRouter);
 router.use('/quizzes', quizRouter);
+router.use('/doctor-chat', doctorChatRouter);
 
 export { router as apiRouter };

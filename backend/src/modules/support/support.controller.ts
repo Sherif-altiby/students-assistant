@@ -116,4 +116,14 @@ export const supportController = {
     const sessions = await supportService.getUpcomingSessions(req.user!.id, 3);
     res.status(StatusCodes.OK).json({ status: 'success', data: sessions });
   }),
+
+  listMyAcceptedDoctors: asyncHandler(async (req: Request, res: Response) => {
+    const doctors = await supportService.listAcceptedDoctorsForUser(req.user!.id);
+    res.status(StatusCodes.OK).json({ status: 'success', data: doctors });
+  }),
+
+  listMyAcceptedStudents: asyncHandler(async (req: Request, res: Response) => {
+    const students = await supportService.listAcceptedStudentsForDoctor(req.user!.id);
+    res.status(StatusCodes.OK).json({ status: 'success', data: students });
+  }),
 };

@@ -1,0 +1,70 @@
+// prisma/models/doctor-chat.prisma
+
+model DoctorChat {
+  id String @id @default(uuid())
+
+  doctorId String @map("doctor_id")
+  doctor   User   @relation("DoctorChatsAsDoctor", fields: [doctorId], references: [id], onDelete: Cascade)
+
+  studentId String @map("student_id")
+  student   User   @relation("DoctorChatsAsStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  lastMessageAt DateTime? @map("last_message_at")
+
+  messages DoctorChatMessage[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([doctorId, studentId])
+  @@index([doctorId, lastMessageAt])
+  @@index([studentId, lastMessageAt])
+  @@map("doctor_chats")
+}
+
+model DoctorChatMessage {
+  id String @id @default(uuid())
+
+  chatId String     @map("chat_id")
+  chat   DoctorChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  senderId String @map("sender_id")
+  sender   User   @relation("DoctorChatMessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+
+  content String
+
+  replyToId String?             @map("reply_to_id")
+  replyTo   DoctorChatMessage?  @relation("ReplyTo", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   DoctorChatMessage[] @relation("ReplyTo")
+
+  deliveredAt DateTime? @map("delivered_at")
+  readAt      DateTime? @map("read_at")
+
+  reactions DoctorChatReaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([chatId, createdAt])
+  @@index([chatId, deliveredAt])
+  @@index([chatId, readAt])
+  @@index([replyToId])
+  @@map("doctor_chat_messages")
+}
+
+model DoctorChatReaction {
+  id String @id @default(uuid())
+
+  messageId String            @map("message_id")
+  message   DoctorChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  userId String @map("user_id")
+  user   User   @relation("DoctorChatReactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  type ReactionType
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@map("doctor_chat_reactions")
+}

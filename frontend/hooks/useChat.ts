@@ -1,3 +1,4 @@
+// hooks/useChat.ts
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -23,7 +24,12 @@ const CHAT_EVENTS = {
 
 const HISTORY_KEY = ["chat", "history"] as const;
 
-export function useChat() {
+interface UseChatOptions {
+  /** When false, the hook is inert: no history query, no socket, no send. Default true. */
+  enabled?: boolean;
+}
+
+export function useChat({ enabled = true }: UseChatOptions = {}) {
   const queryClient = useQueryClient();
   const currentUserId = useAuthStore((s) => s.user?.id);
   const currentUser = useAuthStore((s) => s.user);
@@ -38,16 +44,22 @@ export function useChat() {
   const { data: messages = [], isLoading } = useQuery({
     queryKey: HISTORY_KEY,
     queryFn: () => getChatHistory({ limit: 30 }),
-    staleTime: Infinity, // socket keeps this fresh; no need to refetch on focus etc.
+    staleTime: Infinity,
+    enabled: enabled && !isBootstrapping,
   });
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     bottomRef.current?.scrollIntoView({ behavior });
   }, []);
 
+  const handleConnectError = useCallback((err: Error) => {
+    console.error("Socket connect_error:", err.message);
+    setIsConnected(false);
+  }, []);
+
   // --- socket lifecycle -----------------------------------------------
   useEffect(() => {
-    if (isBootstrapping || !accessToken) {
+    if (!enabled || isBootstrapping || !accessToken) {
       setIsConnected(false);
       return;
     }
@@ -59,25 +71,26 @@ export function useChat() {
 
     const handleNewMessage = (message: ChatMessage) => {
       queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => {
-        // If we already have this message (by id), ignore it to avoid duplicates
         if (old.some((m) => m.id === message.id)) return old;
 
-        // Remove any optimistic placeholder that matches this incoming message
         const filtered = old.filter(
-          (m) => !(m.id.startsWith("tmp-") && m.content === message.content && m.userId === message.userId),
+          (m) =>
+            !(
+              m.id.startsWith("tmp-") &&
+              m.content === message.content &&
+              m.userId === message.userId
+            ),
         );
-        
-        // Ensure no duplicate IDs in the final array
+
         const messageIds = new Set<string>();
         const deduped = [...filtered, message].filter((m) => {
           if (messageIds.has(m.id)) return false;
           messageIds.add(m.id);
           return true;
         });
-        
+
         return deduped;
       });
-      // only autoscroll if the message is from me, or we're already near bottom
       queueMicrotask(() => scrollToBottom());
     };
 
@@ -121,22 +134,17 @@ export function useChat() {
       socket.off("connect_error", handleConnectError);
       disconnectSocket();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken, isBootstrapping]);
+  }, [enabled, accessToken, isBootstrapping, queryClient, scrollToBottom, handleConnectError]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (!isLoading) scrollToBottom("auto");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading]);
+  }, [enabled, isLoading, scrollToBottom]);
 
-  const handleConnectError = (err: Error) => {
-    console.error("Socket connect_error:", err.message);
-    setIsConnected(false);
-  };
-
-  // --- actions ----------------------------------------------------------
+  // --- actions ---------------------------------------------------------
   const sendMessage = useCallback(
     (content: string) => {
+      if (!enabled) return;
       const trimmed = content.trim();
       if (!trimmed) return;
 
@@ -146,7 +154,6 @@ export function useChat() {
         replyToId: replyTo?.id,
       };
 
-      // create optimistic message
       const tmpId = `tmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       const now = new Date().toISOString();
       const optimisticMessage: ChatMessage = {
@@ -164,51 +171,62 @@ export function useChat() {
         reactions: [],
       } as ChatMessage;
 
-      queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => [...old, optimisticMessage]);
+      queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => [
+        ...old,
+        optimisticMessage,
+      ]);
       queueMicrotask(() => scrollToBottom());
 
-      getSocket().emit(CHAT_EVENTS.MESSAGE_SEND, payload, (ack: SocketAck<{ id?: string; message?: ChatMessage }>) => {
-        setIsSending(false);
-        if (!ack.success) {
-          // remove optimistic message
-          queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => old.filter((m) => m.id !== tmpId));
-          console.error("Failed to send message:", ack.message);
-          return;
-        }
-
-        // If server returned the saved message in ack, replace optimistic entry
-        if (ack.data && (ack.data.message || ack.data.id)) {
-          const serverMsg = ack.data.message
-            ? (ack.data.message as ChatMessage)
-            : { ...(optimisticMessage as ChatMessage), id: ack.data.id } as ChatMessage;
-
-          queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => {
-            // remove optimistic placeholder(s) that match and avoid duplicates
-            const filtered = old.filter(
-              (m) => !(m.id === tmpId || (m.id.startsWith("tmp-") && m.content === serverMsg.content && m.userId === serverMsg.userId)),
+      getSocket().emit(
+        CHAT_EVENTS.MESSAGE_SEND,
+        payload,
+        (ack: SocketAck<{ id?: string; message?: ChatMessage }>) => {
+          setIsSending(false);
+          if (!ack.success) {
+            queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) =>
+              old.filter((m) => m.id !== tmpId),
             );
-            
-            // Ensure no duplicate IDs in the final array
-            const messageIds = new Set<string>();
-            const deduped = [...filtered, serverMsg].filter((m) => {
-              if (messageIds.has(m.id)) return false;
-              messageIds.add(m.id);
-              return true;
-            });
-            
-            return deduped;
-          });
-        }
+            console.error("Failed to send message:", ack.message);
+            return;
+          }
 
-        setReplyTo(null);
-      });
+          if (ack.data && (ack.data.message || ack.data.id)) {
+            const serverMsg = ack.data.message
+              ? (ack.data.message as ChatMessage)
+              : ({ ...(optimisticMessage as ChatMessage), id: ack.data.id } as ChatMessage);
+
+            queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) => {
+              const filtered = old.filter(
+                (m) =>
+                  !(
+                    m.id === tmpId ||
+                    (m.id.startsWith("tmp-") &&
+                      m.content === serverMsg.content &&
+                      m.userId === serverMsg.userId)
+                  ),
+              );
+
+              const messageIds = new Set<string>();
+              const deduped = [...filtered, serverMsg].filter((m) => {
+                if (messageIds.has(m.id)) return false;
+                messageIds.add(m.id);
+                return true;
+              });
+
+              return deduped;
+            });
+          }
+
+          setReplyTo(null);
+        },
+      );
     },
-    [replyTo],
+    [enabled, replyTo, currentUserId, currentUser, queryClient, scrollToBottom],
   );
 
   const react = useCallback(
     (messageId: string, type: ReactPayload["type"]) => {
-      // optimistic update — server broadcast will reconcile shortly after
+      if (!enabled) return;
       if (currentUserId) {
         queryClient.setQueryData<ChatMessage[]>(HISTORY_KEY, (old = []) =>
           old.map((msg) => {
@@ -242,7 +260,7 @@ export function useChat() {
         type,
       } satisfies ReactPayload);
     },
-    [currentUserId, queryClient],
+    [enabled, currentUserId, queryClient],
   );
 
   return {

@@ -1,34 +1,18 @@
-"use client";
-
-import { ChatHeader } from "@/components/chat/ChatHeader";
-import { MessageInput } from "@/components/chat/MessageInput";
-import { MessageList } from "@/components/chat/MessageList";
-import { useChat } from "@/hooks/useChat";
+// app/dashboard/chat/page.tsx
+import { ChatPageBody } from "@/components/chat/ChatPageBody";
+import { Suspense } from "react";
  
+ 
+export const dynamic = "force-dynamic";
 
-export default function ChatPage() {
-  const chat = useChat();
-
+export default function UnifiedChatPage() {
   return (
-    <div className="flex h-[calc(100vh-70px)] overflow-hidden flex-col chat-background">
-      {/* <ChatHeader isConnected={chat.isConnected} /> */}
-
-      <MessageList
-        messages={chat.messages}
-        isLoading={chat.isLoading}
-        currentUserId={chat.currentUserId}
-        onReact={chat.react}
-        onReply={chat.setReplyTo}
-        bottomRef={chat.bottomRef}
-      />
-
-      <MessageInput
-        replyTo={chat.replyTo}
-        onCancelReply={() => chat.setReplyTo(null)}
-        onSend={chat.sendMessage}
-        isSending={chat.isSending}
-        disabled={!chat.isConnected}
-      />
-    </div>
+    <Suspense fallback={<ChatSkeleton />}>
+      <ChatPageBody />
+    </Suspense>
   );
+}
+
+function ChatSkeleton() {
+  return <div className="h-[calc(100vh-70px)] bg-background" />;
 }

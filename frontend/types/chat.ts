@@ -25,6 +25,10 @@ export interface ChatMessage {
     user: ChatUser;
   } | null;
   reactions: ChatReaction[];
+
+  // Doctor-chat only — undefined on the public room.
+  deliveredAt?: string | null;
+  readAt?: string | null
 }
 
 export interface SendMessagePayload {
